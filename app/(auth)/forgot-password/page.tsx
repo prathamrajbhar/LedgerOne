@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-            Reset Password 🔐
+            Reset Password
           </h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Enter your registered email address and we&apos;ll send recovery instructions.

@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-            Welcome Back 👋
+            Welcome Back
           </h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Sign in to your LedgerOne workspace and continue managing your business with ease.
