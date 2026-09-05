@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
+import { RobotIcon } from "./robot-icon";
+
 interface Message {
   id: string;
   role: "user" | "assistant";
@@ -124,8 +126,26 @@ export function HelpAssistantWidget() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [processingStage, setProcessingStage] = useState("");
+  const [isBtnHovered, setIsBtnHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stageTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Click outside to close chatbot drawer automatically
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (open && containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [open]);
 
   // Auto-scroll to bottom of message list
   const scrollToBottom = () => {
@@ -233,45 +253,95 @@ export function HelpAssistantWidget() {
   };
 
   return (
-    <>
-      {/* Floating Toggle Button */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
+    <div ref={containerRef}>
+      <style jsx>{`
+        @keyframes roboJump2s {
+          0%, 100% {
+            transform: translateY(0) scale(1);
+          }
+          15% {
+            transform: translateY(4px) scale(1.08, 0.92);
+          }
+          38% {
+            transform: translateY(-22px) scale(0.92, 1.08);
+          }
+          52% {
+            transform: translateY(-24px) scale(1.02, 0.98);
+          }
+          68% {
+            transform: translateY(0) scale(1.1, 0.9);
+          }
+          78% {
+            transform: translateY(-6px) scale(0.98, 1.02);
+          }
+          88% {
+            transform: translateY(0) scale(1);
+          }
+        }
+        @keyframes shadowPulse2s {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          38%, 52% {
+            transform: scale(0.5);
+            opacity: 0.2;
+          }
+          68% {
+            transform: scale(1.1);
+            opacity: 0.8;
+          }
+        }
+        .animate-robo-jump {
+          animation: roboJump2s 2s ease-in-out infinite;
+        }
+        .animate-shadow-pulse {
+          animation: shadowPulse2s 2s ease-in-out infinite;
+        }
+      `}</style>
+
+      {/* Floating Toggle Button Container with Ground Shadow Reflection */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center">
+        {/* Dynamic Ground Shadow Reflection */}
+        {!open && (
+          <div className="absolute -bottom-1.5 w-12 h-3 rounded-full bg-teal/30 blur-sm pointer-events-none animate-shadow-pulse" />
+        )}
+
+        {/* Main Floating Robot Button */}
         <button
           onClick={() => setOpen(!open)}
-          className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-navy via-[#1B3B5F] to-navy text-white shadow-[0_10px_25px_rgba(22,50,79,0.4),0_0_15px_rgba(22,124,128,0.25)] hover:shadow-[0_15px_35px_rgba(22,50,79,0.5),0_0_25px_rgba(22,124,128,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-teal/40 relative group ${
-            open ? "rotate-90 !from-slate-800 !to-slate-900 border-white/50" : ""
+          onMouseEnter={() => setIsBtnHovered(true)}
+          onMouseLeave={() => setIsBtnHovered(false)}
+          className={`flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-[#16324F] via-[#167C80] to-[#0F243A] text-white shadow-[0_14px_40px_rgba(22,124,128,0.5),0_0_28px_rgba(0,245,212,0.35)] hover:shadow-[0_20px_55px_rgba(22,124,128,0.7),0_0_40px_rgba(0,245,212,0.65)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-3.5 border-teal/70 relative group ${
+            open
+              ? "!from-slate-800 !to-slate-900 border-white/50"
+              : "animate-robo-jump"
           }`}
           aria-label={open ? "Close Help Assistant" : "Open Help Assistant"}
         >
           {open ? (
-            <X className="h-6 w-6 text-white transition-transform" />
+            <X className="h-7 w-7 text-white transition-transform duration-300" />
           ) : (
-            <>
-              <MessageCircle className="h-6 w-6 text-white group-hover:scale-110 transition-transform drop-shadow" />
-              <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-4.5 w-4.5 bg-teal text-[9px] font-bold text-white items-center justify-center border border-white/80 shadow-xs">
-                  AI
-                </span>
-              </span>
-            </>
+            <div className="relative flex items-center justify-center">
+              <RobotIcon size={48} isHovered={isBtnHovered} isThinking={loading} isOpen={open} />
+            </div>
           )}
         </button>
       </div>
 
-      {/* Main Chat Widget Drawer Container with Premium Backdrop Elevation & Shadow */}
+      {/* Main Chat Widget Drawer Container with Premium Backdrop Elevation & Smooth Exit Animation */}
       <Card
-        className={`fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2.5rem)] h-[600px] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border-2 border-navy/20 hover:border-teal/40 bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-out origin-bottom-right ${
+        className={`fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2.5rem)] h-[600px] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border-2 border-navy/20 hover:border-teal/40 bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom-right ${
           open
             ? "scale-100 opacity-100 translate-y-0 pointer-events-auto"
-            : "scale-95 opacity-0 translate-y-4 pointer-events-none"
+            : "scale-90 opacity-0 translate-y-6 pointer-events-none"
         }`}
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-navy via-[#1B3B5F] to-navy text-white shadow-md border-b border-teal/20">
           <div className="flex items-center gap-2.5">
-            <div className="p-1.5 rounded-lg bg-teal/30 text-teal-light border border-teal/40 shadow-xs">
-              <Bot className="h-5 w-5" />
+            <div className="p-1.5 rounded-xl bg-teal/20 text-teal-light border border-teal/30 shadow-xs flex items-center justify-center">
+              <RobotIcon size={26} isHovered={true} isThinking={loading} isOpen={open} />
             </div>
             <div>
               <div className="flex items-center gap-2">
@@ -384,14 +454,11 @@ export function HelpAssistantWidget() {
           {/* Step-by-Step Processing Status Animation */}
           {loading && (
             <div className="flex justify-start animate-in fade-in duration-200">
-              <div className="bg-white border border-border/80 rounded-2xl rounded-bl-xs px-3.5 py-2.5 text-xs text-navy/80 flex items-center gap-2.5 shadow-xs">
-                <div className="relative flex h-3 w-3 items-center justify-center">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
-                </div>
+              <div className="bg-white border border-navy/15 rounded-2xl rounded-bl-xs px-3.5 py-2.5 text-xs text-navy flex items-center gap-3 shadow-sm">
+                <RobotIcon size={24} isThinking={true} />
                 <div className="flex flex-col">
-                  <span className="font-semibold text-[11px] text-teal">{processingStage || "Processing..."}</span>
-                  <span className="text-[9.5px] text-muted-foreground">Fetching database context</span>
+                  <span className="font-bold text-[11px] text-teal animate-pulse">{processingStage || "Processing..."}</span>
+                  <span className="text-[9.5px] text-muted-foreground font-medium">Fetching database context</span>
                 </div>
               </div>
             </div>
@@ -461,6 +528,6 @@ export function HelpAssistantWidget() {
           </form>
         </div>
       </Card>
-    </>
+    </div>
   );
 }
