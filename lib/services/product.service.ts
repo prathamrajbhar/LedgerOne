@@ -322,7 +322,7 @@ export class ProductService {
         status: l.salesOrder.status,
         amount: Number(l.lineTotal),
         viewUrl: "/sales",
-        canDeleteDirectly: l.salesOrder.status !== "CONFIRMED",
+        canDeleteDirectly: true,
       })),
       ...invoiceLines.map((l) => ({
         id: l.invoiceId,
@@ -334,7 +334,7 @@ export class ProductService {
         status: l.invoice.status,
         amount: Number(l.lineTotal),
         viewUrl: "/invoices",
-        canDeleteDirectly: l.invoice.status === "DRAFT" || l.invoice.status === "CANCELLED",
+        canDeleteDirectly: true,
       })),
       ...billLines.map((l) => ({
         id: l.vendorBillId,
@@ -346,7 +346,7 @@ export class ProductService {
         status: l.vendorBill.status,
         amount: Number(l.lineTotal),
         viewUrl: "/bills",
-        canDeleteDirectly: l.vendorBill.status === "DRAFT" || l.vendorBill.status === "CANCELLED",
+        canDeleteDirectly: true,
       })),
       ...poLines.map((l) => ({
         id: l.purchaseOrderId,
@@ -358,7 +358,7 @@ export class ProductService {
         status: l.purchaseOrder.status,
         amount: Number(l.lineTotal),
         viewUrl: "/purchases",
-        canDeleteDirectly: l.purchaseOrder.status !== "CONFIRMED",
+        canDeleteDirectly: true,
       })),
     ];
 
