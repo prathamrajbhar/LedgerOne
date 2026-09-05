@@ -1,52 +1,83 @@
-# .env
-.env.local
-.env.*.local
-.env
-
-# dependencies
-node_modules
+# Dependencies
+node_modules/
 /.pnp
 .pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
 
-# testing
-/coverage
+# Next.js Build & Outputs
+.next/
+out/
+build/
+dist/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
+# Environment Variables & Secrets
+.env
+.env*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.pem
+*.key
+*.cert
 
-# debug
+# Logs & Debug
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# local env files
-.env*.local
+# Testing & Coverage
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
 
-# vercel
-.vercel
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma
-prisma/migrations/**/*.sql
+# Vercel & Deployment
+.vercel
 
-# IDE
-.vscode
-.idea
+# IDE & Editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
 *.swp
 *.swo
 *~
+*.sublime-workspace
+.project
+.settings/
 
-# OS
+# Operating Systems
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+
+# Tooling Caches
+.cache/
+.turbo/
+.reticle/
+.temp/
+scratch/
