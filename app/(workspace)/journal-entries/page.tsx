@@ -110,6 +110,14 @@ export default function JournalEntriesPage() {
       debit: "",
       credit: "",
     },
+    {
+      id: crypto.randomUUID(),
+      accountId: "",
+      partnerId: "",
+      description: "",
+      debit: "",
+      credit: "",
+    },
   ]);
 
   // Fetch data on mount
@@ -227,6 +235,14 @@ export default function JournalEntriesPage() {
     setAccountingDate(new Date().toISOString().split("T")[0]);
     setReference("");
     setLines([
+      {
+        id: crypto.randomUUID(),
+        accountId: "",
+        partnerId: "",
+        description: "",
+        debit: "",
+        credit: "",
+      },
       {
         id: crypto.randomUUID(),
         accountId: "",
