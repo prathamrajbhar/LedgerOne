@@ -31,7 +31,6 @@ export async function middleware(request: NextRequest) {
   const workspaceRoutes = [
     "/workspace",
     "/dashboard",
-    "/users",
     "/contacts",
     "/products",
     "/accounts",
@@ -54,21 +53,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL("/portal/home", request.url));
     }
 
-    // ADMINISTRATOR-only routes per docs/rbac.md:
-    // - User Management (/users/*)
-    // - Product Categories (/products/categories)
-    // - System Settings (/settings)
-    const administratorOnlyRoutes = [
-      "/users",                    // User Management section
-      "/products/categories",       // Product Categories (ACCOUNTANT cannot see)
-      "/settings"                  // System Settings
-    ];
-
-    const isAdministratorOnly = administratorOnlyRoutes.some((route) =>
-      pathname.startsWith(route)
-    );
-
-    if (isAdministratorOnly && userRole !== "ADMINISTRATOR") {
+    // ADMINISTRATOR-only routes per docs/rbac.md
+    // All routes under /settings/* are ADMINISTRATOR only
+    if (pathname.startsWith("/settings") && userRole !== "ADMINISTRATOR") {
       // ACCOUNTANT trying to access ADMINISTRATOR-only routes
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
