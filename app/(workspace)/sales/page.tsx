@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Plus, FileText, CheckCircle } from "lucide-react";
+import { Plus, FileText, CheckCircle, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { getSalesOrdersAction, confirmSalesOrderAction, createInvoiceFromSalesOrderAction } from "@/app/actions/sales.actions";
 import { SalesOrderForm } from "./sales-order-form";
@@ -19,9 +21,11 @@ interface SalesOrderItem {
   status: string;
   total: unknown;
   lines?: unknown[];
+  invoices?: Array<{ id: string; invoiceNumber: string; status: string }>;
 }
 
 export default function SalesOrdersPage() {
+  const router = useRouter();
   const [salesOrders, setSalesOrders] = React.useState<SalesOrderItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -72,7 +76,8 @@ export default function SalesOrdersPage() {
       const result = await createInvoiceFromSalesOrderAction(id);
       if (result.success) {
         toast.success("Invoice created successfully from sales order");
-        loadSalesOrders();
+        await loadSalesOrders();
+        router.push("/invoices");
       } else {
         toast.error(result.error || "Failed to create invoice");
       }
@@ -139,51 +144,60 @@ export default function SalesOrdersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {salesOrders.map((so) => (
-                <tr key={so.id} className="hover:bg-primary-light/30">
-                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{so.soNumber}</td>
-                  <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer?.name || "N/A"}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{formatDate(so.orderDate)}</td>
-                  <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines?.length || 0}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    ₹{Number(so.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <StatusBadge status={so.status} />
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      {so.status === "DRAFT" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleConfirmOrder(so.id)}
-                          disabled={actionLoading === so.id}
-                          className="gap-1.5"
-                        >
-                          <CheckCircle className="h-3.5 w-3.5" />
-                          {actionLoading === so.id ? "Confirming..." : "Confirm"}
-                        </Button>
-                      )}
-                      {so.status === "CONFIRMED" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateInvoice(so.id)}
-                          disabled={actionLoading === so.id}
-                          className="gap-1.5 text-navy border-navy hover:bg-navy hover:text-white"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                          {actionLoading === so.id ? "Creating..." : "Create Invoice"}
-                        </Button>
-                      )}
-                      {so.status === "INVOICED" && (
-                        <span className="text-xs text-muted-foreground">Invoiced</span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {salesOrders.map((so) => {
+                const isInvoiced = so.status === "INVOICED" || (so.invoices && so.invoices.length > 0);
+                return (
+                  <tr key={so.id} className="hover:bg-primary-light/30">
+                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{so.soNumber}</td>
+                    <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer?.name || "N/A"}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{formatDate(so.orderDate)}</td>
+                    <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines?.length || 0}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                      ₹{Number(so.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <StatusBadge status={isInvoiced ? "INVOICED" : so.status} />
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {so.status === "DRAFT" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleConfirmOrder(so.id)}
+                            disabled={actionLoading === so.id}
+                            className="gap-1.5"
+                          >
+                            <CheckCircle className="h-3.5 w-3.5" />
+                            {actionLoading === so.id ? "Confirming..." : "Confirm"}
+                          </Button>
+                        )}
+                        {so.status === "CONFIRMED" && !isInvoiced && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCreateInvoice(so.id)}
+                            disabled={actionLoading === so.id}
+                            className="gap-1.5 text-navy border-navy hover:bg-navy hover:text-white"
+                          >
+                            <FileText className="h-3.5 w-3.5" />
+                            {actionLoading === so.id ? "Creating..." : "Create Invoice"}
+                          </Button>
+                        )}
+                        {isInvoiced && (
+                          <Link
+                            href="/invoices"
+                            className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            View Invoice
+                          </Link>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -197,3 +211,4 @@ export default function SalesOrdersPage() {
     </div>
   );
 }
+

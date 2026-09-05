@@ -25,6 +25,11 @@ export function StatusBadge({ status, className, showIcon = true }: StatusBadgeP
       icon = <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-success" />;
       break;
 
+    case "INVOICED":
+      variant = "secondary";
+      icon = <FileText className="w-3.5 h-3.5 mr-1 text-teal" />;
+      break;
+
     case "PENDING":
     case "NOT_PAID":
     case "LOW_STOCK":

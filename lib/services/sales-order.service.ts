@@ -414,6 +414,13 @@ export class SalesOrderService {
             analyticAccount: true,
           },
         },
+        invoices: {
+          select: {
+            id: true,
+            invoiceNumber: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -448,6 +455,13 @@ export class SalesOrderService {
               product: true,
               taxRate: true,
               analyticAccount: true,
+            },
+          },
+          invoices: {
+            select: {
+              id: true,
+              invoiceNumber: true,
+              status: true,
             },
           },
         },
