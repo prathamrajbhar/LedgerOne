@@ -12,12 +12,12 @@ export async function getProductsSummary(searchQuery?: string) {
         isArchived: false,
         ...(searchQuery
           ? {
-              OR: [
-                { name: { contains: searchQuery, mode: "insensitive" } },
-                { material: { contains: searchQuery, mode: "insensitive" } },
-                { category: { name: { contains: searchQuery, mode: "insensitive" } } },
-              ],
-            }
+            OR: [
+              { name: { contains: searchQuery, mode: "insensitive" } },
+              { material: { contains: searchQuery, mode: "insensitive" } },
+              { category: { name: { contains: searchQuery, mode: "insensitive" } } },
+            ],
+          }
           : {}),
       },
       include: {
@@ -287,48 +287,3 @@ export async function getFinancialOverview() {
     return { success: false, error: "Failed to fetch financial overview from database" };
   }
 }
-
-/**
- * AI Chatbot Tool: Get active budget overrun warnings and health summary.
- */
-export async function getBudgetAdvisorSummaryTool() {
-  try {
-    const { aiBudgetAdvisorService } = await import("@/lib/services/ai-budget-advisor.service");
-    const summary = await aiBudgetAdvisorService.getBudgetHealthSummary();
-    const advice = await aiBudgetAdvisorService.getSmartBudgetAdvice();
-    return {
-      success: true,
-      totalActiveBudgets: summary.totalActiveBudgets,
-      overallPercentConsumed: `${summary.overallPercent}%`,
-      highRiskLinesCount: summary.highRiskAlerts.length,
-      alerts: summary.highRiskAlerts,
-      executiveAdvice: advice.adviceText,
-      recommendations: advice.recommendations,
-    };
-  } catch (error) {
-    console.error("Error in getBudgetAdvisorSummaryTool DB tool:", error);
-    return { success: false, error: "Failed to fetch budget advisor summary" };
-  }
-}
-
-/**
- * AI Chatbot Tool: Categorize transaction memo string to Chart of Accounts.
- */
-export async function categorizeMemoTool(memo: string, amount?: number) {
-  try {
-    const { aiTransactionCategorizerService } = await import("@/lib/services/ai-transaction-categorizer.service");
-    const result = await aiTransactionCategorizerService.categorizeTransaction({ memo, amount });
-    return {
-      success: true,
-      accountCode: result.accountCode,
-      accountName: result.accountName,
-      analyticAccountName: result.analyticAccountName || "General",
-      confidence: `${Math.round(result.confidence * 100)}%`,
-      reasoning: result.reasoning,
-    };
-  } catch (error) {
-    console.error("Error in categorizeMemoTool DB tool:", error);
-    return { success: false, error: "Failed to categorize transaction memo" };
-  }
-}
-

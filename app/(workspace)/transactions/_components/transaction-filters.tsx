@@ -2,9 +2,8 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, Sparkles } from "lucide-react";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AiCategorizerModal } from "@/components/ai/ai-categorizer-modal";
 
 export function TransactionFilters() {
   const router = useRouter();
@@ -12,7 +11,6 @@ export function TransactionFilters() {
   const [search, setSearch] = React.useState(searchParams.get("search") || "");
   const [status, setStatus] = React.useState(searchParams.get("status") || "");
   const [source, setSource] = React.useState(searchParams.get("source") || "");
-  const [aiModalOpen, setAiModalOpen] = React.useState(false);
 
   const handleFilter = () => {
     const params = new URLSearchParams();
@@ -75,16 +73,6 @@ export function TransactionFilters() {
           Filter
         </Button>
 
-        <Button
-          onClick={() => setAiModalOpen(true)}
-          size="sm"
-          variant="outline"
-          className="text-xs text-teal border-teal/40 hover:bg-teal/10 gap-1.5 font-semibold"
-        >
-          <Sparkles className="h-3.5 w-3.5" />
-          AI Categorize
-        </Button>
-
         {(search || status || source) && (
           <Button
             onClick={handleReset}
@@ -96,9 +84,6 @@ export function TransactionFilters() {
           </Button>
         )}
       </div>
-
-      <AiCategorizerModal open={aiModalOpen} onOpenChange={setAiModalOpen} />
     </div>
   );
 }
-
