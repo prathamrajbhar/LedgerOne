@@ -1,199 +1,466 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
-import { MessageCircle, X, Send, Bot, Sparkles, HelpCircle } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  Sparkles,
+  HelpCircle,
+  Database,
+  RefreshCw,
+  Box,
+  AlertTriangle,
+  Users,
+  TrendingUp,
+  FileText,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 
 interface Message {
+  id: string;
   role: "user" | "assistant";
   content: string;
+  isStreaming?: boolean;
 }
 
 const initialSuggestions = [
-  "How do I record a new furniture sale invoice?",
-  "How do I track low stock for dining chairs?",
-  "What is the difference between Customer & Vendor contact?",
-  "How to record a GST vendor bill payment?",
+  {
+    icon: Box,
+    text: "How many products do we have in stock?",
+    label: "Inventory Count",
+  },
+  {
+    icon: AlertTriangle,
+    text: "Which items are currently low on stock?",
+    label: "Low Stock Alert",
+  },
+  {
+    icon: Users,
+    text: "How many customers and vendors are registered?",
+    label: "Contacts Directory",
+  },
+  {
+    icon: TrendingUp,
+    text: "Show overall total revenue & net profit",
+    label: "Financial KPIs",
+  },
+  {
+    icon: FileText,
+    text: "What is our customer invoice & receivable total?",
+    label: "Invoices Summary",
+  },
 ];
+
+/**
+ * Render Markdown formatted content safely with visual badges and bullet lists.
+ */
+function FormattedMessage({ content }: { content: string }) {
+  const lines = content.split("\n");
+
+  return (
+    <div className="space-y-1.5 text-xs leading-relaxed">
+      {lines.map((line, lineIdx) => {
+        const trimmed = line.trim();
+        if (!trimmed) return <div key={lineIdx} className="h-1" />;
+
+        // Header 3 or Header 4
+        if (trimmed.startsWith("### ") || trimmed.startsWith("#### ")) {
+          const title = trimmed.replace(/^#{3,4}\s+/, "");
+          return (
+            <h4 key={lineIdx} className="font-bold text-navy text-[13px] mt-2 mb-1 flex items-center gap-1.5 border-b border-border/50 pb-1">
+              {parseInlineFormatting(title)}
+            </h4>
+          );
+        }
+
+        // Bullet items
+        if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
+          const itemText = trimmed.substring(2);
+          return (
+            <div key={lineIdx} className="flex items-start gap-1.5 pl-1 my-0.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal mt-1.5 flex-shrink-0" />
+              <span className="flex-1">{parseInlineFormatting(itemText)}</span>
+            </div>
+          );
+        }
+
+        // Regular line
+        return <p key={lineIdx}>{parseInlineFormatting(trimmed)}</p>;
+      })}
+    </div>
+  );
+}
+
+/**
+ * Helper to parse inline markdown like **bold**, `code`, and currency highlights
+ */
+function parseInlineFormatting(text: string) {
+  // Split by bold (**text**)
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+
+  return parts.map((part, idx) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      const boldText = part.slice(2, -2);
+      // Highlight numbers or currencies with a subtle badge styling if needed
+      return (
+        <strong key={idx} className="font-semibold text-navy bg-[#E8F0F7]/70 px-1 py-0.5 rounded text-[11.5px]">
+          {boldText}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
 
 export function HelpAssistantWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [processingStage, setProcessingStage] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const stageTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-scroll to bottom of message list
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    if (open) {
+      scrollToBottom();
+    }
+  }, [messages, open, loading, processingStage]);
+
+  // Handle step-by-step processing status messages
+  const startProcessingAnimation = () => {
+    setProcessingStage("Analyzing query...");
+
+    stageTimerRef.current = setTimeout(() => {
+      setProcessingStage("Querying LedgerOne Database...");
+      stageTimerRef.current = setTimeout(() => {
+        setProcessingStage("Formatting live insights...");
+      }, 700);
+    }, 600);
+  };
+
+  const clearProcessingAnimation = () => {
+    if (stageTimerRef.current) {
+      clearTimeout(stageTimerRef.current);
+    }
+    setProcessingStage("");
+  };
 
   const sendMessage = async (textToSend?: string) => {
     const text = textToSend || input;
-    if (!text.trim()) return;
+    if (!text.trim() || loading) return;
 
-    const userMessage: Message = { role: "user", content: text };
+    const userMsgId = `user-${Date.now()}`;
+    const userMessage: Message = { id: userMsgId, role: "user", content: text };
+
     setMessages((prev) => [...prev, userMessage]);
     if (!textToSend) setInput("");
     setLoading(true);
+    startProcessingAnimation();
 
     try {
       const response = await fetch("/api/help-assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({
+          messages: [...messages, userMessage].map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
       });
+
+      clearProcessingAnimation();
 
       if (!response.ok) {
         throw new Error("Failed to get response");
       }
 
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
-    } catch {
-      // Fallback friendly offline assistant response
-      let fallbackReply = "I can guide you through LedgerOne accounting workflows! ";
-      const lower = text.toLowerCase();
-      if (lower.includes("invoice") || lower.includes("sale")) {
-        fallbackReply =
-          "To create a Customer Invoice: Navigate to Invoices in the sidebar, click '+ New Invoice', select your customer (e.g. Modern Living Interiors), add furniture line items, review GST amounts, and click 'Confirm'.";
-      } else if (lower.includes("stock") || lower.includes("product") || lower.includes("chair")) {
-        fallbackReply =
-          "In Products & Inventory: You can check current stock counts, set reorder levels, and view items in 'Low Stock' (amber badge) or 'Out of Stock' (red badge). Click '+ New Product' to register new furniture items.";
-      } else if (lower.includes("payment") || lower.includes("bill")) {
-        fallbackReply =
-          "To record a Payment: Open the Invoice or Vendor Bill, click 'Record Payment', choose the bank/cash account (e.g., HDFC Bank Current), enter the received amount, and post the entry.";
-      } else {
-        fallbackReply =
-          "LedgerOne handles double-entry bookkeeping, furniture stock management, GST invoicing, and financial reports. You can ask me how to perform any specific action in the app!";
-      }
+      const rawReply = data.message || "I could not retrieve an answer at this time.";
 
-      setMessages((prev) => [...prev, { role: "assistant", content: fallbackReply }]);
+      // Add typewriter streaming effect
+      const botMsgId = `bot-${Date.now()}`;
+      setMessages((prev) => [...prev, { id: botMsgId, role: "assistant", content: "", isStreaming: true }]);
+
+      streamText(botMsgId, rawReply);
+    } catch {
+      clearProcessingAnimation();
+      const botMsgId = `bot-err-${Date.now()}`;
+      const fallbackReply =
+        "I am currently having trouble reaching the database route. Please ensure your LedgerOne server is running smoothly.";
+      setMessages((prev) => [...prev, { id: botMsgId, role: "assistant", content: fallbackReply }]);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-navy text-white shadow-lg hover:bg-navy-hover transition-all hover:scale-105 active:scale-95 group border-2 border-white/80"
-        aria-label="Open Help Assistant"
-      >
-        <MessageCircle className="h-5 w-5" />
-        <span className="sr-only">Help Assistant</span>
-      </button>
-    );
-  }
+  // Stream text character by character for realistic AI effect
+  const streamText = (msgId: string, fullText: string) => {
+    let index = 0;
+    const chunkSize = 3; // stream 3 chars at a time for smooth speed
+
+    const interval = setInterval(() => {
+      index += chunkSize;
+      if (index >= fullText.length) {
+        index = fullText.length;
+        clearInterval(interval);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msgId ? { ...m, content: fullText, isStreaming: false } : m))
+        );
+      } else {
+        const partial = fullText.slice(0, index);
+        setMessages((prev) =>
+          prev.map((m) => (m.id === msgId ? { ...m, content: partial, isStreaming: true } : m))
+        );
+      }
+    }, 15);
+  };
+
+  const handleClearHistory = () => {
+    setMessages([]);
+  };
 
   return (
-    <Card className="fixed bottom-5 right-5 z-50 w-96 max-w-[calc(100vw-2.5rem)] h-[520px] flex flex-col shadow-2xl border border-border bg-white rounded-2xl overflow-hidden animate-in slide-in-from-bottom-5">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
-        <div className="flex items-center gap-2">
-          <div className="p-1 rounded-md bg-teal/30 text-teal-light">
-            <Bot className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-semibold leading-tight">LedgerOne Assistant</h3>
-            <p className="text-[10px] text-white/70">Accounting & ERP Guide</p>
-          </div>
-        </div>
+    <>
+      {/* Floating Toggle Button */}
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2">
         <button
-          onClick={() => setOpen(false)}
-          className="p-1 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          onClick={() => setOpen(!open)}
+          className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-navy via-[#1B3B5F] to-navy text-white shadow-[0_10px_25px_rgba(22,50,79,0.4),0_0_15px_rgba(22,124,128,0.25)] hover:shadow-[0_15px_35px_rgba(22,50,79,0.5),0_0_25px_rgba(22,124,128,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-2 border-teal/40 relative group ${
+            open ? "rotate-90 !from-slate-800 !to-slate-900 border-white/50" : ""
+          }`}
+          aria-label={open ? "Close Help Assistant" : "Open Help Assistant"}
         >
-          <X className="h-4 w-4" />
+          {open ? (
+            <X className="h-6 w-6 text-white transition-transform" />
+          ) : (
+            <>
+              <MessageCircle className="h-6 w-6 text-white group-hover:scale-110 transition-transform drop-shadow" />
+              <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4.5 w-4.5 bg-teal text-[9px] font-bold text-white items-center justify-center border border-white/80 shadow-xs">
+                  AI
+                </span>
+              </span>
+            </>
+          )}
         </button>
       </div>
 
-      {/* Message History */}
-      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#F9FAFB]">
-        {messages.length === 0 && (
-          <div className="space-y-3 pt-2">
-            <div className="p-3 rounded-xl bg-white border border-border text-xs text-foreground space-y-1">
-              <div className="flex items-center gap-1.5 font-semibold text-navy">
-                <Sparkles className="h-3.5 w-3.5 text-teal" />
-                <span>Hello there!</span>
-              </div>
-              <p className="text-muted-foreground leading-relaxed">
-                I&apos;m your LedgerOne accounting assistant. Ask me anything about managing your furniture business, invoices, payments, or reports.
-              </p>
+      {/* Main Chat Widget Drawer Container with Premium Backdrop Elevation & Shadow */}
+      <Card
+        className={`fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2.5rem)] h-[600px] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border-2 border-navy/20 hover:border-teal/40 bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-out origin-bottom-right ${
+          open
+            ? "scale-100 opacity-100 translate-y-0 pointer-events-auto"
+            : "scale-95 opacity-0 translate-y-4 pointer-events-none"
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-navy via-[#1B3B5F] to-navy text-white shadow-md border-b border-teal/20">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-teal/30 text-teal-light border border-teal/40 shadow-xs">
+              <Bot className="h-5 w-5" />
             </div>
-
-            <div className="space-y-1.5">
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
-                Common Inquiries
-              </span>
-              <div className="flex flex-col gap-1.5">
-                {initialSuggestions.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => sendMessage(item)}
-                    className="text-left text-xs p-2 rounded-lg bg-white border border-border hover:border-teal/40 hover:bg-[#E8F0F7]/40 text-foreground transition-all flex items-start gap-2"
-                  >
-                    <HelpCircle className="h-3.5 w-3.5 text-teal mt-0.5 flex-shrink-0" />
-                    <span>{item}</span>
-                  </button>
-                ))}
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-bold leading-tight tracking-wide drop-shadow-xs">LedgerOne AI Assistant</h3>
+                <span className="flex items-center gap-1 text-[9px] font-semibold bg-emerald-500/25 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-400/40 shadow-2xs">
+                  <Database className="h-2.5 w-2.5 text-emerald-400" />
+                  <span>Live DB</span>
+                </span>
               </div>
+              <p className="text-[10px] text-white/80 mt-0.5 font-medium">Real-time Accounting & ERP Intelligence</p>
             </div>
           </div>
-        )}
 
-        {messages.map((msg, idx) => (
-          <div
-            key={idx}
-            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            <div
-              className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-navy text-white rounded-br-none shadow-xs"
-                  : "bg-white text-foreground border border-border rounded-bl-none shadow-xs"
-              }`}
+          <div className="flex items-center gap-1">
+            {messages.length > 0 && (
+              <button
+                onClick={handleClearHistory}
+                title="Clear Chat History"
+                className="p-1.5 rounded-md text-white/75 hover:text-white hover:bg-white/15 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(false)}
+              className="p-1.5 rounded-md text-white/75 hover:text-white hover:bg-white/15 transition-colors"
             >
-              {msg.content}
-            </div>
+              <X className="h-4 w-4" />
+            </button>
           </div>
-        ))}
+        </div>
 
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-border rounded-xl px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
-              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce" />
-              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce [animation-delay:0.2s]" />
-              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce [animation-delay:0.4s]" />
-              <span>Thinking...</span>
+        {/* Message History Container with Distinct Slate Tint */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-[#EEF2F6]">
+          {messages.length === 0 && (
+            <div className="space-y-3.5 pt-1 animate-in fade-in duration-300">
+              {/* Welcome Banner */}
+              <div className="p-3.5 rounded-xl bg-white border border-navy/15 shadow-sm space-y-1.5 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 font-bold text-navy text-xs">
+                  <Sparkles className="h-4 w-4 text-teal animate-pulse" />
+                  <span>Hello! I am your LedgerOne AI ERP Assistant</span>
+                </div>
+                <p className="text-[11.5px] text-muted-foreground leading-relaxed">
+                  I have direct access to your database to help you query products, stock levels, sales orders, invoices, contacts, and financial summaries.
+                </p>
+                <div className="flex items-center gap-1.5 pt-1 text-[10px] text-emerald-700 font-medium">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <span>Sensitive auth credentials & passwords are protected.</span>
+                </div>
+              </div>
+
+              {/* Quick Query Suggestions */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-bold text-navy/75 uppercase tracking-wider px-1 flex items-center gap-1">
+                  <Database className="h-3 w-3 text-teal" />
+                  <span>Live Database Queries</span>
+                </span>
+
+                <div className="grid grid-cols-1 gap-1.5">
+                  {initialSuggestions.map((item, idx) => {
+                    const IconComponent = item.icon;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => sendMessage(item.text)}
+                        className="text-left text-xs p-2.5 rounded-xl bg-white border border-navy/15 hover:border-teal hover:bg-[#E8F0F7] text-foreground transition-all duration-200 flex items-center justify-between group shadow-xs hover:shadow-sm"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="p-1.5 rounded-md bg-teal/15 text-teal group-hover:bg-teal group-hover:text-white transition-colors flex-shrink-0">
+                            <IconComponent className="h-3.5 w-3.5" />
+                          </div>
+                          <span className="truncate text-[11.5px] font-medium text-navy">{item.text}</span>
+                        </div>
+                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-teal transition-colors flex-shrink-0 ml-1" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Message List */}
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-in fade-in duration-200`}
+            >
+              <div
+                className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-xs ${
+                  msg.role === "user"
+                    ? "bg-gradient-to-r from-navy via-[#16324F] to-[#102A43] text-white rounded-br-xs shadow-md border border-navy/30"
+                    : "bg-white text-foreground border border-navy/15 rounded-bl-xs shadow-sm hover:shadow-md transition-shadow"
+                }`}
+              >
+                {msg.role === "assistant" ? (
+                  <div>
+                    <FormattedMessage content={msg.content} />
+                    {msg.isStreaming && (
+                      <span className="inline-block w-1.5 h-3 bg-teal ml-1 animate-pulse align-middle" />
+                    )}
+                  </div>
+                ) : (
+                  <p className="leading-relaxed">{msg.content}</p>
+                )}
+              </div>
+            </div>
+          ))}
+
+          {/* Step-by-Step Processing Status Animation */}
+          {loading && (
+            <div className="flex justify-start animate-in fade-in duration-200">
+              <div className="bg-white border border-border/80 rounded-2xl rounded-bl-xs px-3.5 py-2.5 text-xs text-navy/80 flex items-center gap-2.5 shadow-xs">
+                <div className="relative flex h-3 w-3 items-center justify-center">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-semibold text-[11px] text-teal">{processingStage || "Processing..."}</span>
+                  <span className="text-[9.5px] text-muted-foreground">Fetching database context</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Dynamic Context Action Chips (When chat has history) */}
+        {messages.length > 0 && !loading && (
+          <div className="px-3 py-1.5 bg-[#F1F5F9] border-t border-border/60 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button
+              onClick={() => sendMessage("How many products do we have in stock?")}
+              className="text-[10px] whitespace-nowrap px-2 py-1 rounded-lg bg-white border border-border text-navy hover:bg-teal/10 hover:border-teal/40 transition-colors flex items-center gap-1"
+            >
+              <Box className="h-2.5 w-2.5 text-teal" />
+              <span>Products</span>
+            </button>
+            <button
+              onClick={() => sendMessage("Which items are low on stock?")}
+              className="text-[10px] whitespace-nowrap px-2 py-1 rounded-lg bg-white border border-border text-navy hover:bg-teal/10 hover:border-teal/40 transition-colors flex items-center gap-1"
+            >
+              <AlertTriangle className="h-2.5 w-2.5 text-amber-500" />
+              <span>Low Stock</span>
+            </button>
+            <button
+              onClick={() => sendMessage("What is our total revenue and net profit?")}
+              className="text-[10px] whitespace-nowrap px-2 py-1 rounded-lg bg-white border border-border text-navy hover:bg-teal/10 hover:border-teal/40 transition-colors flex items-center gap-1"
+            >
+              <TrendingUp className="h-2.5 w-2.5 text-emerald-600" />
+              <span>Financials</span>
+            </button>
+            <button
+              onClick={() => sendMessage("What is our customer invoice & receivable total?")}
+              className="text-[10px] whitespace-nowrap px-2 py-1 rounded-lg bg-white border border-border text-navy hover:bg-teal/10 hover:border-teal/40 transition-colors flex items-center gap-1"
+            >
+              <FileText className="h-2.5 w-2.5 text-blue-600" />
+              <span>Invoices</span>
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Input Form */}
-      <div className="p-2.5 border-t border-border bg-white">
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            sendMessage();
-          }}
-          className="flex gap-1.5"
-        >
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask a question..."
-            disabled={loading}
-            className="h-9 text-xs"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            disabled={loading || !input.trim()}
-            className="h-9 w-9 p-0 flex-shrink-0 bg-navy hover:bg-navy-hover"
+        {/* Input Form */}
+        <div className="p-3 border-t border-border/80 bg-white">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              sendMessage();
+            }}
+            className="flex gap-2"
           >
-            <Send className="h-3.5 w-3.5" />
-          </Button>
-        </form>
-      </div>
-    </Card>
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about products, stock, invoices, revenue..."
+              disabled={loading}
+              className="h-10 text-xs focus-visible:ring-teal bg-[#F8FAFC]"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={loading || !input.trim()}
+              className="h-10 w-10 p-0 flex-shrink-0 bg-navy hover:bg-navy-hover transition-colors"
+            >
+              <Send className="h-4 w-4 text-white" />
+            </Button>
+          </form>
+        </div>
+      </Card>
+    </>
   );
 }
