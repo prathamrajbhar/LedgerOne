@@ -28,6 +28,7 @@ export interface AutoGenerateEntryInput {
   source: JournalEntrySource;
   journalId: string;
   accountingDate: Date;
+  tx?: Prisma.TransactionClient;
   lines: JournalEntryLineInput[];
   sourceDocumentId: string;
   userId: string;
@@ -104,7 +105,8 @@ export class JournalEntryService {
       );
     }
 
-    return prisma.$transaction(async (tx) => {
+    // Use provided transaction or create a new one
+    const createEntry = async (tx: Prisma.TransactionClient) => {
       // Generate entry number
       const entryNumber = await this.generateEntryNumber();
 
@@ -157,7 +159,14 @@ export class JournalEntryService {
       });
 
       return entry;
-    });
+    };
+
+    // Use provided transaction or create a new one
+    if (input.tx) {
+      return createEntry(input.tx);
+    } else {
+      return prisma.$transaction((tx) => createEntry(tx));
+    }
   }
 
   /**
