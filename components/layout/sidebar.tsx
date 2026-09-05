@@ -3,7 +3,6 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowRight, Armchair } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { navSections } from "./sidebar-items";
 
@@ -49,7 +48,7 @@ export function Sidebar({
           {navSections.map((section, idx) => (
             <div key={idx} className="space-y-1">
               {section.title && (
-                <div className="px-3 pb-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground/80">
+                <div className="px-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/80">
                   {section.title}
                 </div>
               )}
@@ -58,7 +57,9 @@ export function Sidebar({
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard" || pathname === "/"
-                    : pathname.startsWith(item.href);
+                    : item.href === "/reports"
+                    ? pathname === "/reports"
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
 
                 return (
                   <Link
@@ -68,7 +69,7 @@ export function Sidebar({
                     className={cn(
                       "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
                       isActive
-                        ? "bg-[#E8F0F7] text-navy font-semibold shadow-sm"
+                        ? "bg-[#E8F0F7] text-navy font-semibold shadow-xs"
                         : "text-muted-foreground hover:bg-[#F6F7F9] hover:text-foreground"
                     )}
                   >
@@ -94,31 +95,6 @@ export function Sidebar({
               })}
             </div>
           ))}
-
-          {/* Bottom Callout: Furniture Business */}
-          <div className="pt-2 px-1">
-            <div className="relative overflow-hidden rounded-xl border border-[#D0E2EC] bg-gradient-to-br from-[#EEF5FA] to-[#E5EFF7] p-3.5 text-navy">
-              <div className="pr-10">
-                <p className="text-[10px] uppercase font-bold tracking-wider text-teal">
-                  Industry Focus
-                </p>
-                <p className="text-xs font-semibold leading-tight text-navy mt-0.5">
-                  Manage your <span className="underline decoration-teal">Furniture Business</span> with Confidence
-                </p>
-              </div>
-
-              <div className="absolute right-2.5 top-3 text-teal/40">
-                <Armchair className="h-10 w-10 stroke-[1.5]" />
-              </div>
-
-              <div className="mt-2.5 flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground font-medium">ERP Suite</span>
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-navy text-white hover:bg-navy-hover transition-colors">
-                  <ArrowRight className="h-3 w-3" />
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </aside>
     </>

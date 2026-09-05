@@ -708,7 +708,7 @@ export function DashboardClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search transactions..."
-              className="h-9 w-full rounded-lg border border-border bg-surface px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+              className="h-9 w-full rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
             />
           </div>
 
@@ -716,7 +716,7 @@ export function DashboardClient({
             {/* Categories Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
+                <button className="h-9 px-3 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
                   <span>{filterCategory}</span>
                   <span className="text-muted-foreground">▾</span>
                 </button>
@@ -740,7 +740,7 @@ export function DashboardClient({
             {/* Statuses Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
+                <button className="h-9 px-3 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
                   <span>{filterStatus}</span>
                   <span className="text-muted-foreground">▾</span>
                 </button>

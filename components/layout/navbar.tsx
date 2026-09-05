@@ -98,11 +98,9 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <Link
             href="/notifications"
             className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground hover:bg-surface-subtle transition-colors"
+            title="Notifications"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-xs">
-              3
-            </span>
           </Link>
 
           {/* User Profile Dropdown */}

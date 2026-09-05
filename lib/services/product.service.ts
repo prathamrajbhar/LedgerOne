@@ -172,6 +172,8 @@ export class ProductService {
       },
     });
 
+    // select * from product where 
+
     if (!product) {
       throw new NotFoundError("Product not found");
     }

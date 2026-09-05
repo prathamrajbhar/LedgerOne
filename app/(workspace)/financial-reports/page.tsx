@@ -211,7 +211,7 @@ export default function FinancialReportsPage() {
                   type="date"
                   value={plStartDate}
                   onChange={(e) => setPlStartDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-input rounded-md bg-background"
+                  className="w-full px-3 py-1.5 text-xs border border-border rounded-md bg-white text-foreground"
                 />
               </div>
               <div className="flex-1">
@@ -222,7 +222,7 @@ export default function FinancialReportsPage() {
                   type="date"
                   value={plEndDate}
                   onChange={(e) => setPlEndDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-input rounded-md bg-background"
+                  className="w-full px-3 py-1.5 text-xs border border-border rounded-md bg-white text-foreground"
                 />
               </div>
               <Button
@@ -327,7 +327,7 @@ export default function FinancialReportsPage() {
                   type="date"
                   value={bsDate}
                   onChange={(e) => setBsDate(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs border border-input rounded-md bg-background"
+                  className="w-full px-3 py-1.5 text-xs border border-border rounded-md bg-white text-foreground"
                 />
               </div>
               <Button

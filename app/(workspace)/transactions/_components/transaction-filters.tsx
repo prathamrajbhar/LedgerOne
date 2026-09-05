@@ -37,7 +37,7 @@ export function TransactionFilters() {
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleFilter()}
           placeholder="Search by entry #, invoice, bill..."
-          className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-surface text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
         />
       </div>
 
@@ -45,7 +45,7 @@ export function TransactionFilters() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
         >
           <option value="">All Status</option>
           <option value="DRAFT">Draft</option>
@@ -55,7 +55,7 @@ export function TransactionFilters() {
         <select
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-border bg-surface text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
         >
           <option value="">All Sources</option>
           <option value="MANUAL">Manual</option>
