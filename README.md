@@ -12,6 +12,7 @@
 ## 📋 Table of Contents
 
 - [Overview](#overview)
+- [Admin Screenshots](#-admin-screenshots)
 - [Features](#features)
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
@@ -39,6 +40,29 @@ LedgerOne replaces fragmented spreadsheets and manual ledgers with a structured,
 - 💬 **Help Assistant** - FAQ-based chatbot for product guidance
 
 **Architecture:** Modular Monolith - Single Next.js application with clearly bounded domain modules.
+
+---
+
+## 📸 Admin Screenshots
+
+> Add the final screenshot assets in a folder like `docs/screenshots/` and update the image links below when the files are ready for GitHub.
+
+| Module | Screenshot | Description |
+| --- | --- | --- |
+| Products & Inventory | ![Products & Inventory](docs/screenshots/products-inventory.png) | Product catalog, stock status, search, filters, and inventory overview. |
+| User & Access Management | ![User & Access Management](docs/screenshots/user-access-management.png) | Admin controls for user accounts, role assignment, status management, and associated entities. |
+| Purchase Orders | ![Purchase Orders](docs/screenshots/purchase-orders.png) | Purchase order listing with status tracking, totals, and confirmation workflow. |
+| Payments & Banking | ![Payments & Banking](docs/screenshots/payments-banking.png) | Payment records, bank transfers, cash transactions, and account reconciliation view. |
+| Profit & Loss | ![Profit & Loss](docs/screenshots/profit-loss.png) | Performance analysis with revenue, expenses, net loss, and account-level drilldown. |
+
+### Upcoming Vendor / Client Screenshots
+
+| Section | Status | Notes |
+| --- | --- | --- |
+| Vendor Portal | Planned | Add invoice, bill, and payment screens after vendor mockups are finalized. |
+| Customer Portal | Planned | Add customer invoice and payment portal screenshots. |
+| Mobile Views | Planned | Add responsive admin and portal mobile layouts. |
+| Settings & Profile | Planned | Add profile, company settings, and fiscal year configuration screens. |
 
 ---
 
