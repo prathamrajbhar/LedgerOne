@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { createSalesOrderAction } from "@/app/actions/sales.actions";
@@ -29,12 +30,15 @@ interface LineItem {
 interface CustomerOption {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
   type: string;
 }
 
 interface ProductOption {
   id: string;
   name: string;
+  sku?: string | null;
   salesPrice: number | string;
 }
 
@@ -50,6 +54,25 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
   const [lines, setLines] = React.useState<LineItem[]>([
     { productId: "", description: "", quantity: 1, unitPrice: 0 },
   ]);
+
+  const customerOptions = React.useMemo(() => {
+    return customers.map((c) => ({
+      value: c.id,
+      label: c.name,
+      subLabel: [c.email, c.phone].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [customers]);
+
+  const productOptions = React.useMemo(() => {
+    return products.map((p) => ({
+      value: p.id,
+      label: p.name,
+      subLabel: [
+        p.sku ? `SKU: ${p.sku}` : null,
+        p.salesPrice ? `₹${Number(p.salesPrice).toLocaleString("en-IN")}` : null,
+      ].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [products]);
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
@@ -213,23 +236,29 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Customer and Date */}
           <div className="grid grid-cols-2 gap-4">
-            <FormSelect
-              label="Customer"
-              required
-              value={customerId}
-              onValueChange={(value) => {
-                setCustomerId(value);
-                if (errors.customerId) {
-                  const newErrors = { ...errors };
-                  delete newErrors.customerId;
-                  setErrors(newErrors);
-                }
-              }}
-              options={customers.map((c) => ({ value: c.id, label: c.name }))}
-              placeholder="Select customer"
-              error={errors.customerId}
-              disabled={loadingData}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground block">
+                Customer <span className="text-destructive">*</span>
+              </label>
+              <SearchableSelect
+                value={customerId}
+                onChange={(value) => {
+                  setCustomerId(value);
+                  if (errors.customerId) {
+                    const newErrors = { ...errors };
+                    delete newErrors.customerId;
+                    setErrors(newErrors);
+                  }
+                }}
+                options={customerOptions}
+                placeholder="Select customer"
+                searchPlaceholder="Search customer by name, email..."
+                disabled={loadingData}
+              />
+              {errors.customerId && (
+                <p className="text-xs text-destructive mt-1">{errors.customerId}</p>
+              )}
+            </div>
 
             <FormInput
               label="Order Date"
@@ -267,17 +296,24 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
             <div className="space-y-3 border border-border rounded-lg p-4 bg-gray-50">
               {lines.map((line, index) => (
                 <div key={index} className="grid grid-cols-12 gap-3 items-start bg-white p-3 rounded-lg border border-border">
-                  <div className="col-span-4">
-                    <FormSelect
-                      label="Product"
-                      required
+                  <div className="col-span-4 space-y-1.5">
+                    <label className="text-xs font-semibold text-foreground block">
+                      Product <span className="text-destructive">*</span>
+                    </label>
+                    <SearchableSelect
+                      size="sm"
                       value={line.productId}
-                      onValueChange={(value) => handleLineChange(index, "productId", value)}
-                      options={products.map((p) => ({ value: p.id, label: p.name }))}
+                      onChange={(value) => handleLineChange(index, "productId", value)}
+                      options={productOptions}
                       placeholder="Select product"
-                      error={errors[`line_${index}_product`]}
+                      searchPlaceholder="Search product by name, SKU..."
                       disabled={loadingData}
                     />
+                    {errors[`line_${index}_product`] && (
+                      <p className="text-xs text-destructive mt-1">
+                        {errors[`line_${index}_product`]}
+                      </p>
+                    )}
                   </div>
 
                   <div className="col-span-2">

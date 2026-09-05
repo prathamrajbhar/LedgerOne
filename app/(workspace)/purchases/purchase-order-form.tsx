@@ -13,13 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createPurchaseOrderAction, getAnalyticAccountsAction } from "@/app/actions/purchase.actions";
@@ -38,6 +32,8 @@ interface LineItem {
 interface VendorOption {
   id: string;
   name: string;
+  email?: string | null;
+  phone?: string | null;
 }
 
 interface ProductOption {
@@ -74,6 +70,33 @@ export function PurchaseOrderForm() {
       lineTotal: 0,
     },
   ]);
+
+  const vendorOptions = React.useMemo(() => {
+    return vendors.map((v) => ({
+      value: v.id,
+      label: v.name,
+      subLabel: [v.email, v.phone].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [vendors]);
+
+  const productOptions = React.useMemo(() => {
+    return products.map((p) => ({
+      value: p.id,
+      label: p.name,
+      subLabel: [
+        p.sku ? `SKU: ${p.sku}` : null,
+        p.cost ? `Cost: ₹${Number(p.cost).toLocaleString("en-IN")}` : null,
+      ].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [products]);
+
+  const analyticAccountOptions = React.useMemo(() => {
+    return analyticAccounts.map((a) => ({
+      value: a.id,
+      label: a.name,
+      subLabel: a.code ? `Code: ${a.code}` : undefined,
+    }));
+  }, [analyticAccounts]);
 
   React.useEffect(() => {
     if (open) {
@@ -248,18 +271,14 @@ export function PurchaseOrderForm() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="vendor">Vendor *</Label>
-                <Select value={vendorId} onValueChange={setVendorId}>
-                  <SelectTrigger id="vendor">
-                    <SelectValue placeholder="Select vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="vendor"
+                  value={vendorId}
+                  onChange={setVendorId}
+                  options={vendorOptions}
+                  placeholder="Select vendor"
+                  searchPlaceholder="Search vendor by name, email..."
+                />
               </div>
 
               <div className="space-y-2">
@@ -298,41 +317,27 @@ export function PurchaseOrderForm() {
                   <tbody className="divide-y">
                     {lines.map((line) => (
                       <tr key={line.id}>
-                        <td className="py-2 px-3">
-                          <Select
+                        <td className="py-2 px-3 min-w-[200px]">
+                          <SearchableSelect
+                            size="sm"
                             value={line.productId}
-                            onValueChange={(value) => updateLine(line.id, "productId", value)}
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select product" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {products.map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            onChange={(value) => updateLine(line.id, "productId", value)}
+                            options={productOptions}
+                            placeholder="Select product"
+                            searchPlaceholder="Search product by name, SKU..."
+                          />
                         </td>
-                        <td className="py-2 px-3">
-                          <Select
+                        <td className="py-2 px-3 min-w-[180px]">
+                          <SearchableSelect
+                            size="sm"
                             value={line.analyticAccountId}
-                            onValueChange={(value) =>
+                            onChange={(value) =>
                               updateLine(line.id, "analyticAccountId", value)
                             }
-                          >
-                            <SelectTrigger className="h-8 text-xs">
-                              <SelectValue placeholder="Select account" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {analyticAccounts.map((account) => (
-                                <SelectItem key={account.id} value={account.id}>
-                                  {account.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                            options={analyticAccountOptions}
+                            placeholder="Select account"
+                            searchPlaceholder="Search account..."
+                          />
                         </td>
                         <td className="py-2 px-3">
                           <Input

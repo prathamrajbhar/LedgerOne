@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   getVendorBillsAction,
   createStandaloneBillAction,
@@ -329,6 +330,37 @@ export default function VendorBillsPage() {
       grandTotal: finalGrandTotal,
     };
   }, [formLines, taxRates]);
+
+  // Memoized options for searchable dropdowns in create modal
+  const vendorOptions = React.useMemo(() => {
+    return vendors.map((v) => ({
+      value: v.id,
+      label: v.name,
+      subLabel: [v.email, v.phone].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [vendors]);
+
+  const purchaseOrderOptions = React.useMemo(() => {
+    const filtered = purchaseOrders.filter((po) => !formVendor || po.vendorId === formVendor);
+    return [
+      { value: "", label: "Direct Bill (No PO)" },
+      ...filtered.map((po) => ({
+        value: po.poNumber,
+        label: po.poNumber,
+      })),
+    ];
+  }, [purchaseOrders, formVendor]);
+
+  const productOptions = React.useMemo(() => {
+    return products.map((p) => ({
+      value: p.id,
+      label: p.name,
+      subLabel: [
+        p.sku ? `SKU: ${p.sku}` : null,
+        p.cost ? `Cost: ₹${Number(p.cost).toLocaleString("en-IN")}` : null,
+      ].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [products]);
 
   // Handle Add Vendor Bill submission
   const handleSaveBill = async (asDraft = false) => {
@@ -1224,18 +1256,21 @@ export default function VendorBillsPage() {
                   <label className="text-xs font-medium text-foreground block mb-1.5">
                     Vendor / Supplier <span className="text-destructive">*</span>
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={vendorOptions}
                     value={formVendor}
-                    onChange={(e) => setFormVendor(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
-                  >
-                    <option value="">Select Vendor...</option>
-                    {vendors.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => {
+                      setFormVendor(val);
+                      if (formPurchaseOrder) {
+                        const linkedPo = purchaseOrders.find((po) => po.poNumber === formPurchaseOrder);
+                        if (linkedPo && linkedPo.vendorId !== val) {
+                          setFormPurchaseOrder("");
+                        }
+                      }
+                    }}
+                    placeholder="Select Vendor..."
+                    searchPlaceholder="Search vendor by name, email..."
+                  />
                 </div>
 
                 {/* Purchase Order (Optional) */}
@@ -1243,20 +1278,13 @@ export default function VendorBillsPage() {
                   <label className="text-xs font-medium text-foreground block mb-1.5">
                     Purchase Order (PO Link)
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={purchaseOrderOptions}
                     value={formPurchaseOrder}
-                    onChange={(e) => setFormPurchaseOrder(e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
-                  >
-                    <option value="">Direct Bill (No PO)</option>
-                    {purchaseOrders
-                      .filter((po) => !formVendor || po.vendorId === formVendor)
-                      .map((po) => (
-                        <option key={po.id} value={po.poNumber}>
-                          {po.poNumber}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={(val) => setFormPurchaseOrder(val)}
+                    placeholder="Direct Bill (No PO)"
+                    searchPlaceholder="Search purchase order..."
+                  />
                 </div>
 
                 {/* Vendor Bill Number */}
@@ -1374,21 +1402,17 @@ export default function VendorBillsPage() {
                       return (
                         <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                           {/* Product / Material */}
-                          <td className="p-2.5">
-                            <select
+                          <td className="p-2.5 min-w-[220px]">
+                            <SearchableSelect
+                              size="sm"
+                              options={productOptions}
                               value={line.productId}
-                              onChange={(e) =>
-                                handleLineChange(idx, "productId", e.target.value)
+                              onChange={(val) =>
+                                handleLineChange(idx, "productId", val)
                               }
-                              className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal font-medium"
-                            >
-                              <option value="">Select item...</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} {p.sku ? `(${p.sku})` : ""}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Select item..."
+                              searchPlaceholder="Search product, material, SKU..."
+                            />
                           </td>
 
                           {/* Description */}
