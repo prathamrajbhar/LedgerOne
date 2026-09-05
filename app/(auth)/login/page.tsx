@@ -55,7 +55,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-6 sm:p-7 space-y-4 backdrop-blur-sm">
+    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-2xl sm:rounded-[24px] p-5 sm:p-7 space-y-4 backdrop-blur-sm">
       {/* Header with Title */}
       <div>
         <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
@@ -77,10 +77,12 @@ export default function LoginPage() {
             <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
+              name="username"
+              autoComplete="username"
               placeholder="e.g. cust006, admin001, or email"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
+              className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-sm sm:text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
               required
             />
           </div>
@@ -94,7 +96,7 @@ export default function LoginPage() {
             </label>
             <Link
               href="/forgot-password"
-              className="text-xs text-[#1F73B7] hover:underline font-medium"
+              className="text-xs text-[#1F73B7] hover:underline font-medium py-0.5"
             >
               Forgot password?
             </Link>
@@ -103,16 +105,18 @@ export default function LoginPage() {
             <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type={showPassword ? "text" : "password"}
+              name="password"
+              autoComplete="current-password"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none font-mono"
+              className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-sm sm:text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none font-mono"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3.5 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3.5 top-3.5 text-muted-foreground hover:text-foreground transition-colors p-0.5"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -125,6 +129,7 @@ export default function LoginPage() {
           <input
             type="checkbox"
             id="remember"
+            name="remember"
             checked={rememberMe}
             onChange={(e) => setRememberMe(e.target.checked)}
             className="h-4 w-4 rounded border-border text-[#193552] accent-[#193552] cursor-pointer"
@@ -141,7 +146,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+          className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-semibold h-11 rounded-xl shadow-sm text-xs sm:text-sm flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
         >
           {loading ? "Signing in..." : "Sign In"}
           {!loading && <ArrowRight className="h-3.5 w-3.5" />}
