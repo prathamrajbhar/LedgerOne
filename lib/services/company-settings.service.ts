@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-import { ValidationError } from "../utils/errors";
+import { PrismaClient, AccountType } from "@prisma/client";
+import { ValidationError, NotFoundError } from "../utils/errors";
 
 const prisma = new PrismaClient();
 
@@ -9,6 +9,7 @@ export interface UpdateCompanySettingsInput {
   address?: string;
   baseCurrency?: string;
   fiscalYearStartMonth?: number;
+  fiscalPeriodClosedUntil?: Date | null;
   poNumberPrefix?: string;
   billNumberPrefix?: string;
   soNumberPrefix?: string;
@@ -51,6 +52,44 @@ export class CompanySettingsService {
       throw new ValidationError("Company name cannot be empty");
     }
 
+    // Validate debtorsAccountId
+    if (input.debtorsAccountId !== undefined) {
+      const debtorsAccount = await prisma.chartOfAccount.findUnique({
+        where: { id: input.debtorsAccountId },
+      });
+
+      if (!debtorsAccount) {
+        throw new NotFoundError("Debtors account not found");
+      }
+
+      if (debtorsAccount.isArchived) {
+        throw new ValidationError("Cannot use archived account as debtors account");
+      }
+
+      if (debtorsAccount.type !== AccountType.ASSET) {
+        throw new ValidationError("Debtors account must be of type ASSET");
+      }
+    }
+
+    // Validate creditorsAccountId
+    if (input.creditorsAccountId !== undefined) {
+      const creditorsAccount = await prisma.chartOfAccount.findUnique({
+        where: { id: input.creditorsAccountId },
+      });
+
+      if (!creditorsAccount) {
+        throw new NotFoundError("Creditors account not found");
+      }
+
+      if (creditorsAccount.isArchived) {
+        throw new ValidationError("Cannot use archived account as creditors account");
+      }
+
+      if (creditorsAccount.type !== AccountType.LIABILITY) {
+        throw new ValidationError("Creditors account must be of type LIABILITY");
+      }
+    }
+
     const settings = await this.get();
 
     const updated = await prisma.companySettings.update({
@@ -61,11 +100,14 @@ export class CompanySettingsService {
         address: input.address?.trim(),
         baseCurrency: input.baseCurrency,
         fiscalYearStartMonth: input.fiscalYearStartMonth,
+        fiscalPeriodClosedUntil: input.fiscalPeriodClosedUntil,
         poNumberPrefix: input.poNumberPrefix,
         billNumberPrefix: input.billNumberPrefix,
         soNumberPrefix: input.soNumberPrefix,
         invoiceNumberPrefix: input.invoiceNumberPrefix,
         jeNumberPrefix: input.jeNumberPrefix,
+        debtorsAccountId: input.debtorsAccountId,
+        creditorsAccountId: input.creditorsAccountId,
       },
     });
 

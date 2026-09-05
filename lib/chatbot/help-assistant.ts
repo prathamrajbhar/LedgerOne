@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI, Content } from "@google/generative-ai";
 
 export interface ChatMessage {
   role: "user" | "assistant";
@@ -14,12 +14,19 @@ CRITICAL INSTRUCTIONS & ISOLATION RULES:
 4. Keep answers clear, structured, and helpful using Markdown format.`;
 
 export class HelpAssistant {
-  private client: Anthropic | null = null;
+  private client: GoogleGenerativeAI | null = null;
 
-  private getClient(): Anthropic {
+  private getClient(): GoogleGenerativeAI {
     if (!this.client) {
-      const apiKey = process.env.ANTHROPIC_API_KEY || "dummy_api_key";
-      this.client = new Anthropic({ apiKey });
+      const apiKey = process.env.GEMINI_API_KEY;
+
+      if (!apiKey) {
+        throw new Error(
+          "GEMINI_API_KEY must be configured to use Help Assistant"
+        );
+      }
+
+      this.client = new GoogleGenerativeAI(apiKey);
     }
     return this.client;
   }
@@ -27,35 +34,45 @@ export class HelpAssistant {
   async ask(message: string, conversationHistory: ChatMessage[] = []): Promise<string> {
     const client = this.getClient();
 
-    const messages: Anthropic.MessageParam[] = [
-      ...conversationHistory.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-      })),
-      {
-        role: "user",
-        content: message,
-      },
-    ];
+    // Convert conversation history to Gemini format
+    const history: Content[] = conversationHistory.map((msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      parts: [{ text: msg.content }],
+    }));
 
     try {
-      const response = await client.messages.create({
-        model: "claude-3-5-sonnet-20241022",
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages,
+      const model = client.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        systemInstruction: SYSTEM_PROMPT,
       });
 
-      const firstContent = response.content[0];
-      if (firstContent && firstContent.type === "text") {
-        return firstContent.text;
+      const chat = model.startChat({
+        history,
+      });
+
+      const result = await chat.sendMessage(message);
+      const response = result.response;
+      const text = response.text();
+
+      if (!text) {
+        throw new Error("Empty response from Gemini API");
       }
-      return "I'm sorry, I couldn't process your request.";
+
+      return text;
     } catch (error) {
-      if (process.env.NODE_ENV === "test" || !process.env.ANTHROPIC_API_KEY) {
-        return "I am the LedgerOne Help Assistant. I can help you navigate software features such as creating Sales Orders, Vendor Bills, and Journal Entries. For security, I do not have access to financial database records.";
+      console.error("Gemini API error:", error);
+
+      if (error instanceof Error) {
+        // Handle specific API errors
+        if (error.message.includes("API key")) {
+          throw new Error("Invalid or missing Gemini API key. Please check your configuration.");
+        }
+        if (error.message.includes("quota") || error.message.includes("rate limit")) {
+          throw new Error("API rate limit exceeded. Please try again later.");
+        }
       }
-      throw error;
+
+      throw new Error("Failed to get response from Help Assistant. Please try again.");
     }
   }
 }

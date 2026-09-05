@@ -677,6 +677,7 @@ model CompanySettings {
   address               String?  @db.Text
   baseCurrency          String   @default("USD")
   fiscalYearStartMonth  Int      @default(1)
+  fiscalPeriodClosedUntil DateTime? // Journal entries on or before this date are locked
   poNumberPrefix        String   @default("PO")
   billNumberPrefix      String   @default("BILL")
   soNumberPrefix        String   @default("SO")

@@ -8,6 +8,7 @@ import { PrismaClient, PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus
 import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, PaymentGatewayError, UnauthorizedError, NotFoundError } from "../utils/errors";
 import { journalEntryService } from "./journal-entry.service";
+import { emailService } from "../email/client";
 
 const prisma = new PrismaClient();
 
@@ -247,24 +248,54 @@ export class PaymentService {
       throw new ValidationError("Payment amount exceeds amount due");
     }
 
+    // ========================================================================
+    // PAYMENT GATEWAY INTEGRATION - NOT YET IMPLEMENTED
+    // ========================================================================
+    // This is a PLACEHOLDER implementation. Real payment processing will NOT work.
+    //
+    // To enable real Razorpay payment processing:
+    // 1. Uncomment the Razorpay API call below (lines marked with // REAL:)
+    // 2. Replace the placeholder gatewayOrderId with the real one from Razorpay
+    // 3. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your .env file
+    // 4. Test thoroughly with Razorpay test credentials before production
+    // 5. Handle API errors (network failures, invalid credentials, rate limits)
+    // 6. Add retry logic for transient failures
+    //
+    // Required Razorpay API call:
+    // REAL: const razorpayOrder = await razorpayClient.createOrder({
+    // REAL:   amount: input.amount.toNumber() * 100, // Convert to paise
+    // REAL:   currency: 'INR',
+    // REAL:   receipt: `INV-${invoice.invoiceNumber}`,
+    // REAL:   notes: { invoiceId: invoice.id, customerId: invoice.customerId },
+    // REAL: });
+    //
+    // REAL: gatewayOrderId = razorpayOrder.id
+    // REAL: checkoutUrl = razorpayOrder.short_url (for checkout UI)
+    // ========================================================================
+
+    // WARNING: Using placeholder order ID - payment processing will NOT work in production
+    const placeholderOrderId = `ORDER_PLACEHOLDER_${Date.now()}_${invoice.id}`;
+
+    console.warn(
+      `[PAYMENT GATEWAY] Creating transaction with PLACEHOLDER order ID: ${placeholderOrderId}. ` +
+      `Real payment processing is not configured. See payment.service.ts line 252 for implementation steps.`
+    );
+
     // Create gateway transaction record
     const transaction = await prisma.paymentGatewayTransaction.create({
       data: {
         invoiceId: invoice.id,
-        gatewayOrderId: `ORDER_${Date.now()}_${invoice.id}`, // Placeholder
+        gatewayOrderId: placeholderOrderId,
         amount: input.amount,
         status: PaymentGatewayStatus.INITIATED,
       },
     });
 
-    // TODO: Call Razorpay API to create actual order
-    // const razorpayOrder = await razorpay.orders.create({...})
-
     return {
       transactionId: transaction.id,
       gatewayOrderId: transaction.gatewayOrderId,
       amount: transaction.amount,
-      // checkoutUrl: razorpayOrder.checkoutUrl,
+      // REAL: checkoutUrl: razorpayOrder.short_url,
     };
   }
 
@@ -273,12 +304,41 @@ export class PaymentService {
    * Phase B of gateway payment flow
    */
   async confirmGatewayPayment(input: ConfirmGatewayPaymentInput) {
-    // TODO: Verify webhook signature
-    // if (!this.verifyRazorpaySignature(input.webhookSignature)) {
-    //   throw new PaymentGatewayError("Invalid webhook signature");
-    // }
+    // ========================================================================
+    // SECURITY: Webhook Signature Verification
+    // ========================================================================
+    // This validates that webhook requests actually come from Razorpay and not
+    // from a malicious actor attempting to confirm fake payments.
+    //
+    // If RAZORPAY_WEBHOOK_SECRET is configured, signature verification is ENFORCED.
+    // If not configured, a warning is logged but processing continues (DEVELOPMENT MODE ONLY).
+    //
+    // PRODUCTION REQUIREMENT: RAZORPAY_WEBHOOK_SECRET must be set in production.
+    // ========================================================================
 
-    return prisma.$transaction(async (tx) => {
+    if (process.env.RAZORPAY_WEBHOOK_SECRET) {
+      // Signature verification is configured - enforce it
+      const razorpayClient = await import("../payments/razorpay-client").then(m => m.razorpayClient);
+      const isValid = razorpayClient.verifyWebhookSignature({
+        signature: input.webhookSignature,
+        payload: JSON.stringify(input), // In real implementation, this should be the raw webhook body
+      });
+
+      if (!isValid) {
+        console.error("[PAYMENT GATEWAY] Invalid webhook signature detected - possible security threat");
+        throw new PaymentGatewayError("Invalid webhook signature");
+      }
+
+      console.log("[PAYMENT GATEWAY] Webhook signature verified successfully");
+    } else {
+      // No webhook secret configured - log warning
+      console.warn(
+        "[PAYMENT GATEWAY] RAZORPAY_WEBHOOK_SECRET not configured - webhook signature NOT verified. " +
+        "This is ONLY acceptable in development. MUST be configured in production for security."
+      );
+    }
+
+    const payment = await prisma.$transaction(async (tx) => {
       // Get transaction
       const transaction = await tx.paymentGatewayTransaction.findUnique({
         where: { id: input.gatewayTransactionId },
@@ -292,7 +352,7 @@ export class PaymentService {
       // Idempotency check
       if (transaction.gatewayPaymentId === input.gatewayPaymentId) {
         // Already processed
-        return transaction;
+        return null; // Signal that this was already processed
       }
 
       // Get company settings for account mappings
@@ -376,10 +436,49 @@ export class PaymentService {
         ],
       });
 
-      // TODO: Send confirmation email via Resend
-
       return payment;
     });
+
+    // If payment is null, it was already processed (idempotency)
+    if (!payment) {
+      return null;
+    }
+
+    // Send confirmation email (outside transaction, don't block on failure)
+    try {
+      // Fetch full invoice with customer details for email
+      const invoiceWithCustomer = await prisma.customerInvoice.findUnique({
+        where: { id: payment.invoiceId },
+        include: { customer: true },
+      });
+
+      if (invoiceWithCustomer) {
+        const paymentDate = new Date().toLocaleDateString("en-IN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+        await emailService.sendPaymentConfirmation(
+          invoiceWithCustomer.customer.name,
+          invoiceWithCustomer.customer.email,
+          invoiceWithCustomer.invoiceNumber,
+          invoiceWithCustomer.total.toFixed(2),
+          payment.amount.toFixed(2),
+          paymentDate,
+          invoiceWithCustomer.amountPaid.toFixed(2),
+          invoiceWithCustomer.amountDue.toFixed(2),
+          invoiceWithCustomer.id
+        );
+
+        console.log(`Payment confirmation email sent to ${invoiceWithCustomer.customer.email} for invoice ${invoiceWithCustomer.invoiceNumber}`);
+      }
+    } catch (emailError) {
+      // Log email failure but don't throw - payment is already confirmed
+      console.error("Failed to send payment confirmation email:", emailError);
+    }
+
+    return payment;
   }
 
   /**

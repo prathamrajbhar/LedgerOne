@@ -58,9 +58,43 @@ export async function POST(req: NextRequest) {
       }
 
       if (transaction) {
+        // ========================================================================
+        // VALIDATION: Payment ID must be present in webhook
+        // ========================================================================
+        // The payment ID is the unique identifier from Razorpay for this payment.
+        // Without it, we cannot:
+        // - Ensure idempotency (prevent duplicate processing)
+        // - Track the payment in Razorpay's system
+        // - Reconcile with Razorpay reports
+        //
+        // A missing payment ID indicates either:
+        // 1. Malformed webhook from Razorpay (should not happen)
+        // 2. Fake/malicious webhook attempt
+        // 3. Integration bug in how we're parsing the webhook
+        // ========================================================================
+
+        if (!paymentId) {
+          console.error(
+            "[PAYMENT WEBHOOK] Webhook missing payment ID. This is a critical error.",
+            {
+              eventType,
+              orderId,
+              transactionId: transaction.id,
+              payloadKeys: Object.keys(event.payload || {}),
+            }
+          );
+          return NextResponse.json(
+            {
+              error: "Invalid webhook: missing payment ID",
+              detail: "Payment ID is required for processing"
+            },
+            { status: 400 }
+          );
+        }
+
         await paymentService.confirmGatewayPayment({
           gatewayTransactionId: transaction.id,
-          gatewayPaymentId: paymentId || `PAY_${Date.now()}`,
+          gatewayPaymentId: paymentId,
           paymentMethod,
           webhookSignature: signature,
         });

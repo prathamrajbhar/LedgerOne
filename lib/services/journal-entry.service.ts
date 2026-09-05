@@ -37,6 +37,9 @@ export class JournalEntryService {
    * Create manual journal entry
    */
   async createManual(input: CreateJournalEntryInput) {
+    // Validate not in closed fiscal period
+    await this.validateNotInClosedPeriod(input.accountingDate);
+
     // Validate balance
     const { totalDebit, totalCredit } = this.calculateTotals(input.lines);
 
@@ -88,6 +91,9 @@ export class JournalEntryService {
    * Auto-generate journal entry from business transaction
    */
   async autoGenerate(input: AutoGenerateEntryInput) {
+    // Validate not in closed fiscal period
+    await this.validateNotInClosedPeriod(input.accountingDate);
+
     // Validate balance
     const { totalDebit, totalCredit } = this.calculateTotals(input.lines);
 
@@ -170,6 +176,9 @@ export class JournalEntryService {
       throw new ValidationError("Journal Entry is already posted");
     }
 
+    // Validate not in closed fiscal period
+    await this.validateNotInClosedPeriod(entry.accountingDate);
+
     // Verify balance
     if (!entry.totalDebit.equals(entry.totalCredit)) {
       throw new UnbalancedEntryError("Cannot post unbalanced entry");
@@ -193,14 +202,135 @@ export class JournalEntryService {
    * Reset entry to draft (for corrections)
    */
   async resetToDraft(entryId: string) {
-    // TODO: Add validation that entry is not in a closed period
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    // Validate not in closed fiscal period
+    await this.validateNotInClosedPeriod(entry.accountingDate);
+
     return prisma.journalEntry.update({
       where: { id: entryId },
       data: { status: JournalEntryStatus.DRAFT },
     });
   }
 
+  /**
+   * Delete a draft journal entry
+   */
+  async delete(entryId: string) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    if (entry.status === JournalEntryStatus.POSTED) {
+      throw new ValidationError("Cannot delete posted journal entries. Reset to draft first.");
+    }
+
+    // Validate not in closed fiscal period
+    await this.validateNotInClosedPeriod(entry.accountingDate);
+
+    return prisma.journalEntry.delete({
+      where: { id: entryId },
+    });
+  }
+
+  /**
+   * Update a draft journal entry
+   */
+  async update(entryId: string, input: CreateJournalEntryInput) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    if (entry.status === JournalEntryStatus.POSTED) {
+      throw new ValidationError("Cannot update posted journal entries. Reset to draft first.");
+    }
+
+    // Validate not in closed fiscal period (check both old and new dates)
+    await this.validateNotInClosedPeriod(entry.accountingDate);
+    await this.validateNotInClosedPeriod(input.accountingDate);
+
+    // Validate balance
+    const { totalDebit, totalCredit } = this.calculateTotals(input.lines);
+
+    if (!totalDebit.equals(totalCredit)) {
+      throw new UnbalancedEntryError(
+        `Journal Entry is unbalanced: Debit ${totalDebit.toString()} ≠ Credit ${totalCredit.toString()}`
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // Delete existing lines
+      await tx.journalEntryLine.deleteMany({
+        where: { journalEntryId: entryId },
+      });
+
+      // Update entry with new data
+      return tx.journalEntry.update({
+        where: { id: entryId },
+        data: {
+          journalId: input.journalId,
+          accountingDate: input.accountingDate,
+          totalDebit,
+          totalCredit,
+          lines: {
+            create: input.lines.map((line) => ({
+              accountId: line.accountId,
+              partnerId: line.partnerId,
+              debit: line.debit,
+              credit: line.credit,
+            })),
+          },
+        },
+        include: {
+          lines: {
+            include: {
+              account: true,
+              partner: true,
+            },
+          },
+        },
+      });
+    });
+  }
+
   // Private helpers
+
+  /**
+   * Validate that a journal entry accounting date is not in a closed fiscal period
+   */
+  private async validateNotInClosedPeriod(accountingDate: Date): Promise<void> {
+    const settings = await prisma.companySettings.findFirst();
+
+    if (settings?.fiscalPeriodClosedUntil) {
+      // Compare dates at day level (ignoring time component)
+      const closedUntil = new Date(settings.fiscalPeriodClosedUntil);
+      closedUntil.setHours(23, 59, 59, 999); // End of day
+
+      const entryDate = new Date(accountingDate);
+      entryDate.setHours(0, 0, 0, 0); // Start of day
+
+      if (entryDate <= closedUntil) {
+        const formattedDate = settings.fiscalPeriodClosedUntil.toISOString().split('T')[0];
+        throw new ValidationError(
+          `Cannot modify journal entries in closed fiscal periods. The fiscal period is closed until ${formattedDate}. Please contact your administrator to reopen the period if corrections are needed.`
+        );
+      }
+    }
+  }
 
   private calculateTotals(lines: JournalEntryLineInput[]): {
     totalDebit: Decimal;

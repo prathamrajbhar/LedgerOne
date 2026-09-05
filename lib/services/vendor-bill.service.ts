@@ -274,6 +274,33 @@ export class VendorBillService {
       throw new ValidationError("Purchase journal not found. Please configure journals first.");
     }
 
+    // Fetch company settings for Accounts Payable (Creditors) account
+    const companySettings = await prisma.companySettings.findFirst();
+
+    if (!companySettings?.creditorsAccountId) {
+      throw new ValidationError(
+        "Accounts Payable (Creditors) account not configured in Company Settings. Please configure it before confirming vendor bills."
+      );
+    }
+
+    // Fetch the creditors account (Accounts Payable - credit side)
+    const creditorsAccount = await prisma.chartOfAccount.findUnique({
+      where: { id: companySettings.creditorsAccountId },
+    });
+
+    if (!creditorsAccount) {
+      throw new ValidationError("Configured Accounts Payable account not found in Chart of Accounts");
+    }
+
+    // Fetch expense account (debit side)
+    const expenseAccount = await prisma.chartOfAccount.findFirst({
+      where: { type: "EXPENSES" },
+    });
+
+    if (!expenseAccount) {
+      throw new ValidationError("No expense account found in Chart of Accounts. Please add at least one EXPENSES type account.");
+    }
+
     const jeNumber = await this.generateJournalEntryNumber();
 
     await prisma.$transaction(async (tx) => {
@@ -282,6 +309,9 @@ export class VendorBillService {
         data: { status: DocumentStatus.CONFIRMED },
       });
 
+      // Generate Journal Entry #1:
+      // Line 1: Debit Expense Account (total) with partnerId = vendorId
+      // Line 2: Credit Accounts Payable/Creditors (total) with partnerId = vendorId
       await tx.journalEntry.create({
         data: {
           entryNumber: jeNumber,
@@ -296,13 +326,13 @@ export class VendorBillService {
           lines: {
             create: [
               {
-                accountId: purchaseJournal.defaultAccountId,
+                accountId: expenseAccount.id,
                 partnerId: bill.vendorId,
                 debit: bill.total,
                 credit: new Prisma.Decimal(0),
               },
               {
-                accountId: purchaseJournal.defaultAccountId,
+                accountId: creditorsAccount.id,
                 partnerId: bill.vendorId,
                 debit: new Prisma.Decimal(0),
                 credit: bill.total,

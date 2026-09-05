@@ -6,6 +6,7 @@
 import { PrismaClient, UserRole } from "@prisma/client";
 import { hash, compare } from "bcryptjs";
 import { ValidationError, UnauthorizedError, ConflictError } from "../utils/errors";
+import { emailService } from "../email/client";
 
 const prisma = new PrismaClient();
 
@@ -195,7 +196,7 @@ export class AuthService {
       throw new ConflictError("Contact already has portal access");
     }
 
-    // Generate temporary password (should be sent via email with reset link)
+    // Generate temporary password
     const tempPassword = this.generateTemporaryPassword();
     const hashedPassword = await hash(tempPassword, 12);
 
@@ -212,12 +213,37 @@ export class AuthService {
       },
     });
 
-    // TODO: Send email with credentials and password reset link
+    // Send portal invitation email with credentials
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    try {
+      await emailService.sendPortalInvitation(
+        contact.email,
+        user.loginId,
+        tempPassword,
+        contact.name
+      );
+      emailSent = true;
+      console.log(
+        `Portal invitation email sent successfully to ${contact.email} (Contact: ${contact.name}, LoginID: ${user.loginId})`
+      );
+    } catch (error) {
+      // Log email failure but don't fail the entire operation
+      // User is already created, admin can manually share credentials or resend
+      emailError = error instanceof Error ? error.message : "Unknown email error";
+      console.error(
+        `Failed to send portal invitation email to ${contact.email} (Contact: ${contact.name}, LoginID: ${user.loginId}):`,
+        emailError
+      );
+    }
 
     return {
       userId: user.id,
       loginId: user.loginId,
-      temporaryPassword: tempPassword, // Only for initial setup
+      temporaryPassword: tempPassword, // Only returned for initial setup/manual sharing
+      emailSent,
+      emailError,
     };
   }
 

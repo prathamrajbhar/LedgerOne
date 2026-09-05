@@ -30,8 +30,15 @@ export class RazorpayClient {
 
   private getClient(): Razorpay {
     if (!this.client) {
-      const keyId = process.env.RAZORPAY_KEY_ID || "dummy_key_id";
-      const keySecret = process.env.RAZORPAY_KEY_SECRET || "dummy_key_secret";
+      const keyId = process.env.RAZORPAY_KEY_ID;
+      const keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+      if (!keyId || !keySecret) {
+        throw new Error(
+          "RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be configured"
+        );
+      }
+
       this.client = new Razorpay({
         key_id: keyId,
         key_secret: keySecret,

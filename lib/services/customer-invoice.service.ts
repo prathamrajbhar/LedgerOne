@@ -460,19 +460,28 @@ export class CustomerInvoiceService {
       throw new ValidationError("No Sales Journal configured in Chart of Accounts");
     }
 
-    // Find Accounts Receivable (Asset) and Income Account
-    const arAccount = await prisma.chartOfAccount.findFirst({
-      where: { type: AccountType.ASSET, name: { contains: "Receivable" } },
-    }) || await prisma.chartOfAccount.findFirst({
-      where: { type: AccountType.ASSET },
+    // Fetch company settings for debtors account configuration
+    const settings = await prisma.companySettings.findFirst();
+    if (!settings?.debtorsAccountId) {
+      throw new ValidationError("Debtors account not configured in company settings");
+    }
+
+    // Find Accounts Receivable using configured debtorsAccountId
+    const arAccount = await prisma.chartOfAccount.findUnique({
+      where: { id: settings.debtorsAccountId }
     });
 
+    if (!arAccount) {
+      throw new ValidationError("Configured debtors account not found");
+    }
+
+    // Find Income Account
     const incomeAccount = await prisma.chartOfAccount.findFirst({
       where: { type: AccountType.INCOME },
     });
 
-    if (!arAccount || !incomeAccount) {
-      throw new ValidationError("Accounts Receivable or Income account missing in Chart of Accounts");
+    if (!incomeAccount) {
+      throw new ValidationError("Income account missing in Chart of Accounts");
     }
 
     // Confirm invoice and generate Journal Entry #1
