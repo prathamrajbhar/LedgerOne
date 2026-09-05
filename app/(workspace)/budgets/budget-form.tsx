@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, ArrowLeft, Loader2, PiggyBank, Calendar, BarChart3, Save } from "lucide-react";
 import { createBudgetAction } from "@/app/actions/budget.actions";
 import { toast } from "sonner";
@@ -54,6 +55,22 @@ export function BudgetForm({ users, analytics }: BudgetFormProps) {
       committedAmount: "",
     },
   ]);
+
+  const userOptions = React.useMemo(() => {
+    return users.map((u) => ({
+      value: u.id,
+      label: u.name || u.email,
+      subLabel: u.name ? u.email : undefined,
+    }));
+  }, [users]);
+
+  const analyticOptions = React.useMemo(() => {
+    return analytics.map((a) => ({
+      value: a.id,
+      label: `${a.name} (${a.type})`,
+      subLabel: `Allocation Type: ${a.type}`,
+    }));
+  }, [analytics]);
 
   const handleAddLine = () => {
     setLines((prev) => [
@@ -203,12 +220,18 @@ export function BudgetForm({ users, analytics }: BudgetFormProps) {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. FY 2024-25 Operating Budget"
             />
-            <FormSelect
-              label="Responsible Person"
-              value={responsibleId}
-              onValueChange={(val) => setResponsibleId(val)}
-              options={users.map((u) => ({ value: u.id, label: u.name || u.email }))}
-            />
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground block">
+                Responsible Person
+              </label>
+              <SearchableSelect
+                value={responsibleId}
+                onChange={(val) => setResponsibleId(val)}
+                options={userOptions}
+                placeholder="Select responsible person"
+                searchPlaceholder="Search user by name or email..."
+              />
+            </div>
             <FormInput
               label="Start Date"
               type="date"
@@ -255,15 +278,16 @@ export function BudgetForm({ users, analytics }: BudgetFormProps) {
                 key={idx}
                 className="flex flex-col sm:flex-row items-end gap-3 p-3.5 bg-surface-subtle/60 rounded-xl border border-border/70 hover:border-border-strong transition-all"
               >
-                <div className="w-full sm:flex-1">
-                  <FormSelect
-                    label={`Analytic Account #${idx + 1}`}
+                <div className="w-full sm:flex-1 space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground block">
+                    Analytic Account #{idx + 1}
+                  </label>
+                  <SearchableSelect
                     value={line.analyticAccountId}
-                    onValueChange={(val) => handleLineChange(idx, "analyticAccountId", val)}
-                    options={analytics.map((a) => ({
-                      value: a.id,
-                      label: `${a.name} (${a.type})`,
-                    }))}
+                    onChange={(val) => handleLineChange(idx, "analyticAccountId", val)}
+                    options={analyticOptions}
+                    placeholder="Select analytic account"
+                    searchPlaceholder="Search analytic account..."
                   />
                 </div>
                 <div className="w-full sm:w-36">
