@@ -47,7 +47,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 Edit Product
               </Button>
             </Link>
-            <Link href="/invoices">
+            <Link href="/sales/invoices/new">
               <Button size="sm" className="bg-navy hover:bg-navy-hover text-white gap-1.5 text-xs">
                 Add to Invoice
               </Button>

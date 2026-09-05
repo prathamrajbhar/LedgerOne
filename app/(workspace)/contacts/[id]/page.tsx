@@ -44,7 +44,7 @@ export default function ContactDetailPage({ params }: { params: { id: string } }
                 Edit Profile
               </Button>
             </Link>
-            <Link href="/invoices">
+            <Link href="/sales/invoices/new">
               <Button size="sm" className="bg-navy hover:bg-navy-hover text-white gap-1.5 text-xs">
                 <FileText className="h-3.5 w-3.5" />
                 Create Invoice

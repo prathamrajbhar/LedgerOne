@@ -183,11 +183,10 @@ async function main() {
   ];
 
   for (const product of products) {
-    await prisma.product.upsert({
-      where: { name: product.name },
-      update: {},
-      create: product,
-    });
+    const existing = await prisma.product.findFirst({ where: { name: product.name } });
+    if (!existing) {
+      await prisma.product.create({ data: product });
+    }
   }
   console.log(`✓ Created ${products.length} products`);
 

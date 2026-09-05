@@ -676,6 +676,58 @@ export class CustomerInvoiceService {
       totalPages: Math.ceil(total / limit),
     };
   }
+
+  /**
+   * List invoices for a contact (Portal)
+   */
+  async listForContact(contactId: string) {
+    return prisma.customerInvoice.findMany({
+      where: { customerId: contactId },
+      include: {
+        customer: true,
+        lines: {
+          include: {
+            product: true,
+          },
+        },
+        payments: true,
+      },
+      orderBy: { invoiceDate: "desc" },
+    });
+  }
+
+  async create(input: any) {
+    if (input.salesOrderId) {
+      return this.createFromSalesOrder(
+        input.salesOrderId,
+        input.invoiceDate ? new Date(input.invoiceDate) : undefined,
+        input.dueDate ? new Date(input.dueDate) : undefined,
+        input.userId || input.createdById
+      );
+    }
+    return this.createStandalone(input);
+  }
+
+  async recordPayment(input: {
+    invoiceId: string;
+    amount: number;
+    paymentMethod?: any;
+    paymentDate?: Date;
+    note?: string;
+    userId?: string;
+  }) {
+    const { paymentService } = await import("./payment.service");
+    const defaultUser = await prisma.user.findFirst();
+    return paymentService.recordManualPayment({
+      documentId: input.invoiceId,
+      documentType: "INVOICE",
+      amount: new Prisma.Decimal(input.amount),
+      paymentMethod: input.paymentMethod || "BANK",
+      paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
+      note: input.note,
+      userId: input.userId || defaultUser?.id || "",
+    });
+  }
 }
 
 export const customerInvoiceService = new CustomerInvoiceService();

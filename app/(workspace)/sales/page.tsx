@@ -21,12 +21,19 @@ export default function SalesOrdersPage() {
         title="Sales Orders"
         description="Furniture sales orders, quotations, confirmed order bookings, and fulfillment status."
         actions={
-          <Link href="/invoices">
-            <Button className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm">
-              <Plus className="h-4 w-4" />
-              New Sales Order
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/sales/invoices">
+              <Button variant="outline" className="text-xs border-border">
+                View Invoices
+              </Button>
+            </Link>
+            <Link href="/sales/orders/new">
+              <Button className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm">
+                <Plus className="h-4 w-4" />
+                New Sales Order
+              </Button>
+            </Link>
+          </div>
         }
       />
 

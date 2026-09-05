@@ -18,8 +18,9 @@ export async function requireAuth() {
 export async function requireRole(allowedRoles: string[]) {
   const session = await requireAuth();
 
-  if (!allowedRoles.includes(session.user.role)) {
-    throw new UnauthorizedError(`Role ${session.user.role} is not authorized for this action`);
+  const userRole = (session?.user as any)?.role;
+  if (!userRole || !allowedRoles.includes(userRole)) {
+    throw new UnauthorizedError(`Role ${userRole} is not authorized for this action`);
   }
 
   return session;

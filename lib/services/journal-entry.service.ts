@@ -200,6 +200,83 @@ export class JournalEntryService {
     });
   }
 
+  async list(
+    params: {
+      journalId?: string;
+      status?: JournalEntryStatus;
+      startDate?: Date;
+      endDate?: Date;
+      page?: number;
+      limit?: number;
+    } = {}
+  ) {
+    const { journalId, status, startDate, endDate, page = 1, limit = 50 } = params;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (journalId) where.journalId = journalId;
+    if (status) where.status = status;
+    if (startDate || endDate) {
+      where.accountingDate = {};
+      if (startDate) where.accountingDate.gte = startDate;
+      if (endDate) where.accountingDate.lte = endDate;
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.journalEntry.findMany({
+        where,
+        include: {
+          journal: { select: { id: true, name: true, type: true } },
+          createdBy: { select: { id: true, name: true } },
+          lines: {
+            include: {
+              account: { select: { id: true, name: true, type: true } },
+              partner: { select: { id: true, name: true } },
+            },
+          },
+        },
+        orderBy: { accountingDate: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.journalEntry.count({ where }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findById(id: string) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id },
+      include: {
+        journal: true,
+        createdBy: true,
+        vendorBill: true,
+        invoice: true,
+        lines: {
+          include: {
+            account: true,
+            partner: true,
+          },
+        },
+      },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    return entry;
+  }
+
   // Private helpers
 
   private calculateTotals(lines: JournalEntryLineInput[]): {

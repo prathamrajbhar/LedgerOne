@@ -47,10 +47,11 @@ const navSections: NavSection[] = [
     title: "Finance",
     items: [
       { name: "Transactions", href: "/transactions", icon: Receipt },
-      { name: "Invoices", href: "/invoices", icon: FileText },
+      { name: "Invoices", href: "/sales/invoices", icon: FileText },
       { name: "Payments", href: "/payments", icon: CreditCard },
       { name: "Expenses", href: "/expenses", icon: Wallet },
       { name: "Accounts", href: "/accounts", icon: BookOpen },
+      { name: "Journal Entries", href: "/accounting/journal-entries", icon: Receipt },
     ],
   },
   {
@@ -74,6 +75,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Reports", href: "/reports", icon: BarChart3 },
       { name: "Financial Reports", href: "/financial-reports", icon: TrendingUp },
+      { name: "Budgets", href: "/budgets", icon: TrendingUp },
     ],
   },
   {
@@ -81,6 +83,7 @@ const navSections: NavSection[] = [
     items: [
       { name: "Notifications", href: "/notifications", icon: Bell, badge: 3 },
       { name: "Settings", href: "/settings", icon: Settings },
+      { name: "User Management", href: "/settings/users", icon: Users },
     ],
   },
 ];

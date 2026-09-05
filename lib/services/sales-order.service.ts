@@ -334,9 +334,10 @@ export class SalesOrderService {
   /**
    * Confirm a draft sales order
    */
-  async confirm(input: ConfirmSalesOrderInput) {
+  async confirm(input: ConfirmSalesOrderInput | string) {
+    const id = typeof input === "string" ? input : input.id;
     const salesOrder = await prisma.salesOrder.findUnique({
-      where: { id: input.id },
+      where: { id },
     });
 
     if (!salesOrder) {
@@ -348,7 +349,7 @@ export class SalesOrderService {
     }
 
     return prisma.salesOrder.update({
-      where: { id: input.id },
+      where: { id },
       data: { status: "CONFIRMED" },
       include: {
         customer: true,

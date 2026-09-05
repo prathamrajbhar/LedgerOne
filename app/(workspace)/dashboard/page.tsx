@@ -470,7 +470,7 @@ export default function DashboardPage() {
           </CardTitle>
           <div className="grid grid-cols-3 gap-2.5">
             <Link
-              href="/invoices"
+              href="/sales/invoices/new"
               className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDF5FC] text-[#3478B9] group-hover:bg-navy group-hover:text-white transition-colors mb-2">
@@ -625,7 +625,7 @@ export default function DashboardPage() {
           <div className="space-y-2.5 pt-3">
             {/* Overdue Invoices */}
             <Link
-              href="/invoices"
+              href="/sales/invoices"
               className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle transition-colors group"
             >
               <div className="flex items-center gap-2.5">
@@ -645,7 +645,7 @@ export default function DashboardPage() {
 
             {/* Pending Invoices */}
             <Link
-              href="/invoices"
+              href="/sales/invoices"
               className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle transition-colors group"
             >
               <div className="flex items-center gap-2.5">

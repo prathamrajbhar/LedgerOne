@@ -528,6 +528,27 @@ export class VendorBillService {
       },
     });
   }
+
+  async recordPayment(input: {
+    billId: string;
+    amount: number;
+    paymentMethod?: any;
+    paymentDate?: Date;
+    note?: string;
+    userId?: string;
+  }) {
+    const { paymentService } = await import("./payment.service");
+    const defaultUser = await prisma.user.findFirst();
+    return paymentService.recordManualPayment({
+      documentId: input.billId,
+      documentType: "BILL",
+      amount: new Prisma.Decimal(input.amount),
+      paymentMethod: input.paymentMethod || "BANK",
+      paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
+      note: input.note,
+      userId: input.userId || defaultUser?.id || "",
+    });
+  }
 }
 
 export const vendorBillService = new VendorBillService();

@@ -17,7 +17,8 @@ export interface SignUpInput {
 }
 
 export interface LoginInput {
-  loginId: string;
+  loginId?: string;
+  email?: string;
   password: string;
 }
 
@@ -89,8 +90,12 @@ export class AuthService {
    * Login with credentials
    */
   async login(input: LoginInput) {
-    const user = await prisma.user.findUnique({
-      where: { loginId: input.loginId },
+    const user = await prisma.user.findFirst({
+      where: input.loginId
+        ? { loginId: input.loginId }
+        : input.email
+        ? { email: input.email }
+        : { loginId: "" },
       select: {
         id: true,
         loginId: true,
