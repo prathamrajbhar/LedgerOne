@@ -9,6 +9,7 @@ declare module "next-auth" {
     contactId?: string;
     contactType?: ContactType;
     contactName?: string;
+    mustChangePassword?: boolean;
   }
 
   interface Session {
@@ -20,6 +21,7 @@ declare module "next-auth" {
       contactId?: string;
       contactType?: ContactType;
       contactName?: string;
+      mustChangePassword?: boolean;
     };
   }
 }
@@ -31,5 +33,6 @@ declare module "next-auth/jwt" {
     contactId?: string;
     contactType?: ContactType;
     contactName?: string;
+    mustChangePassword?: boolean;
   }
 }

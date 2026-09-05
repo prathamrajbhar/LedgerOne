@@ -18,18 +18,20 @@ export default async function WorkspaceLayout({
 
   // Ensure user is Admin or Accountant (not Contact)
   if (session.user.role === UserRole.CONTACT) {
-    redirect("/portal/home");
+    redirect("/portal/dashboard");
   }
 
   const userRole = session.user.role;
   const userName = session.user.name || "User";
   const userEmail = session.user.email;
+  const mustChangePassword = Boolean(session.user.mustChangePassword);
 
   return (
     <WorkspaceLayoutClient
       userRole={userRole}
       userName={userName}
       userEmail={userEmail}
+      mustChangePassword={mustChangePassword}
     >
       {children}
     </WorkspaceLayoutClient>

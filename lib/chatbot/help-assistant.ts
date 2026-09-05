@@ -260,7 +260,7 @@ export class HelpAssistant {
 
       const chat = model.startChat({ history });
       const result = await chat.sendMessage(message);
-      let response = result.response;
+      const response = result.response;
 
       // Handle function calls if model invokes any tool
       const functionCalls = response.functionCalls();

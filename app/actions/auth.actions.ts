@@ -146,3 +146,54 @@ export async function requestPasswordResetAction(_email: string): Promise<Action
     "Please add a PasswordResetToken model to the Prisma schema before implementing this feature."
   );
 }
+
+const changePasswordSchema = z.object({
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
+export async function changeTemporaryPasswordAction(data: {
+  newPassword: string;
+  confirmPassword: string;
+}): Promise<ActionResult> {
+  try {
+    const validated = changePasswordSchema.parse(data);
+
+    // Get current session user
+    const { auth } = await import("@/lib/auth/auth.config");
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return { success: false, error: "Unauthorized. Please log in first." };
+    }
+
+    await authService.updateTemporaryPassword(session.user.id, validated.newPassword);
+
+    const { revalidatePath } = await import("next/cache");
+    revalidatePath("/", "layout");
+
+    return { success: true };
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.errors[0]?.message || "Validation failed",
+      };
+    }
+
+    const err = error as Error;
+    return {
+      success: false,
+      error: err.message || "Failed to update password",
+    };
+  }
+}
+

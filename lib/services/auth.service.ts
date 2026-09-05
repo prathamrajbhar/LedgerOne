@@ -115,6 +115,7 @@ export class AuthService {
         role: true,
         password: true,
         isActive: true,
+        mustChangePassword: true,
         contact: {
           select: {
             id: true,
@@ -171,6 +172,7 @@ export class AuthService {
         role: true,
         password: true,
         isActive: true,
+        mustChangePassword: true,
         contact: {
           select: {
             id: true,
@@ -323,6 +325,7 @@ export class AuthService {
         email: contact.email,
         password: hashedPassword,
         role: UserRole.CONTACT,
+        mustChangePassword: true,
         contact: {
           connect: { id: contact.id },
         },
@@ -387,6 +390,7 @@ export class AuthService {
       data: {
         password: hashedPassword,
         isActive: true,
+        mustChangePassword: true,
       },
     });
 
@@ -413,6 +417,33 @@ export class AuthService {
       emailSent,
       emailError,
     };
+  }
+
+  /**
+   * Update password for user logging in with temporary password
+   */
+  async updateTemporaryPassword(userId: string, newPassword: string) {
+    this.validatePassword(newPassword);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new ValidationError("User not found");
+    }
+
+    const hashedPassword = await hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        password: hashedPassword,
+        mustChangePassword: false,
+      },
+    });
+
+    return { success: true };
   }
 
   // Private helper methods

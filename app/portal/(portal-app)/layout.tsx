@@ -4,6 +4,7 @@ import { UserRole, ContactType } from "@prisma/client";
 import PortalHeader from "./components/PortalHeader";
 import PortalSidebar from "./components/PortalSidebar";
 import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
+import { ForceChangePasswordModal } from "@/components/auth/force-change-password-modal";
 
 export default async function PortalLayout({
   children,
@@ -24,6 +25,7 @@ export default async function PortalLayout({
 
   const contactType = session.user.contactType || ContactType.CUSTOMER;
   const contactName = session.user.contactName || session.user.name || "User";
+  const mustChangePassword = Boolean(session.user.mustChangePassword);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,12 +33,21 @@ export default async function PortalLayout({
       <div className="flex">
         <PortalSidebar contactType={contactType} />
         <main className="flex-1 ml-64 mt-16 p-6">
-          {children}
+          {mustChangePassword ? (
+            <div className="h-[60vh] flex items-center justify-center text-muted-foreground text-sm font-medium">
+              Action Required: Please set your permanent password to access your portal.
+            </div>
+          ) : (
+            children
+          )}
         </main>
       </div>
 
-      {/* Help Assistant Widget - Portal users get it too */}
-      <HelpAssistantWidget />
+      {/* Help Assistant Widget - Only active after password set */}
+      {!mustChangePassword && <HelpAssistantWidget />}
+
+      {/* Mandatory Change Password Modal */}
+      <ForceChangePasswordModal mustChangePassword={mustChangePassword} />
     </div>
   );
 }

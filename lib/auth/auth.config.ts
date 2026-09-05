@@ -35,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             contactId: result.contact?.id,
             contactType: result.contact?.type,
             contactName: result.contact?.name,
+            mustChangePassword: result.mustChangePassword,
           };
         } catch {
           return null;
@@ -73,6 +74,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             contactId: result.contact.id,
             contactType: result.contact.type,
             contactName: result.contact.name,
+            mustChangePassword: result.mustChangePassword,
           };
         } catch {
           return null;
@@ -87,10 +89,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword;
         // Add contact info for portal users
         if (user.contactId) {
           token.contactId = user.contactId;
@@ -98,12 +101,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.contactName = user.contactName;
         }
       }
+
+      if (trigger === "update" && session) {
+        if (typeof session.mustChangePassword === "boolean") {
+          token.mustChangePassword = session.mustChangePassword;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        session.user.mustChangePassword = token.mustChangePassword as boolean | undefined;
         // Add contact info for portal users
         if (token.contactId) {
           session.user.contactId = token.contactId as string;

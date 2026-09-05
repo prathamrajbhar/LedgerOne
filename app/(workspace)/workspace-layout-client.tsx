@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/navbar";
 import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
+import { ForceChangePasswordModal } from "@/components/auth/force-change-password-modal";
 import { UserRole } from "@prisma/client";
 
 interface WorkspaceLayoutClientProps {
@@ -12,6 +13,7 @@ interface WorkspaceLayoutClientProps {
   userRole: UserRole;
   userName: string;
   userEmail: string;
+  mustChangePassword?: boolean;
 }
 
 export default function WorkspaceLayoutClient({
@@ -19,6 +21,7 @@ export default function WorkspaceLayoutClient({
   userRole,
   userName,
   userEmail,
+  mustChangePassword,
 }: WorkspaceLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -44,13 +47,22 @@ export default function WorkspaceLayoutClient({
         {/* Scrollable Page Content */}
         <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-7">
           <div className="max-w-[1600px] mx-auto w-full">
-            {children}
+            {mustChangePassword ? (
+              <div className="h-[60vh] flex items-center justify-center text-muted-foreground text-sm font-medium">
+                Action Required: Please set your permanent password to access your workspace.
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </main>
       </div>
 
       {/* Persistent Help Assistant Chat Widget */}
-      <HelpAssistantWidget />
+      {!mustChangePassword && <HelpAssistantWidget />}
+
+      {/* Mandatory Change Password Modal */}
+      <ForceChangePasswordModal mustChangePassword={mustChangePassword} />
     </div>
   );
 }
