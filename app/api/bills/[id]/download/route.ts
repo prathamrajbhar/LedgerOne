@@ -39,7 +39,11 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Vendor bill PDF download error:", error);
-    return NextResponse.json({ error: "Failed to generate vendor bill PDF" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("Vendor bill PDF download error:", message, error);
+    return NextResponse.json(
+      { error: `Failed to generate vendor bill PDF: ${message}` },
+      { status: 500 }
+    );
   }
 }

@@ -88,7 +88,10 @@ export function useBillDetail(initialBill: SerializedBillData) {
     setDownloading(true);
     try {
       const res = await fetch(`/api/bills/${bill.id}/download`);
-      if (!res.ok) throw new Error("Failed to download PDF");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error || `Server responded with ${res.status}`);
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -99,8 +102,10 @@ export function useBillDetail(initialBill: SerializedBillData) {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       toast.success("Bill PDF downloaded successfully");
-    } catch { toast.error("Failed to generate PDF download"); }
-    finally { setDownloading(false); }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to generate PDF download";
+      toast.error(msg);
+    } finally { setDownloading(false); }
   };
 
   const handleSendReminder = async () => {
