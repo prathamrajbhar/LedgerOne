@@ -117,6 +117,7 @@ export class PaymentService {
         accountingDate: input.paymentDate,
         sourceDocumentId: payment.id,
         userId: input.userId,
+        tx,
         lines: [
           {
             accountId: settings.creditorsAccountId,
@@ -206,6 +207,7 @@ export class PaymentService {
         accountingDate: input.paymentDate,
         sourceDocumentId: payment.id,
         userId: input.userId,
+        tx,
         lines: [
           {
             accountId: journal.defaultAccountId,
