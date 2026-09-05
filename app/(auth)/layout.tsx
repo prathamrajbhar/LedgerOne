@@ -124,7 +124,7 @@ export default function AuthLayout({
 
           {/* Right Column: 5. LOGIN CARD */}
           <div className="col-span-1 lg:col-span-6 xl:col-span-5 flex justify-center lg:justify-end items-center w-full min-h-0">
-            <div className="w-full max-w-[540px] flex justify-center">
+            <div className="w-full max-w-[430px] sm:max-w-[440px] flex justify-center">
               {children}
             </div>
           </div>
