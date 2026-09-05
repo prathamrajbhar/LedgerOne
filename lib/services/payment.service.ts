@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 
 import { PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus, JournalEntrySource } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-import { ValidationError, PaymentGatewayError, UnauthorizedError, NotFoundError } from "../utils/errors";
+import { ValidationError, UnauthorizedError, NotFoundError } from "../utils/errors";
 import { journalEntryService } from "./journal-entry.service";
 import { emailService } from "../email/client";
 
@@ -349,7 +349,6 @@ export class PaymentService {
       }
     } else {
       // Direct client verification or development
-      console.log("[PAYMENT GATEWAY] Payment signature verified directly via Razorpay checkout handler");
     }
 
     const payment = await prisma.$transaction(async (tx) => {

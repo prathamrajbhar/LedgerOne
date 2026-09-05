@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 
 import { UserRole } from "@prisma/client";
 import { hash, compare } from "bcryptjs";
+import { randomBytes } from "crypto";
 import { ValidationError, UnauthorizedError, ConflictError } from "../utils/errors";
 import { emailService } from "../email/client";
 
@@ -511,6 +512,126 @@ export class AuthService {
       .split("")
       .sort(() => Math.random() - 0.5)
       .join("");
+  }
+
+  /**
+   * Request password reset: generates a secure token and sends an email
+   */
+  async requestPasswordReset(email: string) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        email: {
+          equals: normalizedEmail,
+          mode: "insensitive",
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        isActive: true,
+      },
+    });
+
+    // If user does not exist or is inactive, return silently to prevent email enumeration
+    if (!user || !user.isActive) {
+      return { success: true };
+    }
+
+    // Generate cryptographic reset token (32 bytes = 64 hex chars)
+    const token = randomBytes(32).toString("hex");
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        resetToken: token,
+        resetTokenExpiry: expiry,
+      },
+    });
+
+    // Dispatch password reset email
+    await emailService.sendPasswordResetEmail(user.email, token, user.name);
+
+    return { success: true };
+  }
+
+  /**
+   * Validate password reset token
+   */
+  async validateResetToken(token: string) {
+    if (!token || typeof token !== "string") {
+      return { valid: false, message: "Reset token is missing or invalid." };
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
+
+    if (!user) {
+      return {
+        valid: false,
+        message: "This password reset link is invalid or has expired. Please request a new one.",
+      };
+    }
+
+    return {
+      valid: true,
+      email: user.email,
+      name: user.name,
+    };
+  }
+
+  /**
+   * Reset user password using token
+   */
+  async resetPasswordWithToken(token: string, newPassword: string) {
+    if (!token || typeof token !== "string") {
+      throw new ValidationError("Password reset token is required");
+    }
+
+    this.validatePassword(newPassword);
+
+    const user = await prisma.user.findFirst({
+      where: {
+        resetToken: token,
+        resetTokenExpiry: {
+          gt: new Date(),
+        },
+      },
+    });
+
+    if (!user) {
+      throw new ValidationError(
+        "This password reset link is invalid or has expired. Please request a new link."
+      );
+    }
+
+    const hashedPassword = await hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+        mustChangePassword: false,
+      },
+    });
+
+    return { success: true };
   }
 }
 

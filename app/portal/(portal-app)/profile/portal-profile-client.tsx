@@ -20,7 +20,6 @@ import {
   History,
   Phone,
   MapPin,
-  Building,
   ArrowUpRight,
   Camera,
   Loader2,
