@@ -36,6 +36,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  BarChart,
 } from "recharts";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,11 +99,15 @@ export function DashboardClient({
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  // Calculate total expenses for donut chart center
+  const [expenseChartType, setExpenseChartType] = React.useState<"donut" | "bar">("donut");
+
+  // Calculate total expenses for breakdown
   const totalExpensesBreakdown = expenseBreakdown.reduce((sum, item) => {
-    // Extract numeric value from amount string (₹1,23,456 -> 123456)
+    if (typeof item.rawAmount === "number") {
+      return sum + item.rawAmount;
+    }
     const numericValue = parseFloat(item.amount.replace(/[₹,]/g, ""));
-    return sum + numericValue;
+    return sum + (isNaN(numericValue) ? 0 : numericValue);
   }, 0);
 
   return (
@@ -345,84 +350,234 @@ export function DashboardClient({
           </div>
         </Card>
 
-        {/* Expense Breakdown (Donut + Legend) */}
+        {/* Expense Breakdown (Donut & Bar Graph with Real Data) */}
         <Card className="lg:col-span-4 p-5 bg-white shadow-card flex flex-col">
-          <div className="flex items-center justify-between pb-4 border-b border-border">
-            <CardTitle className="text-base font-bold text-foreground">
-              Expense Breakdown
-            </CardTitle>
+          <div className="flex items-center justify-between pb-4 border-b border-border gap-2">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-base font-bold text-foreground">
+                Expense Breakdown
+              </CardTitle>
+            </div>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
-                  <span>{expensePeriod}</span>
-                  <span className="text-muted-foreground">▾</span>
+            <div className="flex items-center gap-1.5">
+              {/* Toggle between Donut and Bar graph */}
+              <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/80">
+                <button
+                  type="button"
+                  onClick={() => setExpenseChartType("donut")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    expenseChartType === "donut"
+                      ? "bg-white text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Donut
                 </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setExpensePeriod("This Month")}>
-                  This Month
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setExpensePeriod("Last Month")}>
-                  Last Month
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setExpensePeriod("This Quarter")}>
-                  This Quarter
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <button
+                  type="button"
+                  onClick={() => setExpenseChartType("bar")}
+                  className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    expenseChartType === "bar"
+                      ? "bg-white text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Bar
+                </button>
+              </div>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1">
+                    <span>{expensePeriod}</span>
+                    <span className="text-muted-foreground text-[10px]">▾</span>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setExpensePeriod("This Month")}>
+                    This Month
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setExpensePeriod("Last Month")}>
+                    Last Month
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setExpensePeriod("This Quarter")}>
+                    This Quarter
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setExpensePeriod("All Time")}>
+                    All Time
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {expenseBreakdown.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-              No expense data available
+            <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center text-center p-6 text-sm text-muted-foreground">
+              <Receipt className="h-8 w-8 text-muted-foreground/40 mb-2" />
+              <span>No expense data available</span>
+              <p className="text-xs text-muted-foreground/80 mt-1">Confirmed vendor bills and journal entries will appear here.</p>
             </div>
-          ) : (
+          ) : expenseChartType === "donut" ? (
             <div className="flex-1 flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center justify-between gap-4 pt-4">
-              {/* Donut Chart with Center Amount */}
-              <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
+              {/* Animated Donut Chart with Center Total */}
+              <div className="relative w-48 h-48 flex-shrink-0 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={expenseBreakdown}
                       cx="50%"
                       cy="50%"
-                      innerRadius={52}
-                      outerRadius={74}
-                      paddingAngle={2}
+                      innerRadius={54}
+                      outerRadius={78}
+                      paddingAngle={3}
                       dataKey="value"
+                      isAnimationActive={true}
+                      animationBegin={100}
+                      animationDuration={1200}
+                      animationEasing="ease-out"
                     >
                       {expenseBreakdown.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                          stroke="#FFFFFF"
+                          strokeWidth={2}
+                        />
                       ))}
                     </Pie>
+                    <RechartsTooltip
+                      formatter={(val: number | string, _name, entry: any) => [
+                        `${val}% (${entry.payload.amount})`,
+                        entry.payload.name,
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "8px",
+                        border: "1px solid #E2E7EC",
+                        boxShadow: "0 4px 12px rgba(22, 50, 79, 0.08)",
+                        fontSize: "12px",
+                      }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
-                  <span className="text-sm sm:text-base font-bold text-foreground">
+                {/* Center Badge matching user design */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
+                  <span className="text-base sm:text-lg font-extrabold text-[#16324F] tracking-tight">
                     ₹{totalExpensesBreakdown.toLocaleString("en-IN")}
                   </span>
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[11px] font-medium text-[#5E6B78]">
                     Total Expenses
                   </span>
                 </div>
               </div>
 
-              {/* Breakdown List */}
-              <div className="w-full flex-1 space-y-1.5 pl-2">
+              {/* Breakdown Category List */}
+              <div className="w-full flex-1 space-y-2 pl-2">
                 {expenseBreakdown.map((item) => (
-                  <div key={item.name} className="flex items-center justify-between text-xs py-0.5">
-                    <div className="flex items-center gap-2">
+                  <div
+                    key={item.name}
+                    className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0 hover:bg-muted/30 px-1 rounded transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 pr-2">
                       <span
                         className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="text-muted-foreground text-[11px] truncate">
+                      <span className="text-foreground font-medium text-xs truncate" title={item.name}>
                         {item.name}
                       </span>
                     </div>
-                    <span className="font-semibold text-foreground text-[11px]">
-                      {item.value}%
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-muted-foreground text-[11px]">
+                        {item.amount}
+                      </span>
+                      <span className="font-bold text-foreground text-xs bg-muted/60 px-1.5 py-0.5 rounded text-[11px]">
+                        {item.value}%
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            /* Animated Bar Graph with Real Data */
+            <div className="flex-1 flex flex-col pt-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mb-1">
+                <span>Category Breakdown</span>
+                <span className="font-semibold text-foreground">
+                  Total: ₹{totalExpensesBreakdown.toLocaleString("en-IN")}
+                </span>
+              </div>
+              <div className="h-[210px] w-full pt-2">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={expenseBreakdown}
+                    layout="vertical"
+                    margin={{ top: 5, right: 25, left: 10, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E7EC" />
+                    <XAxis
+                      type="number"
+                      domain={[0, "dataMax + 10"]}
+                      unit="%"
+                      tickLine={false}
+                      axisLine={{ stroke: "#E2E7EC" }}
+                      tick={{ fill: "#5E6B78", fontSize: 10 }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={false}
+                      width={80}
+                      tick={{ fill: "#16324F", fontSize: 10, fontWeight: 500 }}
+                      tickFormatter={(val) => (val.length > 10 ? `${val.slice(0, 9)}…` : val)}
+                    />
+                    <RechartsTooltip
+                      formatter={(value: number | string, _name, entry: any) => [
+                        `${entry.payload.amount} (${value}%)`,
+                        entry.payload.name,
+                      ]}
+                      contentStyle={{
+                        backgroundColor: "#FFFFFF",
+                        borderRadius: "8px",
+                        border: "1px solid #E2E7EC",
+                        boxShadow: "0 4px 12px rgba(22, 50, 79, 0.08)",
+                        fontSize: "12px",
+                      }}
+                    />
+                    <Bar
+                      dataKey="value"
+                      radius={[0, 4, 4, 0]}
+                      isAnimationActive={true}
+                      animationBegin={100}
+                      animationDuration={1000}
+                      animationEasing="ease-out"
+                    >
+                      {expenseBreakdown.map((entry, index) => (
+                        <Cell key={`bar-cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+
+              {/* Bar view bottom summary chips */}
+              <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/50 mt-auto">
+                {expenseBreakdown.slice(0, 4).map((item) => (
+                  <div
+                    key={item.name}
+                    className="flex items-center gap-1.5 bg-muted/40 px-2 py-0.5 rounded text-[11px]"
+                  >
+                    <span
+                      className="h-2 w-2 rounded-full"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    <span className="text-muted-foreground truncate max-w-[90px]">
+                      {item.name}:
+                    </span>
+                    <span className="font-semibold text-foreground">
+                      {item.amount}
                     </span>
                   </div>
                 ))}
