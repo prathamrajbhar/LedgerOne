@@ -14,11 +14,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Plus, Trash2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertTriangle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { createPurchaseOrderAction, getAnalyticAccountsAction } from "@/app/actions/purchase.actions";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
+import { checkBudgetImpactAction } from "@/app/actions/ai-features.actions";
 
 interface LineItem {
   id: string;
@@ -53,6 +54,7 @@ export function PurchaseOrderForm() {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
+  const [budgetWarnings, setBudgetWarnings] = React.useState<string[]>([]);
 
   const [vendors, setVendors] = React.useState<VendorOption[]>([]);
   const [products, setProducts] = React.useState<ProductOption[]>([]);
@@ -177,6 +179,30 @@ export function PurchaseOrderForm() {
     );
   };
 
+  React.useEffect(() => {
+    const checkBudgetOverruns = async () => {
+      const totalsByAnalytic: Record<string, number> = {};
+      lines.forEach((l) => {
+        if (l.analyticAccountId && l.lineTotal > 0) {
+          totalsByAnalytic[l.analyticAccountId] = (totalsByAnalytic[l.analyticAccountId] || 0) + l.lineTotal;
+        }
+      });
+
+      const warnings: string[] = [];
+      for (const [aid, amt] of Object.entries(totalsByAnalytic)) {
+        const res = await checkBudgetImpactAction(aid, amt);
+        if (res.success && res.data && res.data.warningMessage) {
+          warnings.push(res.data.warningMessage);
+        }
+      }
+      setBudgetWarnings(warnings);
+    };
+
+    if (open) {
+      checkBudgetOverruns();
+    }
+  }, [lines, open]);
+
   const calculateTotal = () => {
     return lines.reduce((sum, line) => sum + line.lineTotal, 0);
   };
@@ -268,6 +294,16 @@ export function PurchaseOrderForm() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
+            {budgetWarnings.length > 0 && (
+              <div className="p-3.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 space-y-1.5 text-xs">
+                <div className="flex items-center gap-1.5 font-bold">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" /> AI Budget Advisor Warning
+                </div>
+                {budgetWarnings.map((w, idx) => (
+                  <p key={idx} className="text-amber-800">{w}</p>
+                ))}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="vendor">Vendor *</Label>
