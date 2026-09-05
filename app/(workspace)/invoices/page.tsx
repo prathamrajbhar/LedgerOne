@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   getInvoicesAction,
   createStandaloneInvoiceAction,
@@ -302,6 +303,42 @@ export default function InvoicesPage() {
       grandTotal,
     };
   }, [formLines, taxRates]);
+
+  // Memoized options for searchable dropdowns in create modal
+  const customerOptions = React.useMemo(() => {
+    return customers.map((c) => ({
+      value: c.id,
+      label: c.name,
+      subLabel: [c.email, c.phone].filter(Boolean).join(" • ") || undefined,
+    }));
+  }, [customers]);
+
+  const salesOrderOptions = React.useMemo(() => {
+    const filtered = salesOrders.filter((so) => !formCustomer || so.customerId === formCustomer);
+    return [
+      { value: "", label: "Direct Invoice (No Sales Order)" },
+      ...filtered.map((so) => ({
+        value: so.soNumber,
+        label: so.soNumber,
+      })),
+    ];
+  }, [salesOrders, formCustomer]);
+
+  const productOptions = React.useMemo(() => {
+    return products.map((p) => {
+      const details = [
+        p.sku ? `SKU: ${p.sku}` : null,
+        p.salesPrice ? `₹${Number(p.salesPrice).toLocaleString("en-IN")}` : null,
+        p.stock !== undefined && p.stock !== null ? `Stock: ${p.stock}` : null,
+      ].filter(Boolean).join(" • ");
+
+      return {
+        value: p.id,
+        label: p.name,
+        subLabel: details || undefined,
+      };
+    });
+  }, [products]);
 
   // Handle Create Invoice submission
   const handleSaveInvoice = async (asDraft = false) => {
@@ -1068,21 +1105,21 @@ export default function InvoicesPage() {
                 <label className="text-xs font-semibold text-foreground block mb-1.5">
                   Customer <span className="text-destructive">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={customerOptions}
                   value={formCustomer}
-                  onChange={(e) => {
-                    setFormCustomer(e.target.value);
-                    // Filter linked sales orders if any
+                  onChange={(val) => {
+                    setFormCustomer(val);
+                    if (formSalesOrder) {
+                      const linkedSo = salesOrders.find((so) => so.soNumber === formSalesOrder);
+                      if (linkedSo && linkedSo.customerId !== val) {
+                        setFormSalesOrder("");
+                      }
+                    }
                   }}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Select a Customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select a Customer"
+                  searchPlaceholder="Search customer by name, email..."
+                />
               </div>
 
               {/* Sales Order Reference */}
@@ -1090,20 +1127,13 @@ export default function InvoicesPage() {
                 <label className="text-xs font-semibold text-foreground block mb-1.5">
                   Sales Order (Optional)
                 </label>
-                <select
+                <SearchableSelect
+                  options={salesOrderOptions}
                   value={formSalesOrder}
-                  onChange={(e) => setFormSalesOrder(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Direct Invoice (No Sales Order)</option>
-                  {salesOrders
-                    .filter((so) => !formCustomer || so.customerId === formCustomer)
-                    .map((so) => (
-                      <option key={so.id} value={so.soNumber}>
-                        {so.soNumber}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setFormSalesOrder(val)}
+                  placeholder="Direct Invoice (No Sales Order)"
+                  searchPlaceholder="Search sales order..."
+                />
               </div>
 
               {/* Payment Terms */}
@@ -1199,21 +1229,17 @@ export default function InvoicesPage() {
                       return (
                         <tr key={idx} className="hover:bg-surface-subtle/50">
                           {/* Product */}
-                          <td className="p-2">
-                            <select
+                          <td className="p-2 min-w-[220px]">
+                            <SearchableSelect
+                              size="sm"
+                              options={productOptions}
                               value={line.productId}
-                              onChange={(e) =>
-                                handleLineChange(idx, "productId", e.target.value)
+                              onChange={(val) =>
+                                handleLineChange(idx, "productId", val)
                               }
-                              className="w-full h-8 px-2 rounded-md border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                            >
-                              <option value="">Select product...</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} {p.sku ? `(${p.sku})` : ""}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Select product..."
+                              searchPlaceholder="Search product by name, SKU..."
+                            />
                           </td>
 
                           {/* Description */}
@@ -1366,25 +1392,25 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            {/* Actions: Save Draft / Preview / Create Invoice */}
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border">
+            {/* Actions: Cancel / Save Draft / Create Invoice */}
+            <div className="flex items-center justify-end gap-3 pt-5 mt-2 border-t border-border">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => setOpenCreateModal(false)}
                 disabled={creating}
-                className="h-8.5 text-xs"
+                className="h-9 px-4 text-xs font-medium text-slate-600 bg-white border border-border hover:bg-slate-50 hover:text-slate-900 rounded-lg transition-colors"
               >
                 Cancel
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => handleSaveInvoice(true)}
                 disabled={creating}
-                className="h-8.5 text-xs text-navy font-medium"
+                className="h-9 px-4 text-xs font-semibold text-navy bg-white border border-border hover:bg-slate-50 hover:border-slate-300 rounded-lg transition-colors shadow-2xs"
               >
                 Save Draft
               </Button>
@@ -1393,17 +1419,17 @@ export default function InvoicesPage() {
                 size="sm"
                 onClick={() => handleSaveInvoice(false)}
                 disabled={creating}
-                className="h-8.5 text-xs bg-navy hover:bg-navy/90 text-white font-semibold gap-1.5"
+                className="h-9 px-5 text-xs font-semibold bg-navy hover:bg-navy/90 text-white rounded-lg shadow-sm gap-2 transition-all active:scale-[0.98]"
               >
                 {creating ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Creating Invoice...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating Invoice...</span>
                   </>
                 ) : (
                   <>
-                    <Receipt className="w-3.5 h-3.5" />
-                    Create Invoice
+                    <FileText className="w-4 h-4 text-teal-300" />
+                    <span>Create Invoice</span>
                   </>
                 )}
               </Button>
