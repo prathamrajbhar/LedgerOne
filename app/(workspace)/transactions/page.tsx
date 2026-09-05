@@ -1,124 +1,180 @@
-"use client";
-
 import * as React from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Download, Search } from "lucide-react";
-import { toast } from "sonner";
+import { Download } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
+import { getJournalEntriesAction } from "@/app/actions/accounting.actions";
+import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { TransactionFilters } from "./_components/transaction-filters";
+import { TransactionRow } from "./_components/transaction-row";
 
-const transactionsData = [
-  { id: "1", date: "18 Nov 2024", code: "INV-2024-1087", party: "Modern Living Interiors", type: "Sales", category: "Commercial Invoicing", amount: 125000, status: "PAID" },
-  { id: "2", date: "17 Nov 2024", code: "BILL-2024-056", party: "WoodMart Supplies", type: "Purchase", category: "Raw Timber Lumber", amount: 48500, status: "PENDING" },
-  { id: "3", date: "16 Nov 2024", code: "EXP-2024-078", party: "Property Owners Trust", type: "Expense", category: "Showroom Rent - Nov", amount: 25000, status: "PAID" },
-  { id: "4", date: "15 Nov 2024", code: "PAY-2024-112", party: "HomeSpace Furniture", type: "Payment", category: "Customer Direct Receipt", amount: 75000, status: "RECEIVED" },
-  { id: "5", date: "14 Nov 2024", code: "INV-2024-1086", party: "Urban Deck Architectural", type: "Sales", category: "Bespoke Sofa Set", amount: 96000, status: "PARTIAL" },
-  { id: "6", date: "12 Nov 2024", code: "BILL-2024-055", party: "Durian Foam & Hardware", type: "Purchase", category: "Upholstery & Hinges", amount: 31200, status: "PAID" },
-  { id: "7", date: "10 Nov 2024", code: "EXP-2024-077", party: "State Electricity Board", type: "Expense", category: "Factory Power Bill", amount: 18400, status: "PAID" },
-  { id: "8", date: "08 Nov 2024", code: "INV-2024-1085", party: "Prestige Executive Suites", type: "Sales", category: "Office Workstations", amount: 215000, status: "OVERDUE" },
-];
+interface TransactionsPageProps {
+  searchParams?: {
+    search?: string;
+    status?: string;
+    source?: string;
+    page?: string;
+  };
+}
 
-export default function TransactionsPage() {
-  const [search, setSearch] = React.useState("");
-  const [filterType, setFilterType] = React.useState("ALL");
+export default async function TransactionsPage({ searchParams }: TransactionsPageProps) {
+  const page = parseInt(searchParams?.page || "1");
+  const search = searchParams?.search || "";
+  const statusFilter = searchParams?.status as JournalEntryStatus | undefined;
+  const sourceFilter = searchParams?.source as JournalEntrySource | undefined;
 
-  const filtered = transactionsData.filter((tx) => {
-    const matchesSearch =
-      tx.code.toLowerCase().includes(search.toLowerCase()) ||
-      tx.party.toLowerCase().includes(search.toLowerCase()) ||
-      tx.category.toLowerCase().includes(search.toLowerCase());
-    const matchesType = filterType === "ALL" || tx.type.toUpperCase() === filterType;
-    return matchesSearch && matchesType;
+  const result = await getJournalEntriesAction({
+    search,
+    status: statusFilter,
+    source: sourceFilter,
+    page,
+    pageSize: 20,
   });
+
+  if (!result.success || !result.data) {
+    return (
+      <div className="space-y-5">
+        <PageHeader
+          title="Financial Transactions"
+          description="Journal entries ledger covering all accounting transactions."
+        />
+        <div className="rounded-xl border border-border bg-white p-8 text-center">
+          <p className="text-sm text-destructive">{result.error || "Failed to load transactions"}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const { entries, pagination } = result.data;
+
+  // Helper function to get document reference
+  const getDocumentReference = (entry: typeof entries[0]) => {
+    if (entry.vendorBill) {
+      return {
+        ref: entry.vendorBill.billNumber,
+        party: entry.vendorBill.vendor.name,
+        type: "Vendor Bill",
+      };
+    }
+    if (entry.invoice) {
+      return {
+        ref: entry.invoice.invoiceNumber,
+        party: entry.invoice.customer.name,
+        type: "Customer Invoice",
+      };
+    }
+    if (entry.billPayment) {
+      return {
+        ref: entry.billPayment.bill.billNumber,
+        party: entry.billPayment.bill.vendor.name,
+        type: "Bill Payment",
+      };
+    }
+    if (entry.invoicePayment) {
+      return {
+        ref: entry.invoicePayment.invoice.invoiceNumber,
+        party: entry.invoicePayment.invoice.customer.name,
+        type: "Invoice Payment",
+      };
+    }
+    return {
+      ref: "Manual Entry",
+      party: "-",
+      type: "Manual",
+    };
+  };
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const formatAmount = (amount: Decimal | number | string) => {
+    const num = typeof amount === "number" ? amount : parseFloat(amount.toString());
+    return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Financial Transactions"
-        description="Audited ledger entries covering customer invoicing, timber purchase bills, vendor payments, and operational expenses."
+        description="Audited ledger entries covering customer invoicing, vendor bills, payments, and operational expenses."
         actions={
-          <Button
-            size="sm"
-            onClick={() => toast.success("Exporting full financial transaction ledger...")}
-            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm"
-          >
-            <Download className="h-4 w-4" />
-            Export Ledger
-          </Button>
+          <form action="/api/export/transactions" method="post">
+            <Button
+              type="submit"
+              size="sm"
+              className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm"
+            >
+              <Download className="h-4 w-4" />
+              Export Ledger
+            </Button>
+          </form>
         }
       />
 
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by transaction #, client, or category..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-surface text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
-          {["ALL", "SALES", "PURCHASE", "EXPENSE", "PAYMENT"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilterType(t)}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                filterType === t
-                  ? "bg-white text-navy font-semibold shadow-xs"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {t === "ALL" ? "All Entries" : t.charAt(0) + t.slice(1).toLowerCase()}
-            </button>
-          ))}
-        </div>
-      </div>
+      {/* Filters */}
+      <TransactionFilters />
 
       {/* Table */}
       <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                <th className="py-3.5 px-4">Date</th>
-                <th className="py-3.5 px-4">Reference #</th>
-                <th className="py-3.5 px-4">Entity / Counterparty</th>
-                <th className="py-3.5 px-4">Category</th>
-                <th className="py-3.5 px-4 text-right">Debit / Credit (₹)</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((row) => (
-                <tr key={row.id} className="hover:bg-primary-light/30 transition-colors">
-                  <td className="py-3.5 px-4 text-muted-foreground whitespace-nowrap">{row.date}</td>
-                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{row.code}</td>
-                  <td className="py-3.5 px-4 font-medium text-foreground">{row.party}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{row.category}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    ₹{row.amount.toLocaleString("en-IN")}.00
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <StatusBadge status={row.status} />
-                  </td>
+        {entries.length === 0 ? (
+          <div className="p-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No journal entries found. {search && "Try adjusting your search filters."}
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <th className="py-3.5 px-4 w-8"></th>
+                  <th className="py-3.5 px-4">Date</th>
+                  <th className="py-3.5 px-4">Entry #</th>
+                  <th className="py-3.5 px-4">Journal</th>
+                  <th className="py-3.5 px-4">Document Ref</th>
+                  <th className="py-3.5 px-4">Party</th>
+                  <th className="py-3.5 px-4 text-right">Debit (₹)</th>
+                  <th className="py-3.5 px-4 text-right">Credit (₹)</th>
+                  <th className="py-3.5 px-4 text-center">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {entries.map((entry) => {
+                  const docRef = getDocumentReference(entry);
+                  const isBalanced = entry.totalDebit.equals(entry.totalCredit);
+
+                  return (
+                    <TransactionRow
+                      key={entry.id}
+                      entry={entry}
+                      docRef={docRef}
+                      isBalanced={isBalanced}
+                      formatDate={formatDate}
+                      formatAmount={formatAmount}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      <Pagination
-        currentPage={1}
-        totalPages={1}
-        totalItems={filtered.length}
-        onPageChange={() => {}}
-      />
+      {pagination.totalPages > 1 && (
+        <Pagination
+          currentPage={pagination.page}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.total}
+          onPageChange={(_newPage) => {
+            // Handled by URL params via router
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -15,7 +15,7 @@ import {
 import { AccountType, JournalType } from "@prisma/client";
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
 
-export interface ActionResult<T = any> {
+export interface ActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

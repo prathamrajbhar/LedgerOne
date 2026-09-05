@@ -1,6 +1,5 @@
 import { ProductForm } from "../product-form";
 import { getProductCategoriesAction } from "@/app/actions/product.actions";
-import { redirect } from "next/navigation";
 
 export default async function NewProductPage() {
   const categoriesResult = await getProductCategoriesAction();

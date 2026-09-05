@@ -1,35 +1,3 @@
-import Link from "next/link";
-import {
-  TrendingUp,
-  Receipt,
-  CircleDollarSign,
-  Users,
-  Building2,
-  Wallet,
-  FileText,
-  CreditCard,
-  UserPlus,
-  PackagePlus,
-  Boxes,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  Download,
-  MoreVertical,
-  ChevronRight,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
-import { Card, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   getDashboardKPIsAction,
   getMonthlyOverviewAction,

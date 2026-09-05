@@ -3,10 +3,9 @@
  * Manages budget lifecycle and achievement computation
  */
 
-import { PrismaClient, BudgetStatus, AnalyticAccountType } from "@prisma/client";
+import { PrismaClient, BudgetStatus, AnalyticAccountType, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, NotFoundError } from "../utils/errors";
-import { isWithinPeriod } from "../utils/helpers";
 
 const prisma = new PrismaClient();
 
@@ -249,7 +248,7 @@ export class BudgetService {
     responsibleId?: string;
     search?: string;
   }) {
-    const where: any = {};
+    const where: Prisma.BudgetWhereInput = {};
 
     if (filters.status) {
       where.status = filters.status;

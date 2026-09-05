@@ -127,7 +127,7 @@ export class AuthService {
    */
   async createUser(input: CreateUserInput, createdByUserId: string) {
     // Only Administrator can create users
-    const createdBy = await this.verifyAdministrator(createdByUserId);
+    await this.verifyAdministrator(createdByUserId);
 
     // Validate
     if (input.loginId.length < 6 || input.loginId.length > 12) {
@@ -225,9 +225,6 @@ export class AuthService {
         contact.name
       );
       emailSent = true;
-      console.log(
-        `Portal invitation email sent successfully to ${contact.email} (Contact: ${contact.name}, LoginID: ${user.loginId})`
-      );
     } catch (error) {
       // Log email failure but don't fail the entire operation
       // User is already created, admin can manually share credentials or resend

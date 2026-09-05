@@ -4,7 +4,7 @@ import { contactService, CreateContactInput, UpdateContactInput, ListContactsPar
 import { ContactType } from "@prisma/client";
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
 
-export interface ContactActionResult<T = any> {
+export interface ContactActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;

@@ -4,6 +4,7 @@ import { journalEntryService } from "@/lib/services/journal-entry.service";
 import { profitLossReportService, GenerateProfitLossParams } from "@/lib/services/reports/profit-loss.service";
 import { balanceSheetService, BalanceSheetParams } from "@/lib/services/reports/balance-sheet.service";
 import { Decimal } from "@prisma/client/runtime/library";
+import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
 
 export interface CreateJournalEntryActionInput {
   journalId: string;
@@ -77,5 +78,35 @@ export async function generateBalanceSheetAction(params: BalanceSheetParams) {
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to generate Balance Sheet report" };
+  }
+}
+
+export interface GetJournalEntriesFilters {
+  search?: string;
+  status?: JournalEntryStatus;
+  source?: JournalEntrySource;
+  dateFrom?: Date;
+  dateTo?: Date;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function getJournalEntriesAction(filters?: GetJournalEntriesFilters) {
+  try {
+    const result = await journalEntryService.list(filters || {});
+    return { success: true, data: result };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch journal entries" };
+  }
+}
+
+export async function getJournalEntryByIdAction(id: string) {
+  try {
+    const entry = await journalEntryService.getById(id);
+    return { success: true, data: entry };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch journal entry details" };
   }
 }

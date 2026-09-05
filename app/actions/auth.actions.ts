@@ -54,12 +54,13 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
       console.error("Failed to send welcome email:", emailError);
     }
 
-    return { success: true };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Sign up error:", error);
 
+    const err = error as Error & { name?: string };
+
     // Handle specific error types
-    if (error.name === "ZodError") {
+    if (err.name === "ZodError") {
       const zodError = error as z.ZodError;
       return {
         success: false,
@@ -67,22 +68,22 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
       };
     }
 
-    if (error.message?.includes("Login ID already exists")) {
+    if (err.message?.includes("Login ID already exists")) {
       return {
         success: false,
         error: "This Login ID is already taken. Please choose another.",
       };
     }
 
-    if (error.message?.includes("Email already exists")) {
+    if (err.message?.includes("Email already exists")) {
       return {
         success: false,
         error: "This email is already registered. Please use a different email or sign in.",
       };
     }
 
-    if (error.message?.includes("Password must contain")) {
-      return { success: false, error: error.message };
+    if (err.message?.includes("Password must contain")) {
+      return { success: false, error: err.message };
     }
 
     return {
@@ -111,7 +112,7 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
  *
  * 3. A reset password page at /reset-password that accepts token query param
  */
-export async function requestPasswordResetAction(email: string): Promise<ActionResult> {
+export async function requestPasswordResetAction(_email: string): Promise<ActionResult> {
   // BLOCKED: Cannot implement without database schema support for password reset tokens
   throw new Error(
     "Password reset functionality requires database schema changes. " +

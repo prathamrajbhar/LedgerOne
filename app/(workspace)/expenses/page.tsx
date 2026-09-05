@@ -299,7 +299,7 @@ export default function ExpensesPage() {
           </div>
         ) : expenses.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            No expenses recorded yet. Click "Record Expense" to add one.
+            No expenses recorded yet. Click &quot;Record Expense&quot; to add one.
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">

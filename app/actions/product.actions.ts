@@ -7,7 +7,7 @@ import { ValidationError, NotFoundError, ConflictError } from "@/lib/utils/error
 
 const prisma = new PrismaClient();
 
-export interface ProductActionResult<T = any> {
+export interface ProductActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -253,6 +253,99 @@ export async function getProductCategoriesAction(): Promise<ProductActionResult>
     return {
       success: false,
       error: "Failed to fetch categories. Please try again.",
+    };
+  }
+}
+
+/**
+ * Get inventory metrics (total, low stock, in stock, out of stock counts)
+ */
+export async function getInventoryMetricsAction(): Promise<ProductActionResult> {
+  try {
+    // Fetch all non-archived products to compute metrics
+    const products = await prisma.product.findMany({
+      where: { isArchived: false },
+      select: {
+        stock: true,
+        reorderPoint: true,
+      },
+    });
+
+    const total = products.length;
+    let lowStock = 0;
+    let outOfStock = 0;
+    let inStock = 0;
+
+    products.forEach((product) => {
+      if (product.stock === 0) {
+        outOfStock++;
+      } else if (product.stock <= product.reorderPoint) {
+        lowStock++;
+      } else {
+        inStock++;
+      }
+    });
+
+    return {
+      success: true,
+      data: {
+        total,
+        lowStock,
+        inStock,
+        outOfStock,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching inventory metrics:", error);
+    return {
+      success: false,
+      error: "Failed to fetch inventory metrics. Please try again.",
+    };
+  }
+}
+
+/**
+ * Get products requiring restock (stock <= reorderPoint)
+ */
+export async function getRestockAlertsAction(): Promise<ProductActionResult> {
+  try {
+    const products = await prisma.product.findMany({
+      where: {
+        isArchived: false,
+        stock: { lte: prisma.product.fields.reorderPoint },
+      },
+      include: {
+        category: true,
+      },
+      orderBy: [
+        { stock: "asc" },
+        { name: "asc" },
+      ],
+    });
+
+    const transformedData = products.map((product) => {
+      const status = product.stock === 0 ? "OUT_OF_STOCK" : "LOW_STOCK";
+
+      return {
+        id: product.id,
+        name: product.name,
+        sku: product.sku || "",
+        category: product.category.name,
+        stock: product.stock,
+        reorderPoint: product.reorderPoint,
+        status,
+      };
+    });
+
+    return {
+      success: true,
+      data: transformedData,
+    };
+  } catch (error) {
+    console.error("Error fetching restock alerts:", error);
+    return {
+      success: false,
+      error: "Failed to fetch restock alerts. Please try again.",
     };
   }
 }

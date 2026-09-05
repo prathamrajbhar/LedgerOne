@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract conversation history (all messages except the last one)
-    const conversationHistory: ChatMessage[] = messages.slice(0, -1).map((msg: any) => ({
+    const conversationHistory: ChatMessage[] = messages.slice(0, -1).map((msg: ChatMessage) => ({
       role: msg.role,
       content: msg.content,
     }));

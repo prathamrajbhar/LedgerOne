@@ -15,49 +15,109 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { toast } from "sonner";
+import {
+  getTaxRatesAction,
+  createTaxRateAction,
+  deleteTaxRateAction,
+} from "@/app/actions/tax-rate.actions";
+import { TaxApplicability } from "@prisma/client";
 
 interface TaxRateItem {
   id: string;
   name: string;
-  rate: number;
-  scope: "SALES" | "PURCHASE" | "BOTH";
-  description: string;
+  percentage: number;
+  applicability: TaxApplicability;
 }
 
-const initialTaxRates: TaxRateItem[] = [
-  { id: "tax-1", name: "GST 18% (Standard Furniture)", rate: 18, scope: "BOTH", description: "Standard GST for finished wooden and metal furniture." },
-  { id: "tax-2", name: "GST 12% (Wood Turnings & Moldings)", rate: 12, scope: "BOTH", description: "Turned wood articles, bamboo products, and moldings." },
-  { id: "tax-3", name: "GST 28% (Luxury & Coir Mattresses)", rate: 28, scope: "SALES", description: "Luxury spring mattresses and premium upholstered seating." },
-  { id: "tax-4", name: "GST 5% (Raw Timber & Sawn Logs)", rate: 5, scope: "PURCHASE", description: "Raw timber logs, veneer sheets, and sawn lumber." },
-  { id: "tax-5", name: "GST 0% (Tax Exempt Exports)", rate: 0, scope: "SALES", description: "SEZ sales and zero-rated international furniture exports." },
-];
-
 export default function TaxRatesPage() {
-  const [rates, setRates] = React.useState(initialTaxRates);
+  const [rates, setRates] = React.useState<TaxRateItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [openModal, setOpenModal] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [rate, setRate] = React.useState("");
-  const [scope, setScope] = React.useState<TaxRateItem["scope"]>("BOTH");
-  const [desc, setDesc] = React.useState("");
+  const [percentage, setPercentage] = React.useState("");
+  const [applicability, setApplicability] = React.useState<TaxApplicability>("BOTH");
 
-  const handleCreate = (e: React.FormEvent) => {
+  // Fetch tax rates on mount
+  React.useEffect(() => {
+    loadTaxRates();
+  }, []);
+
+  const loadTaxRates = async () => {
+    setLoading(true);
+    try {
+      const result = await getTaxRatesAction();
+      if (result.success && result.data) {
+        setRates(result.data);
+      } else {
+        toast.error(result.error || "Failed to load tax rates");
+      }
+    } catch (error) {
+      toast.error("Failed to load tax rates");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || rate === "") return;
-    setRates([
-      ...rates,
-      {
-        id: `tax-${Date.now()}`,
+    if (!name || percentage === "") return;
+
+    setSubmitting(true);
+    try {
+      const result = await createTaxRateAction({
         name,
-        rate: Number(rate),
-        scope,
-        description: desc,
-      },
-    ]);
-    toast.success(`Tax Rate "${name}" configured.`);
-    setOpenModal(false);
-    setName("");
-    setRate("");
-    setDesc("");
+        percentage: Number(percentage),
+        applicability,
+      });
+
+      if (result.success) {
+        toast.success(`Tax Rate "${name}" configured.`);
+        setOpenModal(false);
+        setName("");
+        setPercentage("");
+        setApplicability("BOTH");
+        await loadTaxRates();
+      } else {
+        toast.error(result.error || "Failed to create tax rate");
+      }
+    } catch (error) {
+      toast.error("Failed to create tax rate");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, taxName: string) => {
+    if (!confirm(`Are you sure you want to delete "${taxName}"?`)) return;
+
+    try {
+      const result = await deleteTaxRateAction(id);
+      if (result.success) {
+        toast.success("Tax rate deleted successfully");
+        await loadTaxRates();
+      } else {
+        toast.error(result.error || "Failed to delete tax rate");
+      }
+    } catch (error) {
+      toast.error("Failed to delete tax rate");
+      console.error(error);
+    }
+  };
+
+  const applicabilityLabel = (app: TaxApplicability) => {
+    switch (app) {
+      case "SALES":
+        return "Sales Only";
+      case "PURCHASE":
+        return "Purchase Only";
+      case "BOTH":
+        return "Both";
+      default:
+        return app;
+    }
   };
 
   return (
@@ -84,37 +144,48 @@ export default function TaxRatesPage() {
                   placeholder="e.g. GST 18% (Furniture)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={submitting}
                 />
                 <FormInput
                   label="Rate Percentage (%)"
                   type="number"
                   required
                   placeholder="18"
-                  value={rate}
-                  onChange={(e) => setRate(e.target.value)}
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={percentage}
+                  onChange={(e) => setPercentage(e.target.value)}
+                  disabled={submitting}
                 />
                 <FormSelect
-                  label="Tax Scope"
-                  value={scope}
-                  onValueChange={(val) => setScope(val as TaxRateItem["scope"])}
+                  label="Tax Applicability"
+                  value={applicability}
+                  onValueChange={(val) => setApplicability(val as TaxApplicability)}
                   options={[
                     { value: "BOTH", label: "Both Sales and Purchases" },
                     { value: "SALES", label: "Sales Invoices Only" },
                     { value: "PURCHASE", label: "Vendor Bills Only" },
                   ]}
-                />
-                <FormInput
-                  label="Description / HSN Category"
-                  placeholder="e.g. HSN 9403 Wooden Furniture"
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
+                  disabled={submitting}
                 />
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setOpenModal(false)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setOpenModal(false)}
+                    disabled={submitting}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" size="sm" className="bg-navy hover:bg-navy-hover text-white">
-                    Save Tax Rate
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-navy hover:bg-navy-hover text-white"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Saving..." : "Save Tax Rate"}
                   </Button>
                 </div>
               </form>
@@ -123,38 +194,54 @@ export default function TaxRatesPage() {
         }
       />
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Tax Name</th>
-              <th className="py-3.5 px-4 text-right">Percentage Rate</th>
-              <th className="py-3.5 px-4">Scope</th>
-              <th className="py-3.5 px-4">Description / HSN Classification</th>
-              <th className="py-3.5 px-4 text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {rates.map((t) => (
-              <tr key={t.id} className="hover:bg-primary-light/30 transition-colors">
-                <td className="py-3.5 px-4 font-semibold text-foreground">{t.name}</td>
-                <td className="py-3.5 px-4 text-right font-bold text-navy">{t.rate}%</td>
-                <td className="py-3.5 px-4">
-                  <Badge variant="outline" className="text-[10px] bg-[#F6F7F9]">
-                    {t.scope}
-                  </Badge>
-                </td>
-                <td className="py-3.5 px-4 text-muted-foreground">{t.description}</td>
-                <td className="py-3.5 px-4 text-center">
-                  <Badge variant="success" className="text-[10px]">
-                    Active
-                  </Badge>
-                </td>
+      {loading ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">Loading tax rates...</p>
+        </div>
+      ) : rates.length === 0 ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">No tax rates configured yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Click &quot;New Tax Rate&quot; to add your first GST slab.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="py-3.5 px-4">Tax Name</th>
+                <th className="py-3.5 px-4 text-right">Percentage Rate</th>
+                <th className="py-3.5 px-4">Applicability</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {rates.map((t) => (
+                <tr key={t.id} className="hover:bg-primary-light/30 transition-colors">
+                  <td className="py-3.5 px-4 font-semibold text-foreground">{t.name}</td>
+                  <td className="py-3.5 px-4 text-right font-bold text-navy">{t.percentage}%</td>
+                  <td className="py-3.5 px-4">
+                    <Badge variant="outline" className="text-[10px] bg-[#F6F7F9]">
+                      {applicabilityLabel(t.applicability)}
+                    </Badge>
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs"
+                      onClick={() => handleDelete(t.id, t.name)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

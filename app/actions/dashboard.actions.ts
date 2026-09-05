@@ -1,6 +1,6 @@
 "use server";
 
-import { PrismaClient, DocumentStatus, PaymentStatus, AccountType, JournalEntryStatus, Prisma } from "@prisma/client";
+import { PrismaClient, DocumentStatus, PaymentStatus, AccountType, JournalEntryStatus } from "@prisma/client";
 import { getCurrentUser } from "@/lib/auth/session";
 
 const prisma = new PrismaClient();

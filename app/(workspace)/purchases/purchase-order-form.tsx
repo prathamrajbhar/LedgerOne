@@ -35,14 +35,32 @@ interface LineItem {
   lineTotal: number;
 }
 
+interface VendorOption {
+  id: string;
+  name: string;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  sku?: string;
+  cost: number | string;
+}
+
+interface AnalyticAccountOption {
+  id: string;
+  name: string;
+  code: string;
+}
+
 export function PurchaseOrderForm() {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const [vendors, setVendors] = React.useState<any[]>([]);
-  const [products, setProducts] = React.useState<any[]>([]);
-  const [analyticAccounts, setAnalyticAccounts] = React.useState<any[]>([]);
+  const [vendors, setVendors] = React.useState<VendorOption[]>([]);
+  const [products, setProducts] = React.useState<ProductOption[]>([]);
+  const [analyticAccounts, setAnalyticAccounts] = React.useState<AnalyticAccountOption[]>([]);
 
   const [vendorId, setVendorId] = React.useState("");
   const [orderDate, setOrderDate] = React.useState(new Date().toISOString().split("T")[0]);
@@ -111,7 +129,7 @@ export function PurchaseOrderForm() {
     }
   };
 
-  const updateLine = (id: string, field: keyof LineItem, value: any) => {
+  const updateLine = (id: string, field: keyof LineItem, value: string | number) => {
     setLines(
       lines.map((line) => {
         if (line.id !== id) return line;

@@ -3,7 +3,7 @@
  * Handles manual and auto-generated journal entries with balance enforcement
  */
 
-import { PrismaClient, JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { PrismaClient, JournalEntryStatus, JournalEntrySource, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { UnbalancedEntryError, ValidationError, NotFoundError } from "../utils/errors";
 
@@ -108,7 +108,7 @@ export class JournalEntryService {
       const entryNumber = await this.generateEntryNumber();
 
       // Create entry with source document link
-      const data: any = {
+      const data: Prisma.JournalEntryUncheckedCreateInput = {
         entryNumber,
         journalId: input.journalId,
         accountingDate: input.accountingDate,
@@ -345,6 +345,180 @@ export class JournalEntryService {
     }
 
     return { totalDebit, totalCredit };
+  }
+
+  /**
+   * List journal entries with filtering and pagination
+   */
+  async list(params: {
+    search?: string;
+    status?: JournalEntryStatus;
+    source?: JournalEntrySource;
+    dateFrom?: Date;
+    dateTo?: Date;
+    page?: number;
+    pageSize?: number;
+  }) {
+    const page = params.page || 1;
+    const pageSize = params.pageSize || 20;
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+
+    // Search by entry number or source document references
+    if (params.search) {
+      where.OR = [
+        { entryNumber: { contains: params.search, mode: "insensitive" } },
+        { vendorBill: { billNumber: { contains: params.search, mode: "insensitive" } } },
+        { invoice: { invoiceNumber: { contains: params.search, mode: "insensitive" } } },
+      ];
+    }
+
+    // Filter by status
+    if (params.status) {
+      where.status = params.status;
+    }
+
+    // Filter by source
+    if (params.source) {
+      where.source = params.source;
+    }
+
+    // Filter by date range
+    if (params.dateFrom || params.dateTo) {
+      where.accountingDate = {};
+      if (params.dateFrom) {
+        where.accountingDate.gte = params.dateFrom;
+      }
+      if (params.dateTo) {
+        where.accountingDate.lte = params.dateTo;
+      }
+    }
+
+    const [entries, total] = await Promise.all([
+      prisma.journalEntry.findMany({
+        where,
+        include: {
+          journal: true,
+          vendorBill: {
+            include: {
+              vendor: true,
+            },
+          },
+          invoice: {
+            include: {
+              customer: true,
+            },
+          },
+          billPayment: {
+            include: {
+              bill: {
+                include: {
+                  vendor: true,
+                },
+              },
+            },
+          },
+          invoicePayment: {
+            include: {
+              invoice: {
+                include: {
+                  customer: true,
+                },
+              },
+            },
+          },
+          lines: {
+            include: {
+              account: true,
+              partner: true,
+            },
+          },
+          createdBy: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: {
+          accountingDate: "desc",
+        },
+        skip,
+        take: pageSize,
+      }),
+      prisma.journalEntry.count({ where }),
+    ]);
+
+    return {
+      entries,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.ceil(total / pageSize),
+      },
+    };
+  }
+
+  /**
+   * Get a single journal entry by ID with all details
+   */
+  async getById(entryId: string) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id: entryId },
+      include: {
+        journal: true,
+        vendorBill: {
+          include: {
+            vendor: true,
+          },
+        },
+        invoice: {
+          include: {
+            customer: true,
+          },
+        },
+        billPayment: {
+          include: {
+            bill: {
+              include: {
+                vendor: true,
+              },
+            },
+          },
+        },
+        invoicePayment: {
+          include: {
+            invoice: {
+              include: {
+                customer: true,
+              },
+            },
+          },
+        },
+        lines: {
+          include: {
+            account: true,
+            partner: true,
+          },
+        },
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    return entry;
   }
 
   private async generateEntryNumber(): Promise<string> {

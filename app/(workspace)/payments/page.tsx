@@ -45,25 +45,7 @@ export default function PaymentsPage() {
     loadPayments();
   }, []);
 
-  // Fetch unpaid documents when direction changes
-  React.useEffect(() => {
-    if (openModal) {
-      loadUnpaidDocuments();
-    }
-  }, [direction, openModal]);
-
-  const loadPayments = async () => {
-    setLoading(true);
-    const result = await getPaymentsAction();
-    if (result.success && result.data) {
-      setPayments(result.data);
-    } else {
-      toast.error(result.error || "Failed to load payments");
-    }
-    setLoading(false);
-  };
-
-  const loadUnpaidDocuments = async () => {
+  const loadUnpaidDocuments = React.useCallback(async () => {
     if (direction === "INBOUND") {
       const result = await getUnpaidInvoicesAction();
       if (result.success && result.data) {
@@ -79,7 +61,14 @@ export default function PaymentsPage() {
         toast.error(result.error || "Failed to load unpaid bills");
       }
     }
-  };
+  }, [direction]);
+
+  // Fetch unpaid documents when modal opens or direction changes
+  React.useEffect(() => {
+    if (openModal) {
+      loadUnpaidDocuments();
+    }
+  }, [openModal, loadUnpaidDocuments]);
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();

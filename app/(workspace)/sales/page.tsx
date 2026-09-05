@@ -11,8 +11,18 @@ import { SalesOrderForm } from "./sales-order-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 
+interface SalesOrderItem {
+  id: string;
+  soNumber: string;
+  customer?: { name: string } | null;
+  orderDate: string | Date;
+  status: string;
+  totalAmount: number | string;
+  lines?: unknown[];
+}
+
 export default function SalesOrdersPage() {
-  const [salesOrders, setSalesOrders] = React.useState<any[]>([]);
+  const [salesOrders, setSalesOrders] = React.useState<SalesOrderItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);

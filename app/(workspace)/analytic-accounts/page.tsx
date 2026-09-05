@@ -12,48 +12,105 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
+import { FormSelect } from "@/components/forms/form-select";
 import { toast } from "sonner";
+import {
+  getAnalyticAccountsAction,
+  createAnalyticAccountAction,
+  deleteAnalyticAccountAction,
+} from "@/app/actions/analytic-account.actions";
+import { AnalyticAccountType } from "@prisma/client";
 
 interface AnalyticAccount {
   id: string;
-  code: string;
   name: string;
-  spent: number;
-  budget: number;
+  type: AnalyticAccountType;
 }
 
-const initialAnalytics: AnalyticAccount[] = [
-  { id: "an-1", code: "AN-HOTEL-OAK", name: "Grand Hyatt Bedroom Suites Project", spent: 450000, budget: 600000 },
-  { id: "an-2", code: "AN-CORP-DESK", name: "Infosys Campus Ergonomic Desks Contract", spent: 320000, budget: 400000 },
-  { id: "an-3", code: "AN-VILLA-TEAK", name: "Palm Meadows Villa Interior Furnishings", spent: 180000, budget: 250000 },
-  { id: "an-4", code: "AN-EXHIBIT-2024", name: "India Furniture Expo 2024 Booth & Showcase", spent: 85000, budget: 100000 },
-];
-
 export default function AnalyticAccountsPage() {
-  const [accounts, setAccounts] = React.useState(initialAnalytics);
+  const [accounts, setAccounts] = React.useState<AnalyticAccount[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [openModal, setOpenModal] = React.useState(false);
-  const [code, setCode] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
   const [name, setName] = React.useState("");
-  const [budget, setBudget] = React.useState("");
+  const [type, setType] = React.useState<AnalyticAccountType>("EXPENSES");
 
-  const handleCreate = (e: React.FormEvent) => {
+  // Fetch analytic accounts on mount
+  React.useEffect(() => {
+    loadAccounts();
+  }, []);
+
+  const loadAccounts = async () => {
+    setLoading(true);
+    try {
+      const result = await getAnalyticAccountsAction();
+      if (result.success && result.data) {
+        setAccounts(result.data);
+      } else {
+        toast.error(result.error || "Failed to load analytic accounts");
+      }
+    } catch (error) {
+      toast.error("Failed to load analytic accounts");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !code) return;
-    setAccounts([
-      ...accounts,
-      {
-        id: `an-${Date.now()}`,
-        code: code.toUpperCase(),
+    if (!name) return;
+
+    setSubmitting(true);
+    try {
+      const result = await createAnalyticAccountAction({
         name,
-        spent: 0,
-        budget: Number(budget) || 100000,
-      },
-    ]);
-    toast.success(`Analytic Account "${name}" created.`);
-    setOpenModal(false);
-    setCode("");
-    setName("");
-    setBudget("");
+        type,
+      });
+
+      if (result.success) {
+        toast.success(`Analytic Account "${name}" created.`);
+        setOpenModal(false);
+        setName("");
+        setType("EXPENSES");
+        await loadAccounts();
+      } else {
+        toast.error(result.error || "Failed to create analytic account");
+      }
+    } catch (error) {
+      toast.error("Failed to create analytic account");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: string, accountName: string) => {
+    if (!confirm(`Are you sure you want to delete "${accountName}"?`)) return;
+
+    try {
+      const result = await deleteAnalyticAccountAction(id);
+      if (result.success) {
+        toast.success("Analytic account deleted successfully");
+        await loadAccounts();
+      } else {
+        toast.error(result.error || "Failed to delete analytic account");
+      }
+    } catch (error) {
+      toast.error("Failed to delete analytic account");
+      console.error(error);
+    }
+  };
+
+  const typeLabel = (accountType: AnalyticAccountType) => {
+    switch (accountType) {
+      case "INCOME":
+        return "Income Tracking";
+      case "EXPENSES":
+        return "Cost/Expense Tracking";
+      default:
+        return accountType;
+    }
   };
 
   return (
@@ -75,32 +132,40 @@ export default function AnalyticAccountsPage() {
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4 pt-2">
                 <FormInput
-                  label="Project / Cost Center Code"
+                  label="Project / Cost Center Name"
                   required
-                  placeholder="e.g. AN-RESORT-01"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-                <FormInput
-                  label="Project Title"
-                  required
-                  placeholder="e.g. Goa Luxury Villa Wooden Decking"
+                  placeholder="e.g. Grand Hyatt Bedroom Suites Project"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  disabled={submitting}
                 />
-                <FormInput
-                  label="Target Cost Budget (₹)"
-                  type="number"
-                  placeholder="300000"
-                  value={budget}
-                  onChange={(e) => setBudget(e.target.value)}
+                <FormSelect
+                  label="Account Type"
+                  value={type}
+                  onValueChange={(val) => setType(val as AnalyticAccountType)}
+                  options={[
+                    { value: "EXPENSES", label: "Cost/Expense Tracking" },
+                    { value: "INCOME", label: "Income Tracking" },
+                  ]}
+                  disabled={submitting}
                 />
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setOpenModal(false)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setOpenModal(false)}
+                    disabled={submitting}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" size="sm" className="bg-navy hover:bg-navy-hover text-white">
-                    Create
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-navy hover:bg-navy-hover text-white"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Creating..." : "Create"}
                   </Button>
                 </div>
               </form>
@@ -109,39 +174,50 @@ export default function AnalyticAccountsPage() {
         }
       />
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Code</th>
-              <th className="py-3.5 px-4">Project / Cost Center</th>
-              <th className="py-3.5 px-4 text-right">Actual Cost Spent</th>
-              <th className="py-3.5 px-4 text-right">Budget Limit</th>
-              <th className="py-3.5 px-4 text-center">Utilization</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {accounts.map((acc) => {
-              const pct = ((acc.spent / acc.budget) * 100).toFixed(0);
-              return (
+      {loading ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">Loading analytic accounts...</p>
+        </div>
+      ) : accounts.length === 0 ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">No analytic accounts configured yet.</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Click "New Analytic Account" to add your first cost center or project tracker.
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="py-3.5 px-4">Project / Cost Center</th>
+                <th className="py-3.5 px-4">Type</th>
+                <th className="py-3.5 px-4 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {accounts.map((acc) => (
                 <tr key={acc.id} className="hover:bg-primary-light/30 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{acc.code}</td>
                   <td className="py-3.5 px-4 font-semibold text-foreground">{acc.name}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    ₹{acc.spent.toLocaleString("en-IN")}
-                  </td>
-                  <td className="py-3.5 px-4 text-right text-muted-foreground">
-                    ₹{acc.budget.toLocaleString("en-IN")}
+                  <td className="py-3.5 px-4 text-muted-foreground text-xs">
+                    {typeLabel(acc.type)}
                   </td>
                   <td className="py-3.5 px-4 text-center">
-                    <span className="text-xs font-bold text-teal">{pct}%</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 h-7 text-xs"
+                      onClick={() => handleDelete(acc.id, acc.name)}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

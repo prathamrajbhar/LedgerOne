@@ -26,10 +26,22 @@ interface LineItem {
   taxRateId?: string;
 }
 
+interface CustomerOption {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface ProductOption {
+  id: string;
+  name: string;
+  salesPrice: number | string;
+}
+
 export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderFormProps) {
   const [loading, setLoading] = React.useState(false);
-  const [customers, setCustomers] = React.useState<any[]>([]);
-  const [products, setProducts] = React.useState<any[]>([]);
+  const [customers, setCustomers] = React.useState<CustomerOption[]>([]);
+  const [products, setProducts] = React.useState<ProductOption[]>([]);
   const [loadingData, setLoadingData] = React.useState(true);
 
   const [customerId, setCustomerId] = React.useState("");
@@ -58,7 +70,7 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
 
       if (customersResult.success && customersResult.data) {
         const allCustomers = customersResult.data.contacts.filter(
-          (c: any) => c.type === "CUSTOMER" || c.type === "BOTH"
+          (c: { type: string }) => c.type === "CUSTOMER" || c.type === "BOTH"
         );
         setCustomers(allCustomers);
       }
@@ -86,7 +98,7 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
     setLines(lines.filter((_, i) => i !== index));
   };
 
-  const handleLineChange = (index: number, field: keyof LineItem, value: any) => {
+  const handleLineChange = (index: number, field: keyof LineItem, value: string | number) => {
     const newLines = [...lines];
     newLines[index] = { ...newLines[index], [field]: value };
 

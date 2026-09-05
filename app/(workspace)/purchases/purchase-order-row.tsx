@@ -7,8 +7,19 @@ import { CheckCircle } from "lucide-react";
 import { confirmPurchaseOrderAction } from "@/app/actions/purchase.actions";
 import { toast } from "sonner";
 
+interface PurchaseOrderData {
+  id: string;
+  poNumber: string;
+  vendor?: { name: string } | null;
+  orderDate: string | Date;
+  status: string;
+  totalAmount: number | string;
+  _count?: { lines: number };
+  lines?: unknown[];
+}
+
 interface PurchaseOrderRowProps {
-  po: any;
+  po: PurchaseOrderData;
 }
 
 export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {

@@ -3,8 +3,8 @@
  * Manages customer and vendor contact information
  */
 
-import { PrismaClient, ContactType } from "@prisma/client";
-import { ValidationError, ConflictError, NotFoundError } from "../utils/errors";
+import { PrismaClient, ContactType, Prisma } from "@prisma/client";
+import { ConflictError, NotFoundError } from "../utils/errors";
 
 const prisma = new PrismaClient();
 
@@ -105,7 +105,7 @@ export class ContactService {
   async list(params: ListContactsParams) {
     const { search, type, isArchived = false, limit = 25, offset = 0 } = params;
 
-    const where: any = {
+    const where: Prisma.ContactWhereInput = {
       isArchived,
     };
 
