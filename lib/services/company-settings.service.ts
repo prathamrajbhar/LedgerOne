@@ -14,6 +14,8 @@ export interface UpdateCompanySettingsInput {
   soNumberPrefix?: string;
   invoiceNumberPrefix?: string;
   jeNumberPrefix?: string;
+  debtorsAccountId?: string;
+  creditorsAccountId?: string;
 }
 
 export class CompanySettingsService {

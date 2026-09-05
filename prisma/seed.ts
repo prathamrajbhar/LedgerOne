@@ -6,27 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting database seeding...");
 
-  // 1. Create default company settings
-  console.log("📝 Creating company settings...");
-  const companySettings = await prisma.companySettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: {
-      id: "default",
-      companyName: "LedgerOne Demo Company",
-      baseCurrency: "USD",
-      fiscalYearStartMonth: 1,
-      poNumberPrefix: "PO",
-      billNumberPrefix: "BILL",
-      soNumberPrefix: "SO",
-      invoiceNumberPrefix: "INV",
-      jeNumberPrefix: "JE",
-      address: "123 Business Street, Suite 100, New York, NY 10001",
-    },
-  });
-  console.log("✓ Company settings created");
-
-  // 2. Create default chart of accounts
+  // 1. Create default chart of accounts first (needed for CompanySettings references)
   console.log("📊 Creating chart of accounts...");
   const accounts = [
     // Assets
@@ -71,6 +51,31 @@ async function main() {
     createdAccounts.push(created);
   }
   console.log(`✓ Created ${createdAccounts.length} accounts`);
+
+  // 2. Create default company settings with account references
+  console.log("📝 Creating company settings...");
+  const debtorsAccount = createdAccounts.find((a) => a.name === "Accounts Receivable")!;
+  const creditorsAccount = createdAccounts.find((a) => a.name === "Accounts Payable")!;
+
+  const companySettings = await prisma.companySettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: {
+      id: "default",
+      companyName: "LedgerOne Demo Company",
+      baseCurrency: "USD",
+      fiscalYearStartMonth: 1,
+      poNumberPrefix: "PO",
+      billNumberPrefix: "BILL",
+      soNumberPrefix: "SO",
+      invoiceNumberPrefix: "INV",
+      jeNumberPrefix: "JE",
+      debtorsAccountId: debtorsAccount.id,
+      creditorsAccountId: creditorsAccount.id,
+      address: "123 Business Street, Suite 100, New York, NY 10001",
+    },
+  });
+  console.log("✓ Company settings created");
 
   // 3. Create default journals
   console.log("📚 Creating journals...");

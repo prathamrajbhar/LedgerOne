@@ -148,6 +148,8 @@ model ChartOfAccount {
   // Relations
   journalDefaults Journal[]
   journalEntryLines JournalEntryLine[]
+  companySettingsAsDebtors CompanySettings[] @relation("DebtorsAccount")
+  companySettingsAsCreditors CompanySettings[] @relation("CreditorsAccount")
 
   @@index([type])
   @@index([isArchived])
@@ -680,8 +682,16 @@ model CompanySettings {
   soNumberPrefix        String   @default("SO")
   invoiceNumberPrefix   String   @default("INV")
   jeNumberPrefix        String   @default("JE")
+  debtorsAccountId      String?
+  creditorsAccountId    String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
+  // Relations
+  debtorsAccount        ChartOfAccount? @relation("DebtorsAccount", fields: [debtorsAccountId], references: [id])
+  creditorsAccount      ChartOfAccount? @relation("CreditorsAccount", fields: [creditorsAccountId], references: [id])
+
+  @@index([debtorsAccountId])
+  @@index([creditorsAccountId])
   @@map("company_settings")
 }

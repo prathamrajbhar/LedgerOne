@@ -4,9 +4,10 @@
  * Supports both manual payments (Admin/Accountant) and gateway payments (Contact Portal)
  */
 
-import { PrismaClient, PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus } from "@prisma/client";
+import { PrismaClient, PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus, JournalEntrySource } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, PaymentGatewayError, UnauthorizedError, NotFoundError } from "../utils/errors";
+import { journalEntryService } from "./journal-entry.service";
 
 const prisma = new PrismaClient();
 
@@ -61,6 +62,23 @@ export class PaymentService {
         throw new ValidationError("Payment amount exceeds amount due");
       }
 
+      // Get company settings for account mappings
+      const settings = await tx.companySettings.findFirst();
+      if (!settings?.creditorsAccountId) {
+        throw new ValidationError("Creditors account not configured in company settings");
+      }
+
+      // Get appropriate journal based on payment method
+      const journalType = input.paymentMethod === PaymentMethod.BANK ? "BANK" : "CASH";
+      const journal = await tx.journal.findFirst({
+        where: { type: journalType },
+        include: { defaultAccount: true },
+      });
+
+      if (!journal) {
+        throw new ValidationError(`${journalType} journal not found`);
+      }
+
       // Create payment record
       const payment = await tx.billPayment.create({
         data: {
@@ -91,8 +109,27 @@ export class PaymentService {
       });
 
       // Create Journal Entry #2 (Creditors Dr / Cash-Bank Cr)
-      // TODO: Implement JournalEntryService.createPaymentEntry
-      // This will be created in the accounting service
+      await journalEntryService.autoGenerate({
+        source: JournalEntrySource.BILL_PAYMENT,
+        journalId: journal.id,
+        accountingDate: input.paymentDate,
+        sourceDocumentId: payment.id,
+        userId: input.userId,
+        lines: [
+          {
+            accountId: settings.creditorsAccountId,
+            partnerId: bill.vendorId,
+            debit: input.amount,
+            credit: new Decimal(0),
+          },
+          {
+            accountId: journal.defaultAccountId,
+            partnerId: bill.vendorId,
+            debit: new Decimal(0),
+            credit: input.amount,
+          },
+        ],
+      });
 
       return payment;
     });
@@ -111,6 +148,23 @@ export class PaymentService {
 
       if (input.amount.greaterThan(invoice.amountDue)) {
         throw new ValidationError("Payment amount exceeds amount due");
+      }
+
+      // Get company settings for account mappings
+      const settings = await tx.companySettings.findFirst();
+      if (!settings?.debtorsAccountId) {
+        throw new ValidationError("Debtors account not configured in company settings");
+      }
+
+      // Get appropriate journal based on payment method
+      const journalType = input.paymentMethod === PaymentMethod.BANK ? "BANK" : "CASH";
+      const journal = await tx.journal.findFirst({
+        where: { type: journalType },
+        include: { defaultAccount: true },
+      });
+
+      if (!journal) {
+        throw new ValidationError(`${journalType} journal not found`);
       }
 
       // Create payment record
@@ -144,7 +198,27 @@ export class PaymentService {
       });
 
       // Create Journal Entry #2 (Cash/Bank Dr / Debtors Cr)
-      // TODO: Implement JournalEntryService.createPaymentEntry
+      await journalEntryService.autoGenerate({
+        source: JournalEntrySource.INVOICE_PAYMENT,
+        journalId: journal.id,
+        accountingDate: input.paymentDate,
+        sourceDocumentId: payment.id,
+        userId: input.userId,
+        lines: [
+          {
+            accountId: journal.defaultAccountId,
+            partnerId: invoice.customerId,
+            debit: input.amount,
+            credit: new Decimal(0),
+          },
+          {
+            accountId: settings.debtorsAccountId,
+            partnerId: invoice.customerId,
+            debit: new Decimal(0),
+            credit: input.amount,
+          },
+        ],
+      });
 
       return payment;
     });
@@ -221,6 +295,22 @@ export class PaymentService {
         return transaction;
       }
 
+      // Get company settings for account mappings
+      const settings = await tx.companySettings.findFirst();
+      if (!settings?.debtorsAccountId) {
+        throw new ValidationError("Debtors account not configured in company settings");
+      }
+
+      // Get Bank journal (gateway payments always go to Bank)
+      const bankJournal = await tx.journal.findFirst({
+        where: { type: "BANK" },
+        include: { defaultAccount: true },
+      });
+
+      if (!bankJournal) {
+        throw new ValidationError("Bank journal not found");
+      }
+
       // Update transaction
       await tx.paymentGatewayTransaction.update({
         where: { id: transaction.id },
@@ -263,8 +353,28 @@ export class PaymentService {
         },
       });
 
-      // Create Journal Entry #2
-      // TODO: Implement JournalEntryService.createPaymentEntry
+      // Create Journal Entry #2 (Bank Dr / Debtors Cr)
+      await journalEntryService.autoGenerate({
+        source: JournalEntrySource.INVOICE_PAYMENT,
+        journalId: bankJournal.id,
+        accountingDate: new Date(),
+        sourceDocumentId: payment.id,
+        userId: invoice.createdById || "system", // Gateway payments don't have a user context
+        lines: [
+          {
+            accountId: bankJournal.defaultAccountId,
+            partnerId: invoice.customerId,
+            debit: transaction.amount,
+            credit: new Decimal(0),
+          },
+          {
+            accountId: settings.debtorsAccountId,
+            partnerId: invoice.customerId,
+            debit: new Decimal(0),
+            credit: transaction.amount,
+          },
+        ],
+      });
 
       // TODO: Send confirmation email via Resend
 
