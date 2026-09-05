@@ -8,7 +8,7 @@ export default function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="relative min-h-[100dvh] w-full flex flex-col lg:flex-row items-stretch bg-[#F6F8FB] font-sans overflow-x-hidden">
+    <main className="relative min-h-[100dvh] w-full flex flex-col justify-between bg-[#F6F8FB] font-sans overflow-x-hidden">
       {/* Background Graphic */}
       <div
         className="fixed inset-0 w-full h-full bg-cover bg-center pointer-events-none z-0"
@@ -16,55 +16,63 @@ export default function AuthLayout({
           backgroundImage: "url('/auth-bg.png')",
         }}
       />
-      {/* Soft adaptive overlay for mobile & narrow screens */}
-      <div className="fixed inset-0 w-full h-full bg-white/45 lg:bg-transparent pointer-events-none z-0 backdrop-blur-[1px] lg:backdrop-blur-none" />
+      {/* Subtle overlay for small screens */}
+      <div className="fixed inset-0 w-full h-full bg-white/40 lg:bg-transparent pointer-events-none z-0 backdrop-blur-[1px] lg:backdrop-blur-none" />
 
-      {/* Mobile Top Header Branding (< lg screens) */}
-      <div className="lg:hidden relative z-10 w-full pt-5 pb-2 px-6 flex items-center justify-between">
-        <Link href="/" className="inline-block group">
-          <span className="text-2xl font-extrabold tracking-tight text-[#0F2942]">
-            Ledger<span className="text-[#167C80]">One</span>
-          </span>
-          <p className="text-[11px] text-[#526477] font-normal">
-            Enterprise Accounting & Furniture ERP
-          </p>
-        </Link>
-        <div className="w-8 h-1 bg-[#167C80] rounded-full" />
-      </div>
-
-      {/* Left Column: Brand Identity, Value Proposition & Feature Badges (Desktop lg+) */}
-      <div className="hidden lg:flex relative z-10 flex-1 flex-col justify-between py-8 xl:py-12 px-8 xl:px-16 2xl:px-20 max-w-[50%] min-h-[100dvh]">
-        {/* Top Header Branding */}
+      {/* Top Header Bar: Logo on Left, Tagline on Right */}
+      <header className="relative z-10 w-full pt-6 sm:pt-8 px-6 sm:px-12 lg:px-16 xl:px-20 flex items-start justify-between">
+        {/* Left Branding */}
         <div>
           <Link href="/" className="inline-block group">
-            <span className="text-2xl xl:text-3xl font-extrabold tracking-tight text-[#0F2942]">
+            <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0F2942]">
               Ledger<span className="text-[#167C80]">One</span>
             </span>
             <p className="text-xs text-[#526477] mt-0.5 font-normal tracking-wide">
               Enterprise Accounting & Furniture ERP System
             </p>
           </Link>
-          <div className="w-10 h-1 bg-[#167C80] rounded-full mt-2" />
+          <div className="w-9 h-[3.5px] bg-[#167C80] rounded-full mt-2.5" />
         </div>
 
-        {/* Center Hero Copy & 4 Capability Indicators */}
-        <div className="my-auto py-4 space-y-4 xl:space-y-6 max-w-lg">
-          <div className="space-y-2.5">
-            <h1 className="text-3xl xl:text-4xl 2xl:text-[42px] font-extrabold text-[#0F2942] tracking-tight leading-[1.14]">
-              Manage Smarter.
+        {/* Right Tagline (Visible on md/lg screens, exact match with reference image) */}
+        <div className="hidden sm:block text-right">
+          <p className="text-xs font-medium text-[#526477] tracking-tight">Reliable Accounts.</p>
+          <p className="text-xs font-medium text-[#526477] tracking-tight">Stronger Businesses.</p>
+          <div className="w-6 h-[2.5px] bg-[#167C80] rounded-full ml-auto mt-1" />
+        </div>
+      </header>
+
+      {/* Main Body: 2 Columns on Desktop */}
+      <div className="relative z-10 flex-1 flex flex-col lg:flex-row items-center justify-between px-6 sm:px-12 lg:px-16 xl:px-20 py-6 lg:py-4">
+        {/* Left Column: Eyebrow, Headline, Description, 4 Colored Cards, Callout Quote */}
+        <div className="hidden lg:flex flex-col justify-center space-y-5 xl:space-y-6 max-w-xl w-full pr-6 xl:pr-10">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-2 text-xs font-medium text-[#526477] tracking-wider">
+            <span>Simplify</span>
+            <span className="text-[#167C80] font-bold">•</span>
+            <span>Automate</span>
+            <span className="text-[#167C80] font-bold">•</span>
+            <span>Grow</span>
+          </div>
+
+          {/* Main Headline */}
+          <div className="space-y-2">
+            <h1 className="text-4xl lg:text-[44px] xl:text-[48px] font-extrabold tracking-tight leading-[1.08]">
+              <span className="text-[#0F2942]">Manage Smarter.</span>
               <br />
-              <span className="text-[#0F2942]">Grow Faster.</span>
+              <span className="text-[#167C80]">Grow Faster.</span>
             </h1>
-            <p className="text-xs xl:text-sm text-[#4A5568] leading-relaxed max-w-md">
+            <p className="text-xs xl:text-sm text-[#526477] leading-relaxed max-w-md pt-1">
               A comprehensive double-entry accounting and inventory control platform purpose-built for furniture manufacturing and retail enterprises.
             </p>
           </div>
 
           {/* 4 Feature Cards */}
-          <div className="grid grid-cols-4 gap-2 xl:gap-2.5 pt-1">
-            <div className="bg-white/90 backdrop-blur-sm border border-white/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-2.5 xl:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all w-full">
-              <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-xl bg-[#F0F4F8] flex items-center justify-center text-[#16324F] mb-1 flex-shrink-0">
-                <Package className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+          <div className="grid grid-cols-4 gap-2.5 xl:gap-3 max-w-md pt-1">
+            {/* Inventory Tracking - Mint */}
+            <div className="bg-white/95 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
+              <div className="h-9 w-9 rounded-xl bg-[#DFF4EC] flex items-center justify-center text-[#0D9488] mb-1.5 flex-shrink-0">
+                <Package className="h-4 w-4" />
               </div>
               <span className="text-[10px] font-semibold text-[#0F2942] leading-tight">
                 Inventory
@@ -73,9 +81,10 @@ export default function AuthLayout({
               </span>
             </div>
 
-            <div className="bg-white/90 backdrop-blur-sm border border-white/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-2.5 xl:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all w-full">
-              <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-xl bg-[#F0F4F8] flex items-center justify-center text-[#16324F] mb-1 flex-shrink-0">
-                <FileText className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+            {/* General Ledger - Blue */}
+            <div className="bg-white/95 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
+              <div className="h-9 w-9 rounded-xl bg-[#E8F1FC] flex items-center justify-center text-[#1E70B8] mb-1.5 flex-shrink-0">
+                <FileText className="h-4 w-4" />
               </div>
               <span className="text-[10px] font-semibold text-[#0F2942] leading-tight">
                 General
@@ -84,9 +93,10 @@ export default function AuthLayout({
               </span>
             </div>
 
-            <div className="bg-white/90 backdrop-blur-sm border border-white/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-2.5 xl:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all w-full">
-              <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-xl bg-[#F0F4F8] flex items-center justify-center text-[#16324F] mb-1 flex-shrink-0">
-                <Users className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+            {/* Vendor & Portal - Purple */}
+            <div className="bg-white/95 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
+              <div className="h-9 w-9 rounded-xl bg-[#F2ECFD] flex items-center justify-center text-[#7C3AED] mb-1.5 flex-shrink-0">
+                <Users className="h-4 w-4" />
               </div>
               <span className="text-[10px] font-semibold text-[#0F2942] leading-tight">
                 Vendor &
@@ -95,9 +105,10 @@ export default function AuthLayout({
               </span>
             </div>
 
-            <div className="bg-white/90 backdrop-blur-sm border border-white/80 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-2.5 xl:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all w-full">
-              <div className="h-7 w-7 xl:h-8 xl:w-8 rounded-xl bg-[#F0F4F8] flex items-center justify-center text-[#16324F] mb-1 flex-shrink-0">
-                <BarChart3 className="h-3.5 w-3.5 xl:h-4 xl:w-4" />
+            {/* Financial Analytics - Orange */}
+            <div className="bg-white/95 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
+              <div className="h-9 w-9 rounded-xl bg-[#FFF1E6] flex items-center justify-center text-[#EA580C] mb-1.5 flex-shrink-0">
+                <BarChart3 className="h-4 w-4" />
               </div>
               <span className="text-[10px] font-semibold text-[#0F2942] leading-tight">
                 Financial
@@ -106,36 +117,25 @@ export default function AuthLayout({
               </span>
             </div>
           </div>
+
+          {/* Quote Callout with Left Teal Border */}
+          <div className="border-l-[2.5px] border-[#167C80] pl-3.5 py-1 text-xs text-[#526477] italic leading-relaxed pt-1">
+            Everything your furniture business needs,
+            <br />
+            in one powerful platform.
+          </div>
         </div>
 
-        {/* Footer info */}
-        <div className="text-[11px] text-[#526477]/80">
-          © {new Date().getFullYear()} LedgerOne Enterprise. All rights reserved.
+        {/* Right Column: Centered Floating Auth Card */}
+        <div className="flex-1 flex justify-center lg:justify-end items-center w-full py-4 sm:py-6">
+          <div className="w-full max-w-[420px]">
+            {children}
+          </div>
         </div>
       </div>
 
-      {/* Right Column: Centered Floating Auth Card Container */}
-      <div className="relative z-10 flex-1 flex flex-col justify-center items-center py-4 sm:py-8 lg:py-10 px-4 sm:px-8 lg:px-10 xl:px-16 w-full lg:max-w-[50%] min-h-[calc(100dvh-80px)] lg:min-h-[100dvh]">
-        <div className="w-full max-w-[425px] my-auto">
-          {children}
-        </div>
-
-        {/* Mobile-only compact feature indicators below the card */}
-        <div className="lg:hidden mt-5 pb-6 flex flex-wrap justify-center items-center gap-2 text-center">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 border border-white/90 text-[10px] font-semibold text-[#0F2942] shadow-xs">
-            <Package className="h-3 w-3 text-[#16324F]" /> Inventory
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 border border-white/90 text-[10px] font-semibold text-[#0F2942] shadow-xs">
-            <FileText className="h-3 w-3 text-[#16324F]" /> General Ledger
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 border border-white/90 text-[10px] font-semibold text-[#0F2942] shadow-xs">
-            <Users className="h-3 w-3 text-[#16324F]" /> Client Portal
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/80 border border-white/90 text-[10px] font-semibold text-[#0F2942] shadow-xs">
-            <BarChart3 className="h-3 w-3 text-[#16324F]" /> Analytics
-          </span>
-        </div>
-      </div>
+      {/* Empty bottom spacer for balance */}
+      <div className="hidden lg:block h-6" />
     </main>
   );
 }
