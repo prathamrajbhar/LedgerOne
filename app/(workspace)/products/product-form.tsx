@@ -56,8 +56,12 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
 
     if (!formData.name.trim()) newErrors.name = "Product name is required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.salesPrice) newErrors.salesPrice = "Sales price is required";
-    if (!formData.cost) newErrors.cost = "Cost price is required";
+    if (formData.salesPrice === "" || formData.salesPrice === null || formData.salesPrice === undefined) {
+      newErrors.salesPrice = "Sales price is required";
+    }
+    if (formData.cost === "" || formData.cost === null || formData.cost === undefined) {
+      newErrors.cost = "Cost price is required";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -72,9 +76,9 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
         name: formData.name.trim(),
         type: formData.type,
         categoryId: formData.categoryId,
-        sku: formData.sku.trim() || undefined,
-        material: formData.material.trim() || undefined,
-        dimensions: formData.dimensions.trim() || undefined,
+        sku: formData.sku.trim() || null,
+        material: formData.material.trim() || null,
+        dimensions: formData.dimensions.trim() || null,
         salesPrice: parseFloat(formData.salesPrice.toString()),
         cost: parseFloat(formData.cost.toString()),
         stock: parseInt(formData.stock.toString()) || 0,

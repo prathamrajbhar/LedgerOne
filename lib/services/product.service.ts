@@ -8,14 +8,14 @@ export interface CreateProductInput {
   name: string;
   type: "GOODS" | "SERVICE" | "COMBO";
   categoryId: string;
-  sku?: string;
-  material?: string;
-  dimensions?: string;
+  sku?: string | null;
+  material?: string | null;
+  dimensions?: string | null;
   salesPrice: number;
   cost: number;
   stock?: number;
   reorderPoint?: number;
-  image?: string;
+  image?: string | null;
 }
 
 export interface UpdateProductInput {
@@ -23,14 +23,14 @@ export interface UpdateProductInput {
   name?: string;
   type?: "GOODS" | "SERVICE" | "COMBO";
   categoryId?: string;
-  sku?: string;
-  material?: string;
-  dimensions?: string;
+  sku?: string | null;
+  material?: string | null;
+  dimensions?: string | null;
   salesPrice?: number;
   cost?: number;
   stock?: number;
   reorderPoint?: number;
-  image?: string;
+  image?: string | null;
 }
 
 export interface ListProductsParams {
@@ -68,36 +68,45 @@ export class ProductService {
       throw new ValidationError("Product category not found");
     }
 
+    const formattedSku = input.sku?.trim() || null;
+
     // Check SKU uniqueness if provided
-    if (input.sku) {
+    if (formattedSku) {
       const existingSku = await prisma.product.findUnique({
-        where: { sku: input.sku },
+        where: { sku: formattedSku },
       });
       if (existingSku) {
         throw new ConflictError("SKU already exists");
       }
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name: input.name.trim(),
-        type: input.type,
-        categoryId: input.categoryId,
-        sku: input.sku?.trim() || null,
-        material: input.material?.trim() || null,
-        dimensions: input.dimensions?.trim() || null,
-        salesPrice: new Prisma.Decimal(input.salesPrice),
-        cost: new Prisma.Decimal(input.cost),
-        stock: input.stock ?? 0,
-        reorderPoint: input.reorderPoint ?? 10,
-        image: input.image,
-      },
-      include: {
-        category: true,
-      },
-    });
+    try {
+      const product = await prisma.product.create({
+        data: {
+          name: input.name.trim(),
+          type: input.type,
+          categoryId: input.categoryId,
+          sku: formattedSku,
+          material: input.material?.trim() || null,
+          dimensions: input.dimensions?.trim() || null,
+          salesPrice: new Prisma.Decimal(input.salesPrice),
+          cost: new Prisma.Decimal(input.cost),
+          stock: input.stock ?? 0,
+          reorderPoint: input.reorderPoint ?? 10,
+          image: input.image || null,
+        },
+        include: {
+          category: true,
+        },
+      });
 
-    return product;
+      return product;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictError("SKU already exists");
+      }
+      throw error;
+    }
   }
 
   async update(input: UpdateProductInput) {
@@ -109,6 +118,9 @@ export class ProductService {
       throw new NotFoundError("Product not found");
     }
 
+    if (input.name !== undefined && !input.name.trim()) {
+      throw new ValidationError("Product name cannot be empty");
+    }
     if (input.salesPrice !== undefined && input.salesPrice < 0) {
       throw new ValidationError("Sales price cannot be negative");
     }
@@ -132,37 +144,49 @@ export class ProductService {
       }
     }
 
-    // Check SKU uniqueness if being updated
-    if (input.sku && input.sku !== product.sku) {
+    const formattedSku = input.sku !== undefined ? (input.sku?.trim() || null) : undefined;
+
+    // Check SKU uniqueness if being updated to a non-null SKU
+    if (formattedSku !== undefined && formattedSku !== null && formattedSku !== product.sku) {
       const existingSku = await prisma.product.findUnique({
-        where: { sku: input.sku },
+        where: { sku: formattedSku },
       });
-      if (existingSku) {
+      if (existingSku && existingSku.id !== input.id) {
         throw new ConflictError("SKU already exists");
       }
     }
 
-    const updated = await prisma.product.update({
-      where: { id: input.id },
-      data: {
-        name: input.name?.trim(),
-        type: input.type,
-        categoryId: input.categoryId,
-        sku: input.sku?.trim(),
-        material: input.material?.trim(),
-        dimensions: input.dimensions?.trim(),
-        salesPrice: input.salesPrice ? new Prisma.Decimal(input.salesPrice) : undefined,
-        cost: input.cost ? new Prisma.Decimal(input.cost) : undefined,
-        stock: input.stock,
-        reorderPoint: input.reorderPoint,
-        image: input.image,
-      },
-      include: {
-        category: true,
-      },
-    });
+    const formattedMaterial = input.material !== undefined ? (input.material?.trim() || null) : undefined;
+    const formattedDimensions = input.dimensions !== undefined ? (input.dimensions?.trim() || null) : undefined;
 
-    return updated;
+    try {
+      const updated = await prisma.product.update({
+        where: { id: input.id },
+        data: {
+          ...(input.name !== undefined && { name: input.name.trim() }),
+          ...(input.type !== undefined && { type: input.type }),
+          ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+          ...(formattedSku !== undefined && { sku: formattedSku }),
+          ...(formattedMaterial !== undefined && { material: formattedMaterial }),
+          ...(formattedDimensions !== undefined && { dimensions: formattedDimensions }),
+          ...(input.salesPrice !== undefined && { salesPrice: new Prisma.Decimal(input.salesPrice) }),
+          ...(input.cost !== undefined && { cost: new Prisma.Decimal(input.cost) }),
+          ...(input.stock !== undefined && { stock: input.stock }),
+          ...(input.reorderPoint !== undefined && { reorderPoint: input.reorderPoint }),
+          ...(input.image !== undefined && { image: input.image }),
+        },
+        include: {
+          category: true,
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictError("SKU already exists");
+      }
+      throw error;
+    }
   }
 
   async findById(id: string) {
@@ -172,8 +196,6 @@ export class ProductService {
         category: true,
       },
     });
-
-    // select * from product where 
 
     if (!product) {
       throw new NotFoundError("Product not found");
