@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormTextarea } from "@/components/forms/form-textarea";
+import { PhoneInput } from "@/components/ui/phone-input";
 import { ArrowLeft, Save, Users, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -269,11 +270,11 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
                 error={errors.email}
               />
 
-              <FormInput
+              <PhoneInput
                 label="Phone Number"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="+91 98765 43210"
+                onChange={(value) => setFormData({ ...formData, phone: value })}
+                placeholder="98765 43210"
               />
             </div>
 

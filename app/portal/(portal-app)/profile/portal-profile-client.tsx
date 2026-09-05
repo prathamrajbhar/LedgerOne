@@ -27,6 +27,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PhoneInput } from "@/components/ui/phone-input";
 import {
   PortalProfileData,
   updatePortalProfileAction,
@@ -481,21 +482,12 @@ export function PortalProfileClient({ initialProfile }: PortalProfileClientProps
                       </div>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-foreground">
-                        Phone Number
-                      </label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-                        <Input
-                          type="tel"
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="+91 98765 43210"
-                          className="pl-9 text-xs"
-                        />
-                      </div>
-                    </div>
+                    <PhoneInput
+                      label="Phone Number"
+                      value={phone}
+                      onChange={(val) => setPhone(val)}
+                      placeholder="98765 43210"
+                    />
                   </div>
 
                   <div className="space-y-1.5">
