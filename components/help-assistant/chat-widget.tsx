@@ -254,7 +254,7 @@ export function HelpAssistantWidget() {
 
   return (
     <div ref={containerRef}>
-      <style jsx>{`
+      <style>{`
         @keyframes roboJump2s {
           0%, 100% {
             transform: translateY(0) scale(1);
@@ -331,7 +331,7 @@ export function HelpAssistantWidget() {
 
       {/* Main Chat Widget Drawer Container with Premium Backdrop Elevation & Smooth Exit Animation */}
       <Card
-        className={`fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2.5rem)] h-[600px] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border-2 border-navy/20 hover:border-teal/40 bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] origin-bottom-right ${
+        className={`fixed bottom-24 right-6 z-50 w-[440px] max-w-[calc(100vw-2.5rem)] h-[600px] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border-2 border-navy/20 hover:border-teal/40 bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-out origin-bottom-right ${
           open
             ? "scale-100 opacity-100 translate-y-0 pointer-events-auto"
             : "scale-90 opacity-0 translate-y-6 pointer-events-none"
