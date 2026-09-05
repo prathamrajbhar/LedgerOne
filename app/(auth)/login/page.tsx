@@ -56,21 +56,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-[430px] min-h-[540px] sm:min-h-[580px] lg:min-h-[610px] max-h-[calc(100dvh-40px)] bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] sm:rounded-[32px] p-6 sm:p-8 lg:p-9 flex flex-col justify-between overflow-hidden">
+    <div className="w-full max-w-[430px] min-h-[460px] sm:min-h-[490px] bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] sm:rounded-[32px] p-6 sm:p-7 flex flex-col justify-between overflow-hidden">
       {/* Header with Title & Subtitle */}
       <div className="flex-shrink-0">
-        <h2 className="text-2xl sm:text-[28px] font-bold text-[#0F2942] tracking-tight leading-tight">
+        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight leading-tight">
           Welcome Back
         </h2>
-        <p className="text-xs sm:text-[13px] text-[#526477] leading-relaxed mt-1.5">
+        <p className="text-xs text-[#526477] leading-relaxed mt-1">
           Sign in to your LedgerOne workspace and continue managing your business with ease.
         </p>
       </div>
 
       {/* Login Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 pt-2 flex-1 flex flex-col justify-center min-h-0">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5 pt-1.5 flex-1 flex flex-col justify-center min-h-0">
         {/* LOGIN ID FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <label className="text-xs font-semibold text-[#0F2942] block">
             Login ID or Email
           </label>
@@ -83,14 +83,14 @@ export default function LoginPage() {
               placeholder="e.g. admin001, cust006, or email"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              className="w-full h-11 sm:h-12 pl-10 pr-4 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none"
+              className="w-full h-10 sm:h-11 pl-10 pr-4 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none"
               required
             />
           </div>
         </div>
 
         {/* PASSWORD FIELD */}
-        <div className="space-y-1.5">
+        <div className="space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-[#0F2942] block">
               Password
@@ -111,7 +111,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-11 sm:h-12 pl-10 pr-10 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none font-mono"
+              className="w-full h-10 sm:h-11 pl-10 pr-10 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none font-mono"
               required
             />
             <button
@@ -147,7 +147,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 sm:h-[50px] bg-[#0F2942] hover:bg-[#163859] text-white font-bold rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex-shrink-0"
+          className="w-full h-11 sm:h-[46px] bg-[#0F2942] hover:bg-[#163859] text-white font-bold rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 transition-all mt-1.5 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex-shrink-0"
         >
           <span>{loading ? "Signing in..." : "Sign In"}</span>
           {!loading && <ArrowRight className="h-4 w-4" />}
@@ -155,7 +155,7 @@ export default function LoginPage() {
       </form>
 
       {/* DIVIDER */}
-      <div className="relative my-2 sm:my-3 flex-shrink-0">
+      <div className="relative my-2 flex-shrink-0">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-[#E2E8F0]" />
         </div>
