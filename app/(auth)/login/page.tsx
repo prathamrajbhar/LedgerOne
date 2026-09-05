@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import Image from "next/image";
 import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { getPostLoginRedirectAction } from "@/app/actions/auth.actions";
@@ -55,7 +56,7 @@ export default function LoginPage() {
 
   return (
     <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-6 sm:p-7 space-y-4 backdrop-blur-sm">
-      {/* Header with Title and Logo Badge */}
+      {/* Header with Title and New Brand Logo */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
@@ -66,20 +67,16 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* LedgerOne ERP Badge */}
-        <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-border/50 w-14 h-14 flex-shrink-0 shadow-2xs">
-          <div className="grid grid-cols-2 gap-0.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
-          </div>
-          <span className="text-[8px] font-bold text-[#193552] mt-1 tracking-tight leading-none">
-            LedgerOne
-          </span>
-          <span className="text-[6px] text-muted-foreground font-semibold tracking-wider uppercase">
-            ERP
-          </span>
+        {/* LedgerOne Brand Logo Image */}
+        <div className="relative w-16 h-16 flex-shrink-0 rounded-full p-0.5 bg-white border border-border/60 shadow-xs flex items-center justify-center overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt="LedgerOne Logo"
+            width={64}
+            height={64}
+            className="w-full h-full object-contain"
+            priority
+          />
         </div>
       </div>
 

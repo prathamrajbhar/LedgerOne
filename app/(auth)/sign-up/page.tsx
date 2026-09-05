@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Lock, User, Mail, Building, ArrowRight, Eye, EyeOff } from "lucide-react";
@@ -66,20 +67,16 @@ export default function SignUpPage() {
           </p>
         </div>
 
-        {/* LedgerOne ERP Badge */}
-        <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-border/50 w-14 h-14 flex-shrink-0 shadow-2xs">
-          <div className="grid grid-cols-2 gap-0.5">
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
-            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
-          </div>
-          <span className="text-[8px] font-bold text-[#193552] mt-1 tracking-tight leading-none">
-            LedgerOne
-          </span>
-          <span className="text-[6px] text-muted-foreground font-semibold tracking-wider uppercase">
-            ERP
-          </span>
+        {/* LedgerOne Brand Logo Image */}
+        <div className="relative w-16 h-16 flex-shrink-0 rounded-full p-0.5 bg-white border border-border/60 shadow-xs flex items-center justify-center overflow-hidden">
+          <Image
+            src="/logo.png"
+            alt="LedgerOne Logo"
+            width={64}
+            height={64}
+            className="w-full h-full object-contain"
+            priority
+          />
         </div>
       </div>
 

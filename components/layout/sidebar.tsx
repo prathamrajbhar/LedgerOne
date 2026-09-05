@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { getFilteredNavSections } from "./sidebar-items";
 import { UserRole } from "@prisma/client";
 
+import Image from "next/image";
+
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -44,15 +46,27 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
         )}
       >
         {/* Brand Header */}
-        <div className="h-16 px-6 flex flex-col justify-center border-b border-border/70 flex-shrink-0 bg-white">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-bold tracking-tight text-navy">
-              Ledger<span className="text-teal">One</span>
+        <div className="h-16 px-4 flex items-center gap-3 border-b border-border/70 flex-shrink-0 bg-white">
+          <div className="relative w-9 h-9 flex-shrink-0 rounded-full bg-white border border-border/60 shadow-2xs overflow-hidden flex items-center justify-center p-0.5">
+            <Image
+              src="/logo.png"
+              alt="LedgerOne Logo"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain"
+              priority
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-1">
+              <span className="text-lg font-bold tracking-tight text-navy">
+                Ledger<span className="text-teal">One</span>
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground font-normal block -mt-0.5">
+              Accounting for a Better Tomorrow
             </span>
           </div>
-          <span className="text-[11px] text-muted-foreground font-normal -mt-0.5">
-            Accounting for a Better Tomorrow
-          </span>
         </div>
 
         {/* Navigation Items (Scrollable) */}
