@@ -77,6 +77,12 @@ export class S3StorageClient {
 
     await client.send(command);
 
+    const endpoint = process.env.AWS_ENDPOINT_URL;
+    if (endpoint) {
+      const cleanEndpoint = endpoint.replace(/\/$/, "");
+      return `${cleanEndpoint}/${this.bucketName}/${key}`;
+    }
+
     const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
     return `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
   }

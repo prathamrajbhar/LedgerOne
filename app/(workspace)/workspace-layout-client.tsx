@@ -13,6 +13,7 @@ interface WorkspaceLayoutClientProps {
   userRole: UserRole;
   userName: string;
   userEmail: string;
+  userAvatar?: string | null;
   mustChangePassword?: boolean;
 }
 
@@ -21,6 +22,7 @@ export default function WorkspaceLayoutClient({
   userRole,
   userName,
   userEmail,
+  userAvatar,
   mustChangePassword,
 }: WorkspaceLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,6 +44,7 @@ export default function WorkspaceLayoutClient({
           userRole={userRole}
           userName={userName}
           userEmail={userEmail}
+          userAvatar={userAvatar}
         />
 
         {/* Scrollable Page Content */}
