@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, UserRole } from "@prisma/client";
 import { authService } from "@/lib/services/auth.service";
 
 const prisma = new PrismaClient();
@@ -12,25 +12,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        loginId: { label: "Login ID", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
+        if (!credentials?.loginId || !credentials?.password) {
           return null;
         }
 
         try {
           const result = await authService.login({
-            email: credentials.email as string,
+            loginId: credentials.loginId as string,
             password: credentials.password as string,
           });
 
           return {
-            id: result.user.id,
-            email: result.user.email,
-            name: result.user.name,
-            role: result.user.role,
+            id: result.id,
+            email: result.email,
+            name: result.name,
+            role: result.role,
           };
         } catch (error) {
           return null;
@@ -55,7 +55,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as string;
+        session.user.role = token.role as UserRole;
       }
       return session;
     },
