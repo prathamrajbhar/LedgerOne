@@ -3,6 +3,7 @@
 import { authService } from "@/lib/services/auth.service";
 import { emailService } from "@/lib/email/client";
 import { z } from "zod";
+import { UserRole } from "@prisma/client";
 
 // Validation schemas
 const signUpSchema = z.object({
@@ -20,6 +21,7 @@ const signUpSchema = z.object({
     .regex(/[a-z]/, "Password must contain at least one lowercase letter")
     .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
   companyName: z.string().optional(),
+  role: z.nativeEnum(UserRole).default(UserRole.ACCOUNTANT).optional(),
 });
 
 export type SignUpFormData = z.infer<typeof signUpSchema>;
@@ -31,7 +33,7 @@ export interface ActionResult<T = void> {
 }
 
 /**
- * Sign up a new accountant user
+ * Sign up a new user
  */
 export async function signUpAction(data: SignUpFormData): Promise<ActionResult> {
   try {
@@ -44,6 +46,7 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
       email: validatedData.email,
       password: validatedData.password,
       name: validatedData.name,
+      role: validatedData.role,
     });
 
     // Send welcome email

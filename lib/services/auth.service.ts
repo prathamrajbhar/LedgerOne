@@ -16,6 +16,7 @@ export interface SignUpInput {
   email: string;
   password: string;
   name?: string;
+  role?: UserRole;
 }
 
 export interface LoginInput {
@@ -78,7 +79,7 @@ export class AuthService {
         email: input.email,
         password: hashedPassword,
         name: input.name,
-        role: UserRole.ACCOUNTANT,
+        role: input.role || UserRole.ACCOUNTANT,
       },
       select: {
         id: true,
