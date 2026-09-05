@@ -120,31 +120,92 @@ export async function getPostLoginRedirectAction(identifier: string): Promise<st
   }
 }
 
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+const resetPasswordWithTokenSchema = z
+  .object({
+    token: z.string().min(1, "Reset token is required"),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+      .regex(/[!@#$%^&*(),.?":{}|<>]/, "Password must contain at least one special character"),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
 /**
- * Request password reset (BLOCKED)
- *
- * NOTE: This functionality requires a password reset token storage mechanism
- * which does not exist in the current database schema. The following would be needed:
- *
- * 1. A PasswordResetToken model in Prisma schema with:
- *    - token: String (unique, indexed)
- *    - userId: String (relation to User)
- *    - expiresAt: DateTime
- *    - used: Boolean
- *
- * 2. Service methods in auth.service.ts:
- *    - requestPasswordReset(email): generates token, stores in DB, sends email
- *    - validateResetToken(token): checks if token exists and is valid
- *    - resetPassword(token, newPassword): validates token and updates password
- *
- * 3. A reset password page at /reset-password that accepts token query param
+ * Request password reset link via email
  */
-export async function requestPasswordResetAction(_email: string): Promise<ActionResult> {
-  // BLOCKED: Cannot implement without database schema support for password reset tokens
-  throw new Error(
-    "Password reset functionality requires database schema changes. " +
-    "Please add a PasswordResetToken model to the Prisma schema before implementing this feature."
-  );
+export async function requestPasswordResetAction(
+  email: string
+): Promise<ActionResult> {
+  try {
+    const validated = forgotPasswordSchema.parse({ email });
+    await authService.requestPasswordReset(validated.email);
+    return { success: true };
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.errors[0]?.message || "Invalid email address",
+      };
+    }
+    const err = error as Error;
+    return {
+      success: false,
+      error: err.message || "Failed to process password reset request",
+    };
+  }
+}
+
+/**
+ * Verify validity of a password reset token
+ */
+export async function validateResetTokenAction(
+  token: string
+): Promise<{ valid: boolean; email?: string; name?: string | null; message?: string }> {
+  try {
+    return await authService.validateResetToken(token);
+  } catch {
+    return {
+      valid: false,
+      message: "An unexpected error occurred while verifying the reset token.",
+    };
+  }
+}
+
+/**
+ * Execute password reset with token
+ */
+export async function resetPasswordAction(data: {
+  token: string;
+  password: string;
+  confirmPassword: string;
+}): Promise<ActionResult> {
+  try {
+    const validated = resetPasswordWithTokenSchema.parse(data);
+    await authService.resetPasswordWithToken(validated.token, validated.password);
+    return { success: true };
+  } catch (error: unknown) {
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: error.errors[0]?.message || "Validation failed",
+      };
+    }
+    const err = error as Error;
+    return {
+      success: false,
+      error: err.message || "Failed to reset password. Please try again.",
+    };
+  }
 }
 
 const changePasswordSchema = z.object({

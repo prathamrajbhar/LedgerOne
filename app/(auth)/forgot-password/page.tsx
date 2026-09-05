@@ -5,10 +5,13 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Mail, ArrowRight, AlertCircle, ArrowLeft } from "lucide-react";
+import { Mail, ArrowRight, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
+import { requestPasswordResetAction } from "@/app/actions/auth.actions";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,10 +20,21 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    toast.error(
-      "Password reset is not yet available. Please contact your administrator for password assistance.",
-      { duration: 5000 }
-    );
+    setLoading(true);
+    try {
+      const result = await requestPasswordResetAction(email);
+      if (!result.success) {
+        toast.error(result.error || "Failed to send reset link");
+        return;
+      }
+
+      setSubmitted(true);
+      toast.success("Password reset instructions sent!");
+    } catch {
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -35,48 +49,70 @@ export default function ForgotPasswordPage() {
         </p>
       </div>
 
-      {/* Feature notice */}
-      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 space-y-1">
-        <div className="flex items-start gap-2.5">
-          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <h3 className="text-xs font-semibold text-amber-900">
-              Admin Password Assistance
-            </h3>
-            <p className="text-[11px] text-amber-800 leading-relaxed">
-              Automated password reset requires security token configuration. Please contact your system administrator or IT team for password updates.
-            </p>
+      {submitted ? (
+        <div className="space-y-4 py-2">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+            <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <h3 className="text-xs font-bold text-emerald-900">
+                Check Your Inbox
+              </h3>
+              <p className="text-xs text-emerald-800 leading-relaxed">
+                If an active account exists for <strong>{email}</strong>, we have sent password reset instructions with a secure recovery link.
+              </p>
+              <p className="text-[11px] text-emerald-700 pt-1">
+                The link will expire in 60 minutes for security reasons.
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-foreground block">
-            Registered Email Address
-          </label>
-          <div className="relative">
-            <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <input
-              type="email"
-              placeholder="name@company.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
-              required
-            />
+          <button
+            type="button"
+            onClick={() => setSubmitted(false)}
+            className="w-full text-xs text-[#1F73B7] hover:underline font-medium text-center py-1 cursor-pointer"
+          >
+            Didn&apos;t receive it? Try another email
+          </button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-foreground block">
+              Registered Email Address
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <input
+                type="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
+                className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none disabled:opacity-60"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <button
-          type="submit"
-          className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer"
-        >
-          Send Reset Link
-          <ArrowRight className="h-3.5 w-3.5" />
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#193552] hover:bg-[#12283E] active:scale-[0.99] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Sending Recovery Link...
+              </>
+            ) : (
+              <>
+                Send Reset Link
+                <ArrowRight className="h-3.5 w-3.5" />
+              </>
+            )}
+          </button>
+        </form>
+      )}
 
       {/* OR Divider */}
       <div className="relative my-3">
