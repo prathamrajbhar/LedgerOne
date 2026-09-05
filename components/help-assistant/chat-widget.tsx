@@ -17,6 +17,7 @@ import {
   TrendingUp,
   FileText,
   CheckCircle2,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -60,9 +61,15 @@ const initialSuggestions = [
 ];
 
 /**
- * Render Markdown formatted content safely with visual badges and bullet lists.
+ * Render Markdown formatted content safely with visual badges, bullet lists, and interactive clickable questions.
  */
-function FormattedMessage({ content }: { content: string }) {
+function FormattedMessage({
+  content,
+  onQuestionClick,
+}: {
+  content: string;
+  onQuestionClick?: (text: string) => void;
+}) {
   const lines = content.split("\n");
 
   return (
@@ -81,9 +88,38 @@ function FormattedMessage({ content }: { content: string }) {
           );
         }
 
-        // Bullet items
+        // Bullet items (Check if this is a suggested question)
         if (trimmed.startsWith("* ") || trimmed.startsWith("- ")) {
           const itemText = trimmed.substring(2);
+
+          // Extract question inside quotes (e.g. * 'How many products do we have in stock?') or ending in ?
+          const quoteMatch = itemText.match(/['"’‘]([^'"’‘]+)['"’‘]/);
+          const isQuestionText = quoteMatch
+            ? quoteMatch[1]
+            : itemText.includes("?") && !itemText.toLowerCase().includes("http")
+            ? itemText.replace(/\*\*/g, "").trim()
+            : null;
+
+          if (isQuestionText && onQuestionClick) {
+            const cleanQuestion = isQuestionText.trim();
+            return (
+              <button
+                key={lineIdx}
+                type="button"
+                onClick={() => onQuestionClick(cleanQuestion)}
+                className="w-full text-left text-[11.5px] p-2.5 my-1 rounded-xl bg-[#F0F4F8] hover:bg-[#E2ECF5] border border-teal/30 hover:border-teal text-navy transition-all duration-200 flex items-center justify-between group shadow-2xs hover:shadow-sm cursor-pointer transform hover:scale-[1.01]"
+              >
+                <div className="flex items-center gap-2 min-w-0 pr-1">
+                  <div className="p-1 rounded-md bg-teal/15 text-teal group-hover:bg-teal group-hover:text-white transition-colors flex-shrink-0">
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="font-semibold truncate text-navy">{cleanQuestion}</span>
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-teal/60 group-hover:text-teal group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+              </button>
+            );
+          }
+
           return (
             <div key={lineIdx} className="flex items-start gap-1.5 pl-1 my-0.5">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-teal mt-1.5 flex-shrink-0" />
@@ -439,7 +475,7 @@ export function HelpAssistantWidget() {
               >
                 {msg.role === "assistant" ? (
                   <div>
-                    <FormattedMessage content={msg.content} />
+                    <FormattedMessage content={msg.content} onQuestionClick={(q) => sendMessage(q)} />
                     {msg.isStreaming && (
                       <span className="inline-block w-1.5 h-3 bg-teal ml-1 animate-pulse align-middle" />
                     )}

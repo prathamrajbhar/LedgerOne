@@ -30,6 +30,7 @@ DATA SECURITY & PRIVACY RULES:
 
 RESPONSE FORMATTING:
 - Format responses cleanly with Markdown (bold text, key-value bullets, numbers).
+- When suggesting follow-up questions or example queries to the user, wrap each question in single quotes as a bullet item (e.g. * 'How many products do we have in stock?'). Limit suggestions to 3-4 top relevant queries.
 - Be helpful, conversational, precise, and practical.`;
 
 // Define Gemini Tool Function Declarations
