@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth.config";
 import { vendorBillService } from "@/lib/services/vendor-bill.service";
 import { generateBillPDF, BillWithRelations } from "@/lib/pdf/bill-pdf";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _request: NextRequest,
@@ -13,12 +14,21 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const bill = await vendorBillService.findById(params.id);
+    const [bill, companySettings] = await Promise.all([
+      vendorBillService.findById(params.id),
+      prisma.companySettings.findFirst(),
+    ]);
+
     if (!bill) {
       return NextResponse.json({ error: "Vendor bill not found" }, { status: 404 });
     }
 
-    const pdfBuffer = await generateBillPDF(bill as unknown as BillWithRelations);
+    const billWithSettings = {
+      ...bill,
+      companySettings,
+    };
+
+    const pdfBuffer = await generateBillPDF(billWithSettings as unknown as BillWithRelations);
 
     return new NextResponse(pdfBuffer as unknown as BodyInit, {
       status: 200,
