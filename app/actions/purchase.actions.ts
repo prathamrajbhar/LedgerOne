@@ -224,3 +224,40 @@ export async function getAnalyticAccountsAction() {
     return { success: false, error: err.message || "Failed to fetch analytic accounts" };
   }
 }
+
+export async function getVendorBillByIdAction(id: string) {
+  try {
+    const bill = await prisma.vendorBill.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        payments: {
+          orderBy: {
+            paymentDate: "desc",
+          },
+        },
+        emailLogs: {
+          orderBy: {
+            sentAt: "desc",
+          },
+        },
+      },
+    });
+
+    if (!bill) {
+      return { success: false, error: "Vendor bill not found" };
+    }
+
+    return { success: true, data: bill };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch vendor bill details" };
+  }
+}
