@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#eef2f6"/>
+  <rect x="40" y="40" width="1120" height="680" rx="18" fill="#ffffff" stroke="#dfe7ee"/>
+  <rect x="70" y="82" width="400" height="38" rx="10" fill="#f1f5f9"/>
+  <text x="95" y="107" font-family="Arial, sans-serif" font-size="24" fill="#1f2937">Products &amp; Inventory</text>
+  <rect x="70" y="170" width="1040" height="440" rx="12" fill="#f8fafc" stroke="#e5e7eb"/>
+  <rect x="90" y="200" width="1000" height="48" rx="8" fill="#e5f2f1"/>
+  <text x="120" y="232" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Product</text>
+  <text x="430" y="232" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Category</text>
+  <text x="620" y="232" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Cost</text>
+  <text x="780" y="232" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Selling</text>
+  <text x="930" y="232" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Stock</text>
+  <rect x="90" y="270" width="1000" height="62" rx="8" fill="#ffffff" stroke="#edf2f7"/>
+  <rect x="110" y="285" width="42" height="32" rx="8" fill="#dfeef0"/>
+  <text x="120" y="306" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">A</text>
+  <text x="170" y="306" font-family="Arial, sans-serif" font-size="22" fill="#0f172a">Accent Armchair</text>
+  <text x="430" y="306" font-family="Arial, sans-serif" font-size="18" fill="#475569">Living Room</text>
+  <text x="620" y="306" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹420</text>
+  <text x="780" y="306" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹699</text>
+  <text x="930" y="306" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">12 units</text>
+  <rect x="1030" y="285" width="38" height="32" rx="16" fill="#dff6eb"/>
+  <circle cx="1048" cy="301" r="7" fill="#16a34a"/>
+  <rect x="90" y="342" width="1000" height="62" rx="8" fill="#ffffff" stroke="#edf2f7"/>
+  <rect x="110" y="357" width="42" height="32" rx="8" fill="#dfeef0"/>
+  <text x="120" y="378" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">R</text>
+  <text x="170" y="378" font-family="Arial, sans-serif" font-size="22" fill="#0f172a">Area Rug</text>
+  <text x="430" y="378" font-family="Arial, sans-serif" font-size="18" fill="#475569">Accessories</text>
+  <text x="620" y="378" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹300</text>
+  <text x="780" y="378" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹499</text>
+  <text x="930" y="378" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">12 units</text>
+  <rect x="1030" y="357" width="38" height="32" rx="16" fill="#dff6eb"/>
+  <circle cx="1048" cy="373" r="7" fill="#16a34a"/>
+  <rect x="90" y="414" width="1000" height="62" rx="8" fill="#ffffff" stroke="#edf2f7"/>
+  <rect x="110" y="429" width="42" height="32" rx="8" fill="#dfeef0"/>
+  <text x="120" y="450" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">S</text>
+  <text x="170" y="450" font-family="Arial, sans-serif" font-size="22" fill="#0f172a">Assembly &amp; Installation</text>
+  <text x="430" y="450" font-family="Arial, sans-serif" font-size="18" fill="#475569">Services</text>
+  <text x="620" y="450" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹0</text>
+  <text x="780" y="450" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹200</text>
+  <text x="930" y="450" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">0 units</text>
+  <rect x="1030" y="429" width="38" height="32" rx="16" fill="#ffe4e6"/>
+  <circle cx="1048" cy="445" r="7" fill="#ef4444"/>
+</svg>

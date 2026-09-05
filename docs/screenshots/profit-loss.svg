@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760">
+  <rect width="1200" height="760" fill="#eef2f6"/>
+  <rect x="40" y="40" width="1120" height="680" rx="18" fill="#ffffff" stroke="#dfe7ee"/>
+  <rect x="70" y="82" width="400" height="38" rx="10" fill="#f1f5f9"/>
+  <text x="95" y="107" font-family="Arial, sans-serif" font-size="24" fill="#1f2937">Profit &amp; Loss</text>
+  <rect x="70" y="150" width="1040" height="52" rx="10" fill="#f8fafc" stroke="#e5e7eb"/>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="18" fill="#475569">Performance from 2025-12-31 to 2026-09-05</text>
+  <rect x="100" y="232" width="1000" height="120" rx="16" fill="#f8fafc" stroke="#e5e7eb"/>
+  <rect x="120" y="260" width="280" height="80" rx="10" fill="#eaf7f6"/>
+  <text x="155" y="295" font-family="Arial, sans-serif" font-size="18" fill="#475569">Total Revenue</text>
+  <text x="155" y="322" font-family="Arial, sans-serif" font-size="34" fill="#0f766e">₹33,065.80</text>
+  <rect x="440" y="260" width="280" height="80" rx="10" fill="#fef2f2"/>
+  <text x="468" y="295" font-family="Arial, sans-serif" font-size="18" fill="#475569">Total Expenses</text>
+  <text x="468" y="322" font-family="Arial, sans-serif" font-size="34" fill="#dc2626">₹55,020.00</text>
+  <rect x="760" y="260" width="300" height="80" rx="10" fill="#fee2e2"/>
+  <text x="790" y="295" font-family="Arial, sans-serif" font-size="18" fill="#475569">Net Loss</text>
+  <text x="790" y="322" font-family="Arial, sans-serif" font-size="34" fill="#dc2626">₹-21,954.20</text>
+  <rect x="100" y="382" width="470" height="260" rx="12" fill="#edf7f7" stroke="#dfe9ea"/>
+  <text x="180" y="420" font-family="Arial, sans-serif" font-size="18" fill="#475569">Revenue Accounts</text>
+  <text x="740" y="420" font-family="Arial, sans-serif" font-size="18" fill="#475569">₹33,065.80</text>
+  <line x1="120" y1="440" x2="540" y2="440" stroke="#dfe7ef"/>
+  <text x="140" y="480" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Furniture Sales</text>
+  <text x="470" y="480" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹31,565.80</text>
+  <text x="140" y="520" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Delivery Service Revenue</text>
+  <text x="470" y="520" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹300.00</text>
+  <text x="140" y="560" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Installation Service Revenue</text>
+  <text x="470" y="560" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹400.00</text>
+  <rect x="600" y="382" width="470" height="260" rx="12" fill="#fff1f2" stroke="#f5d8d8"/>
+  <text x="680" y="420" font-family="Arial, sans-serif" font-size="18" fill="#475569">Expense Accounts</text>
+  <text x="980" y="420" font-family="Arial, sans-serif" font-size="18" fill="#475569">₹55,020.00</text>
+  <line x1="620" y1="440" x2="1038" y2="440" stroke="#f4d7d8"/>
+  <text x="630" y="480" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Cost of Goods Sold - Furniture</text>
+  <text x="980" y="480" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹24,000.00</text>
+  <text x="630" y="520" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Office Supplies</text>
+  <text x="980" y="520" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹1,260.00</text>
+  <text x="630" y="560" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">Depreciation Expense</text>
+  <text x="980" y="560" font-family="Arial, sans-serif" font-size="18" fill="#0f172a">₹850.00</text>
+</svg>
