@@ -100,6 +100,12 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
   } | null>(null);
   const [copied, setCopied] = React.useState(false);
 
+  React.useEffect(() => {
+    if (open && contacts.length > 0 && !selectedContactId) {
+      setSelectedContactId(contacts[0].id);
+    }
+  }, [open, contacts, selectedContactId]);
+
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedContactId) return toast.error("Please select a contact");
@@ -123,8 +129,9 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
         return;
       }
       toast.error(res.error || "Failed to generate portal invitation");
-    } catch {
-      toast.error("An error occurred");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "An error occurred";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

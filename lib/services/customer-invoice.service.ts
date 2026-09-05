@@ -53,6 +53,35 @@ export interface ListCustomerInvoicesParams {
 }
 
 export class CustomerInvoiceService {
+  private async generateInvoiceNumber(): Promise<string> {
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.invoiceNumberPrefix || "INV";
+
+    const invoices = await prisma.customerInvoice.findMany({
+      where: { invoiceNumber: { startsWith: prefix } },
+      select: { invoiceNumber: true },
+    });
+
+    let maxNumber = 0;
+    for (const inv of invoices) {
+      const suffix = inv.invoiceNumber.slice(prefix.length);
+      const parsed = parseInt(suffix, 10);
+      if (!isNaN(parsed) && parsed > maxNumber) {
+        maxNumber = parsed;
+      }
+    }
+
+    let nextNumber = maxNumber + 1;
+    let invoiceNumber = `${prefix}${String(nextNumber).padStart(5, "0")}`;
+
+    while (await prisma.customerInvoice.findUnique({ where: { invoiceNumber } })) {
+      nextNumber += 1;
+      invoiceNumber = `${prefix}${String(nextNumber).padStart(5, "0")}`;
+    }
+
+    return invoiceNumber;
+  }
+
   /**
    * Create invoice from a confirmed Sales Order
    */
@@ -117,10 +146,7 @@ export class CustomerInvoiceService {
     const total = subtotal.add(totalTax);
 
     // Generate invoice number
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.invoiceNumberPrefix || "INV";
-    const count = await prisma.customerInvoice.count();
-    const invoiceNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+    const invoiceNumber = await this.generateInvoiceNumber();
 
     const invoice = await prisma.customerInvoice.create({
       data: {
@@ -248,10 +274,7 @@ export class CustomerInvoiceService {
 
     const total = subtotal.add(totalTax);
 
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.invoiceNumberPrefix || "INV";
-    const count = await prisma.customerInvoice.count();
-    const invoiceNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+    const invoiceNumber = await this.generateInvoiceNumber();
 
     const invoice = await prisma.customerInvoice.create({
       data: {
