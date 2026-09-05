@@ -6,13 +6,14 @@
 
 ---
 
-## ⚠️ Critical Rules
+## ⚠️ Critical Rules (See [GITHUB_RULES.md](file:///home/pratham/Disk1/Odoo_Workspace/LedgerOne/GITHUB_RULES.md))
 
 1. **One Task → One Commit → One PR** - Complete a task, test it, commit immediately, open PR, get it merged, THEN move to next task
 2. **Never batch multiple tasks** - Each task is a separate commit with proper convention
 3. **Branch per task** - `backend2/sales-order-service`, `backend2/razorpay-integration`, etc.
 4. **Test before commit** - Run `npm run lint && npm run type-check && npm run test`
 5. **Merge before next** - Task N+1 only starts after Task N is merged to main
+6. **Follow GitHub Rules** - Adhere strictly to the branch workflows and conventions defined in [GITHUB_RULES.md](file:///home/pratham/Disk1/Odoo_Workspace/LedgerOne/GITHUB_RULES.md)
 
 ---
 

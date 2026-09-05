@@ -260,13 +260,17 @@ feat(sales): Add a really super awesome invoice feature with multiple things and
 - ❌ Don't wait until end of day to commit multiple changes
 - ❌ Don't combine unrelated changes in one commit
 
-### Branch Strategy
+### Branch Strategy & Multi-Track Workflow
 
-- `main` - Production-ready code
-- `feature/<scope>-<description>` - Feature branches (e.g., `feature/sales-invoice-creation`)
-- `fix/<scope>-<description>` - Bug fix branches (e.g., `fix/accounting-balance-validation`)
+The project uses 4 dedicated tracks for parallel feature development. See detailed rules in [GITHUB_RULES.md](file:///home/pratham/Disk1/Odoo_Workspace/LedgerOne/GITHUB_RULES.md):
 
-Always create a branch for your work and open a PR to `main`.
+- `main` - Production-ready code (direct pushes forbidden)
+- `backend1` / `backend1/<task-name>` - Backend Track 1 (Master Data, Purchase, Accounting)
+- `backend2` / `backend2/<task-name>` - Backend Track 2 (Sales, Gateway, Budget, Chatbot)
+- `frontend1` / `frontend1/<task-name>` - Frontend Track 1 (UI Foundation, Master Data, Purchase UI)
+- `frontend2` / `frontend2/<task-name>` - Frontend Track 2 (Layout, Sales UI, Budgets, Portal)
+
+Always branch per task using your track prefix and open a PR with proper checks passing.
 
 ---
 
@@ -564,6 +568,7 @@ All original product documentation is in `/docs`:
 - **architecture.md** - Architecture Document (layers, modules, data model)
 - **WORKFLOW.md** - Workflow & Navigation Specification (screen-by-screen flows)
 - **SCREENS.md** - Screen Specifications (UI wireframes reference)
+- **[GITHUB_RULES.md](file:///home/pratham/Disk1/Odoo_Workspace/LedgerOne/GITHUB_RULES.md)** - GitHub Rules & 4-Track Branching Guidelines (`backend1`, `backend2`, `frontend1`, `frontend2`)
 
 **Before implementing any feature, read the relevant sections of these documents.**
 

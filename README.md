@@ -404,6 +404,11 @@ Comprehensive product and technical documentation is in `/docs`:
 - **[architecture.md](./docs/architecture.md)** - Architecture & Design
 - **[WORKFLOW.md](./docs/WORKFLOW.md)** - Screen-by-Screen Workflows
 - **[CLAUDE.md](./CLAUDE.md)** - Development Guidelines & Team Collaboration
+- **[GITHUB_RULES.md](./GITHUB_RULES.md)** - GitHub Rules & 4-Track Branching Guidelines (`backend1`, `backend2`, `frontend1`, `frontend2`)
+- **[1_BACKEND.md](./1_BACKEND.md)** - Backend Track 1 Tasks
+- **[2_BACKEND.md](./2_BACKEND.md)** - Backend Track 2 Tasks
+- **[1_FRONTEND.md](./1_FRONTEND.md)** - Frontend Track 1 Tasks
+- **[2_FRONTEND.md](./2_FRONTEND.md)** - Frontend Track 2 Tasks
 
 **Before implementing any feature, read the relevant documentation.**
 
