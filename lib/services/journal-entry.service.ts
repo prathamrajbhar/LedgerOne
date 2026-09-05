@@ -1,0 +1,228 @@
+/**
+ * Journal Entry Service
+ * Handles manual and auto-generated journal entries with balance enforcement
+ */
+
+import { PrismaClient, JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
+import { UnbalancedEntryError, ValidationError, NotFoundError } from "../utils/errors";
+
+const prisma = new PrismaClient();
+
+export interface CreateJournalEntryInput {
+  journalId: string;
+  accountingDate: Date;
+  lines: JournalEntryLineInput[];
+  userId: string;
+}
+
+export interface JournalEntryLineInput {
+  accountId: string;
+  partnerId?: string;
+  debit: Decimal;
+  credit: Decimal;
+}
+
+export interface AutoGenerateEntryInput {
+  source: JournalEntrySource;
+  journalId: string;
+  accountingDate: Date;
+  lines: JournalEntryLineInput[];
+  sourceDocumentId: string;
+  userId: string;
+}
+
+export class JournalEntryService {
+  /**
+   * Create manual journal entry
+   */
+  async createManual(input: CreateJournalEntryInput) {
+    // Validate balance
+    const { totalDebit, totalCredit } = this.calculateTotals(input.lines);
+
+    if (!totalDebit.equals(totalCredit)) {
+      throw new UnbalancedEntryError(
+        `Journal Entry is unbalanced: Debit ${totalDebit.toString()} ≠ Credit ${totalCredit.toString()}`
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // Generate entry number
+      const entryNumber = await this.generateEntryNumber();
+
+      // Create entry
+      const entry = await tx.journalEntry.create({
+        data: {
+          entryNumber,
+          journalId: input.journalId,
+          accountingDate: input.accountingDate,
+          status: JournalEntryStatus.DRAFT,
+          source: JournalEntrySource.MANUAL,
+          totalDebit,
+          totalCredit,
+          createdById: input.userId,
+          lines: {
+            create: input.lines.map((line) => ({
+              accountId: line.accountId,
+              partnerId: line.partnerId,
+              debit: line.debit,
+              credit: line.credit,
+            })),
+          },
+        },
+        include: {
+          lines: {
+            include: {
+              account: true,
+              partner: true,
+            },
+          },
+        },
+      });
+
+      return entry;
+    });
+  }
+
+  /**
+   * Auto-generate journal entry from business transaction
+   */
+  async autoGenerate(input: AutoGenerateEntryInput) {
+    // Validate balance
+    const { totalDebit, totalCredit } = this.calculateTotals(input.lines);
+
+    if (!totalDebit.equals(totalCredit)) {
+      throw new UnbalancedEntryError(
+        `Auto-generated Journal Entry is unbalanced: Debit ${totalDebit.toString()} ≠ Credit ${totalCredit.toString()}`
+      );
+    }
+
+    return prisma.$transaction(async (tx) => {
+      // Generate entry number
+      const entryNumber = await this.generateEntryNumber();
+
+      // Create entry with source document link
+      const data: any = {
+        entryNumber,
+        journalId: input.journalId,
+        accountingDate: input.accountingDate,
+        status: JournalEntryStatus.POSTED, // Auto entries are posted immediately
+        source: input.source,
+        totalDebit,
+        totalCredit,
+        createdById: input.userId,
+        lines: {
+          create: input.lines.map((line) => ({
+            accountId: line.accountId,
+            partnerId: line.partnerId,
+            debit: line.debit,
+            credit: line.credit,
+          })),
+        },
+      };
+
+      // Link to source document
+      switch (input.source) {
+        case JournalEntrySource.VENDOR_BILL:
+          data.vendorBillId = input.sourceDocumentId;
+          break;
+        case JournalEntrySource.CUSTOMER_INVOICE:
+          data.invoiceId = input.sourceDocumentId;
+          break;
+        case JournalEntrySource.BILL_PAYMENT:
+          data.billPaymentId = input.sourceDocumentId;
+          break;
+        case JournalEntrySource.INVOICE_PAYMENT:
+          data.invoicePaymentId = input.sourceDocumentId;
+          break;
+      }
+
+      const entry = await tx.journalEntry.create({
+        data,
+        include: {
+          lines: {
+            include: {
+              account: true,
+              partner: true,
+            },
+          },
+        },
+      });
+
+      return entry;
+    });
+  }
+
+  /**
+   * Post a draft journal entry
+   */
+  async post(entryId: string) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id: entryId },
+      include: { lines: true },
+    });
+
+    if (!entry) {
+      throw new NotFoundError("Journal Entry not found");
+    }
+
+    if (entry.status === JournalEntryStatus.POSTED) {
+      throw new ValidationError("Journal Entry is already posted");
+    }
+
+    // Verify balance
+    if (!entry.totalDebit.equals(entry.totalCredit)) {
+      throw new UnbalancedEntryError("Cannot post unbalanced entry");
+    }
+
+    return prisma.journalEntry.update({
+      where: { id: entryId },
+      data: { status: JournalEntryStatus.POSTED },
+      include: {
+        lines: {
+          include: {
+            account: true,
+            partner: true,
+          },
+        },
+      },
+    });
+  }
+
+  /**
+   * Reset entry to draft (for corrections)
+   */
+  async resetToDraft(entryId: string) {
+    // TODO: Add validation that entry is not in a closed period
+    return prisma.journalEntry.update({
+      where: { id: entryId },
+      data: { status: JournalEntryStatus.DRAFT },
+    });
+  }
+
+  // Private helpers
+
+  private calculateTotals(lines: JournalEntryLineInput[]): {
+    totalDebit: Decimal;
+    totalCredit: Decimal;
+  } {
+    let totalDebit = new Decimal(0);
+    let totalCredit = new Decimal(0);
+
+    for (const line of lines) {
+      totalDebit = totalDebit.add(line.debit);
+      totalCredit = totalCredit.add(line.credit);
+    }
+
+    return { totalDebit, totalCredit };
+  }
+
+  private async generateEntryNumber(): Promise<string> {
+    // TODO: Get prefix from CompanySettings
+    const prefix = "JE";
+    const count = await prisma.journalEntry.count();
+    return `${prefix}${String(count + 1).padStart(6, "0")}`;
+  }
+}
+
+export const journalEntryService = new JournalEntryService();
