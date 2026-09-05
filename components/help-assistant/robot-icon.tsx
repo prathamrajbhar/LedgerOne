@@ -36,10 +36,10 @@ export function RobotIcon({
         className="overflow-visible"
       >
         <defs>
-          {/* Gradients */}
+          {/* Light Theme Teal Head Gradient */}
           <linearGradient id="botHeadGrad" x1="8" y1="12" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-            <stop stopColor="#1B3B5F" />
-            <stop offset="1" stopColor="#0F243A" />
+            <stop stopColor="#2E9E96" />
+            <stop offset="1" stopColor="#167C80" />
           </linearGradient>
 
           <linearGradient id="botVisorGrad" x1="12" y1="18" x2="36" y2="30" gradientUnits="userSpaceOnUse">
@@ -70,7 +70,7 @@ export function RobotIcon({
           y1="12"
           x2="24"
           y2="6"
-          stroke="#4EA8DE"
+          stroke="#167C80"
           strokeWidth="2.5"
           strokeLinecap="round"
           className="transition-colors duration-300"
@@ -81,7 +81,7 @@ export function RobotIcon({
           cx="24"
           cy="4"
           r={isHovered || isThinking ? "4" : "3"}
-          fill={isHovered ? "#2E9E96" : "#4EA8DE"}
+          fill={isHovered ? "#00F5D4" : "#2E9E96"}
           filter="url(#antennaGlow)"
           className={`transition-all duration-300 ${
             isHovered || isThinking ? "animate-pulse fill-teal" : ""
@@ -107,6 +107,8 @@ export function RobotIcon({
           height="12"
           rx="2"
           fill={isHovered ? "#2E9E96" : "#167C80"}
+          stroke="#0F243A"
+          strokeWidth="1"
           className="transition-colors duration-300"
         />
         <rect
@@ -116,6 +118,8 @@ export function RobotIcon({
           height="12"
           rx="2"
           fill={isHovered ? "#2E9E96" : "#167C80"}
+          stroke="#0F243A"
+          strokeWidth="1"
           className="transition-colors duration-300"
         />
 
@@ -127,8 +131,8 @@ export function RobotIcon({
           height="28"
           rx="10"
           fill="url(#botHeadGrad)"
-          stroke={isHovered ? "#2E9E96" : "#2E4765"}
-          strokeWidth="2"
+          stroke="#0F243A"
+          strokeWidth="2.2"
           className={`transition-all duration-300 ${
             isHovered ? "rotate-2 translate-y-[-1px]" : ""
           } origin-bottom`}
@@ -142,7 +146,7 @@ export function RobotIcon({
           height="15"
           rx="6"
           fill="url(#botVisorGrad)"
-          stroke="#167C80"
+          stroke="#00F5D4"
           strokeWidth="1.2"
         />
 
