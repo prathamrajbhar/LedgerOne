@@ -3,7 +3,7 @@
  * Handles creation, updating, confirmation, cancellation, and querying of sales orders
  */
 
-import { PrismaClient, SalesOrderStatus, Prisma } from "@prisma/client";
+import { PrismaClient, DocumentStatus, Prisma } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
 const prisma = new PrismaClient();
@@ -42,7 +42,7 @@ export interface ConfirmSalesOrderInput {
 
 export interface ListSalesOrdersParams {
   customerId?: string;
-  status?: SalesOrderStatus;
+  status?: DocumentStatus;
   startDate?: Date;
   endDate?: Date;
   page?: number;
