@@ -4,10 +4,14 @@ import { salesOrderService, CreateSalesOrderInput, ListSalesOrdersParams } from 
 import { customerInvoiceService, CreateStandaloneInvoiceInput, ListCustomerInvoicesParams } from "@/lib/services/customer-invoice.service";
 import { DocumentStatus, PaymentStatus } from "@prisma/client";
 
+function serialize<T>(data: T): T {
+  return JSON.parse(JSON.stringify(data));
+}
+
 export async function getSalesOrdersAction(params?: ListSalesOrdersParams) {
   try {
     const result = await salesOrderService.list(params || {});
-    return { success: true, data: result };
+    return { success: true, data: serialize(result) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to fetch sales orders" };
@@ -17,7 +21,7 @@ export async function getSalesOrdersAction(params?: ListSalesOrdersParams) {
 export async function createSalesOrderAction(input: CreateSalesOrderInput) {
   try {
     const salesOrder = await salesOrderService.create(input);
-    return { success: true, data: salesOrder };
+    return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to create sales order" };
@@ -27,7 +31,7 @@ export async function createSalesOrderAction(input: CreateSalesOrderInput) {
 export async function confirmSalesOrderAction(id: string) {
   try {
     const salesOrder = await salesOrderService.confirm({ id });
-    return { success: true, data: salesOrder };
+    return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to confirm sales order" };
@@ -37,7 +41,7 @@ export async function confirmSalesOrderAction(id: string) {
 export async function cancelSalesOrderAction(id: string) {
   try {
     const salesOrder = await salesOrderService.cancel(id);
-    return { success: true, data: salesOrder };
+    return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to cancel sales order" };
@@ -47,7 +51,7 @@ export async function cancelSalesOrderAction(id: string) {
 export async function createInvoiceFromSalesOrderAction(salesOrderId: string, invoiceDate?: Date, dueDate?: Date, userId?: string) {
   try {
     const invoice = await customerInvoiceService.createFromSalesOrder(salesOrderId, invoiceDate, dueDate, userId);
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to create invoice from sales order" };
@@ -57,7 +61,7 @@ export async function createInvoiceFromSalesOrderAction(salesOrderId: string, in
 export async function createStandaloneInvoiceAction(input: CreateStandaloneInvoiceInput) {
   try {
     const invoice = await customerInvoiceService.createStandalone(input);
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to create standalone invoice" };
@@ -67,7 +71,7 @@ export async function createStandaloneInvoiceAction(input: CreateStandaloneInvoi
 export async function confirmInvoiceAction(id: string, userId?: string) {
   try {
     const invoice = await customerInvoiceService.confirm(id, userId);
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to confirm invoice" };
@@ -77,7 +81,7 @@ export async function confirmInvoiceAction(id: string, userId?: string) {
 export async function cancelInvoiceAction(id: string) {
   try {
     const invoice = await customerInvoiceService.cancel(id);
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to cancel invoice" };
@@ -105,7 +109,7 @@ export async function getInvoicesAction(params?: {
     };
 
     const result = await customerInvoiceService.list(listParams);
-    return { success: true, data: result };
+    return { success: true, data: serialize(result) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to fetch invoices" };
@@ -115,7 +119,7 @@ export async function getInvoicesAction(params?: {
 export async function getInvoiceByIdAction(id: string) {
   try {
     const invoice = await customerInvoiceService.findById(id);
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to fetch invoice" };
@@ -128,9 +132,10 @@ export async function downloadInvoicePDFAction(invoiceId: string) {
     if (!invoice) {
       return { success: false, error: "Invoice not found" };
     }
-    return { success: true, data: invoice };
+    return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to download invoice" };
   }
 }
+
