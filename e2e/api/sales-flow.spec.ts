@@ -59,6 +59,7 @@ test.describe("Sales & Payment E2E API Flow", () => {
         phone: "+1234567890",
         address: "123 Business Way",
         profileImage: null,
+        bannerUrl: null,
         userId: null,
         type: ContactType.CUSTOMER,
         isArchived: false,
