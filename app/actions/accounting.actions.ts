@@ -2,6 +2,7 @@
 
 import { journalEntryService } from "@/lib/services/journal-entry.service";
 import { profitLossReportService, GenerateProfitLossParams } from "@/lib/services/reports/profit-loss.service";
+import { balanceSheetService, BalanceSheetParams } from "@/lib/services/reports/balance-sheet.service";
 import { Decimal } from "@prisma/client/runtime/library";
 
 export interface CreateJournalEntryActionInput {
@@ -66,5 +67,15 @@ export async function generateProfitLossReportAction(params: GenerateProfitLossP
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to generate Profit & Loss report" };
+  }
+}
+
+export async function generateBalanceSheetAction(params: BalanceSheetParams) {
+  try {
+    const report = await balanceSheetService.generate(params);
+    return { success: true, data: report };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to generate Balance Sheet report" };
   }
 }

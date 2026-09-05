@@ -7,8 +7,13 @@ export interface CreateProductInput {
   name: string;
   type: "GOODS" | "SERVICE" | "COMBO";
   categoryId: string;
+  sku?: string;
+  material?: string;
+  dimensions?: string;
   salesPrice: number;
   cost: number;
+  stock?: number;
+  reorderPoint?: number;
   image?: string;
 }
 
@@ -17,8 +22,13 @@ export interface UpdateProductInput {
   name?: string;
   type?: "GOODS" | "SERVICE" | "COMBO";
   categoryId?: string;
+  sku?: string;
+  material?: string;
+  dimensions?: string;
   salesPrice?: number;
   cost?: number;
+  stock?: number;
+  reorderPoint?: number;
   image?: string;
 }
 
@@ -42,6 +52,12 @@ export class ProductService {
     if (input.cost < 0) {
       throw new ValidationError("Cost cannot be negative");
     }
+    if (input.stock !== undefined && input.stock < 0) {
+      throw new ValidationError("Stock cannot be negative");
+    }
+    if (input.reorderPoint !== undefined && input.reorderPoint < 0) {
+      throw new ValidationError("Reorder point cannot be negative");
+    }
 
     const category = await prisma.productCategory.findUnique({
       where: { id: input.categoryId },
@@ -51,13 +67,28 @@ export class ProductService {
       throw new ValidationError("Product category not found");
     }
 
+    // Check SKU uniqueness if provided
+    if (input.sku) {
+      const existingSku = await prisma.product.findUnique({
+        where: { sku: input.sku },
+      });
+      if (existingSku) {
+        throw new ConflictError("SKU already exists");
+      }
+    }
+
     const product = await prisma.product.create({
       data: {
         name: input.name.trim(),
         type: input.type,
         categoryId: input.categoryId,
+        sku: input.sku?.trim() || null,
+        material: input.material?.trim() || null,
+        dimensions: input.dimensions?.trim() || null,
         salesPrice: new Prisma.Decimal(input.salesPrice),
         cost: new Prisma.Decimal(input.cost),
+        stock: input.stock ?? 0,
+        reorderPoint: input.reorderPoint ?? 10,
         image: input.image,
       },
       include: {
@@ -83,6 +114,12 @@ export class ProductService {
     if (input.cost !== undefined && input.cost < 0) {
       throw new ValidationError("Cost cannot be negative");
     }
+    if (input.stock !== undefined && input.stock < 0) {
+      throw new ValidationError("Stock cannot be negative");
+    }
+    if (input.reorderPoint !== undefined && input.reorderPoint < 0) {
+      throw new ValidationError("Reorder point cannot be negative");
+    }
 
     if (input.categoryId) {
       const category = await prisma.productCategory.findUnique({
@@ -94,14 +131,29 @@ export class ProductService {
       }
     }
 
+    // Check SKU uniqueness if being updated
+    if (input.sku && input.sku !== product.sku) {
+      const existingSku = await prisma.product.findUnique({
+        where: { sku: input.sku },
+      });
+      if (existingSku) {
+        throw new ConflictError("SKU already exists");
+      }
+    }
+
     const updated = await prisma.product.update({
       where: { id: input.id },
       data: {
         name: input.name?.trim(),
         type: input.type,
         categoryId: input.categoryId,
+        sku: input.sku?.trim(),
+        material: input.material?.trim(),
+        dimensions: input.dimensions?.trim(),
         salesPrice: input.salesPrice ? new Prisma.Decimal(input.salesPrice) : undefined,
         cost: input.cost ? new Prisma.Decimal(input.cost) : undefined,
+        stock: input.stock,
+        reorderPoint: input.reorderPoint,
         image: input.image,
       },
       include: {

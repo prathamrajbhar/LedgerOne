@@ -4,12 +4,14 @@ import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 const prisma = new PrismaClient();
 
 export interface CreateAccountInput {
+  code: string;
   name: string;
   type: AccountType;
 }
 
 export interface UpdateAccountInput {
   id: string;
+  code?: string;
   name?: string;
 }
 
@@ -21,20 +23,35 @@ export interface ListAccountsParams {
 
 export class ChartOfAccountsService {
   async create(input: CreateAccountInput) {
+    if (!input.code?.trim()) {
+      throw new ValidationError("Account code is required");
+    }
+
     if (!input.name?.trim()) {
       throw new ValidationError("Account name is required");
     }
 
-    const existing = await prisma.chartOfAccount.findUnique({
+    // Check if code already exists
+    const existingCode = await prisma.chartOfAccount.findUnique({
+      where: { code: input.code.trim() },
+    });
+
+    if (existingCode) {
+      throw new ConflictError("Account code already exists");
+    }
+
+    // Check if name already exists
+    const existingName = await prisma.chartOfAccount.findUnique({
       where: { name: input.name.trim() },
     });
 
-    if (existing) {
+    if (existingName) {
       throw new ConflictError("Account name already exists");
     }
 
     const account = await prisma.chartOfAccount.create({
       data: {
+        code: input.code.trim(),
         name: input.name.trim(),
         type: input.type,
       },
@@ -52,15 +69,30 @@ export class ChartOfAccountsService {
       throw new NotFoundError("Account not found");
     }
 
+    // Check if code already exists (if updating code)
+    if (input.code) {
+      const existingCode = await prisma.chartOfAccount.findFirst({
+        where: {
+          code: input.code.trim(),
+          NOT: { id: input.id },
+        },
+      });
+
+      if (existingCode) {
+        throw new ConflictError("Account code already exists");
+      }
+    }
+
+    // Check if name already exists (if updating name)
     if (input.name) {
-      const existing = await prisma.chartOfAccount.findFirst({
+      const existingName = await prisma.chartOfAccount.findFirst({
         where: {
           name: input.name.trim(),
           NOT: { id: input.id },
         },
       });
 
-      if (existing) {
+      if (existingName) {
         throw new ConflictError("Account name already exists");
       }
     }
@@ -68,6 +100,7 @@ export class ChartOfAccountsService {
     const updated = await prisma.chartOfAccount.update({
       where: { id: input.id },
       data: {
+        code: input.code?.trim(),
         name: input.name?.trim(),
       },
     });
@@ -92,7 +125,10 @@ export class ChartOfAccountsService {
 
     const where: Prisma.ChartOfAccountWhereInput = {
       ...(search && {
-        name: { contains: search, mode: "insensitive" },
+        OR: [
+          { code: { contains: search, mode: "insensitive" } },
+          { name: { contains: search, mode: "insensitive" } },
+        ],
       }),
       ...(type && { type }),
       ...(!includeArchived && { isArchived: false }),
@@ -100,7 +136,7 @@ export class ChartOfAccountsService {
 
     const accounts = await prisma.chartOfAccount.findMany({
       where,
-      orderBy: { name: "asc" },
+      orderBy: { code: "asc" },
     });
 
     return accounts;

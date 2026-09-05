@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, User, Mail, Building, ArrowRight } from "lucide-react";
+import { signUpAction } from "@/app/actions/auth.actions";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -26,17 +27,30 @@ export default function SignUpPage() {
       return;
     }
 
-    if (loginId.length < 6 || loginId.length > 12) {
-      toast.error("Login ID must be 6 to 12 characters.");
-      return;
-    }
-
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      toast.success("Accountant account created successfully! Please sign in.");
+
+    try {
+      const result = await signUpAction({
+        name,
+        loginId,
+        email,
+        password,
+        companyName: companyName || undefined,
+      });
+
+      if (!result.success) {
+        toast.error(result.error || "Failed to create account");
+        return;
+      }
+
+      toast.success("Account created successfully! Please sign in.");
       router.push("/login");
-    }, 500);
+    } catch (error) {
+      console.error("Sign up error:", error);
+      toast.error("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

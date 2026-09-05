@@ -1,15 +1,21 @@
 import { ContactForm } from "../../contact-form";
+import { getContactByIdAction } from "@/app/actions/contact.actions";
+import { notFound } from "next/navigation";
 
-export default function EditContactPage({ params }: { params: { id: string } }) {
+export default async function EditContactPage({ params }: { params: { id: string } }) {
+  const result = await getContactByIdAction(params.id);
+
+  if (!result.success || !result.data) {
+    notFound();
+  }
+
   const contact = {
-    id: params.id,
-    name: "Modern Living Interiors Pvt Ltd",
-    type: "CUSTOMER" as const,
-    email: "procurement@modernliving.in",
-    phone: "+91 98201 44556",
-    address: "Bandra Kurla Complex, Commercial Tower B, Mumbai, MH - 400051",
-    taxNumber: "27AAAAA1234A1Z5",
-    creditLimit: "300000",
+    id: result.data.id,
+    name: result.data.name,
+    type: result.data.type,
+    email: result.data.email,
+    phone: result.data.phone || "",
+    address: result.data.address || "",
   };
 
   return <ContactForm initialData={contact} isEdit />;

@@ -10,35 +10,35 @@ async function main() {
   console.log("📊 Creating chart of accounts...");
   const accounts = [
     // Assets
-    { name: "Cash", type: AccountType.CASH },
-    { name: "Bank Account", type: AccountType.BANK },
-    { name: "Accounts Receivable", type: AccountType.ASSET },
-    { name: "Inventory", type: AccountType.ASSET },
-    { name: "Office Equipment", type: AccountType.ASSET },
+    { code: "1000", name: "Cash", type: AccountType.CASH },
+    { code: "1010", name: "Bank Account", type: AccountType.BANK },
+    { code: "1200", name: "Accounts Receivable", type: AccountType.ASSET },
+    { code: "1300", name: "Inventory", type: AccountType.ASSET },
+    { code: "1400", name: "Office Equipment", type: AccountType.ASSET },
 
     // Liabilities
-    { name: "Accounts Payable", type: AccountType.LIABILITY },
-    { name: "Short-term Loans", type: AccountType.LIABILITY },
-    { name: "Taxes Payable", type: AccountType.LIABILITY },
+    { code: "2100", name: "Accounts Payable", type: AccountType.LIABILITY },
+    { code: "2200", name: "Short-term Loans", type: AccountType.LIABILITY },
+    { code: "2300", name: "Taxes Payable", type: AccountType.LIABILITY },
 
     // Capital/Equity
-    { name: "Owner's Equity", type: AccountType.CAPITAL },
-    { name: "Retained Earnings", type: AccountType.CAPITAL },
+    { code: "3000", name: "Owner's Equity", type: AccountType.CAPITAL },
+    { code: "3100", name: "Retained Earnings", type: AccountType.CAPITAL },
 
     // Income
-    { name: "Product Sales Revenue", type: AccountType.INCOME },
-    { name: "Service Revenue", type: AccountType.INCOME },
-    { name: "Other Income", type: AccountType.INCOME },
+    { code: "4000", name: "Product Sales Revenue", type: AccountType.INCOME },
+    { code: "4100", name: "Service Revenue", type: AccountType.INCOME },
+    { code: "4900", name: "Other Income", type: AccountType.INCOME },
 
     // Expenses
-    { name: "Cost of Goods Sold", type: AccountType.EXPENSES },
-    { name: "Salaries Expense", type: AccountType.EXPENSES },
-    { name: "Rent Expense", type: AccountType.EXPENSES },
-    { name: "Utilities Expense", type: AccountType.EXPENSES },
-    { name: "Marketing Expense", type: AccountType.EXPENSES },
-    { name: "Office Supplies Expense", type: AccountType.EXPENSES },
-    { name: "Depreciation Expense", type: AccountType.OTHER_EXPENSES },
-    { name: "Interest Expense", type: AccountType.OTHER_EXPENSES },
+    { code: "5000", name: "Cost of Goods Sold", type: AccountType.EXPENSES },
+    { code: "5100", name: "Salaries Expense", type: AccountType.EXPENSES },
+    { code: "5200", name: "Rent Expense", type: AccountType.EXPENSES },
+    { code: "5300", name: "Utilities Expense", type: AccountType.EXPENSES },
+    { code: "5400", name: "Marketing Expense", type: AccountType.EXPENSES },
+    { code: "5500", name: "Office Supplies Expense", type: AccountType.EXPENSES },
+    { code: "5900", name: "Depreciation Expense", type: AccountType.OTHER_EXPENSES },
+    { code: "5950", name: "Interest Expense", type: AccountType.OTHER_EXPENSES },
   ];
 
   const createdAccounts = [];
@@ -85,10 +85,10 @@ async function main() {
   const accountsPayableAccount = createdAccounts.find((a) => a.name === "Accounts Payable")!;
 
   const journals = [
-    { name: "Sales Journal", type: JournalType.SALES, defaultAccountId: salesRevenueAccount.id },
-    { name: "Purchase Journal", type: JournalType.PURCHASE, defaultAccountId: accountsPayableAccount.id },
-    { name: "Bank Journal", type: JournalType.BANK, defaultAccountId: bankAccount.id },
-    { name: "Cash Journal", type: JournalType.CASH, defaultAccountId: cashAccount.id },
+    { code: "SAL", name: "Sales Journal", type: JournalType.SALES, defaultAccountId: salesRevenueAccount.id },
+    { code: "PUR", name: "Purchase Journal", type: JournalType.PURCHASE, defaultAccountId: accountsPayableAccount.id },
+    { code: "BNK", name: "Bank Journal", type: JournalType.BANK, defaultAccountId: bankAccount.id },
+    { code: "CSH", name: "Cash Journal", type: JournalType.CASH, defaultAccountId: cashAccount.id },
   ];
 
   for (const journal of journals) {

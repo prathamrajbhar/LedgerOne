@@ -108,8 +108,13 @@ model Product {
   type        ProductType
   categoryId  String
   category    ProductCategory @relation(fields: [categoryId], references: [id])
+  sku         String?       @unique
+  material    String?
+  dimensions  String?
   salesPrice  Decimal       @db.Decimal(15, 2)
   cost        Decimal       @db.Decimal(15, 2)
+  stock       Int           @default(0)
+  reorderPoint Int          @default(10)
   image       String?
   isArchived  Boolean       @default(false)
   createdAt   DateTime      @default(now())
@@ -123,6 +128,7 @@ model Product {
 
   @@index([categoryId])
   @@index([isArchived])
+  @@index([sku])
   @@map("products")
 }
 
@@ -139,6 +145,7 @@ enum AccountType {
 
 model ChartOfAccount {
   id          String      @id @default(cuid())
+  code        String      @unique
   name        String      @unique
   type        AccountType
   isArchived  Boolean     @default(false)
@@ -153,6 +160,7 @@ model ChartOfAccount {
 
   @@index([type])
   @@index([isArchived])
+  @@index([code])
   @@map("chart_of_accounts")
 }
 
@@ -165,6 +173,7 @@ enum JournalType {
 
 model Journal {
   id              String      @id @default(cuid())
+  code            String      @unique
   name            String      @unique
   type            JournalType
   defaultAccountId String
@@ -177,6 +186,7 @@ model Journal {
 
   @@index([type])
   @@index([defaultAccountId])
+  @@index([code])
   @@map("journals")
 }
 

@@ -4,6 +4,7 @@ import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 const prisma = new PrismaClient();
 
 export interface CreateJournalInput {
+  code: string;
   name: string;
   type: JournalType;
   defaultAccountId: string;
@@ -11,6 +12,7 @@ export interface CreateJournalInput {
 
 export interface UpdateJournalInput {
   id: string;
+  code?: string;
   name?: string;
   defaultAccountId?: string;
 }
@@ -22,15 +24,29 @@ export interface ListJournalsParams {
 
 export class JournalService {
   async create(input: CreateJournalInput) {
+    if (!input.code?.trim()) {
+      throw new ValidationError("Journal code is required");
+    }
+
     if (!input.name?.trim()) {
       throw new ValidationError("Journal name is required");
     }
 
-    const existing = await prisma.journal.findUnique({
+    // Check if code already exists
+    const existingCode = await prisma.journal.findUnique({
+      where: { code: input.code.trim().toUpperCase() },
+    });
+
+    if (existingCode) {
+      throw new ConflictError("Journal code already exists");
+    }
+
+    // Check if name already exists
+    const existingName = await prisma.journal.findUnique({
       where: { name: input.name.trim() },
     });
 
-    if (existing) {
+    if (existingName) {
       throw new ConflictError("Journal name already exists");
     }
 
@@ -44,6 +60,7 @@ export class JournalService {
 
     const journal = await prisma.journal.create({
       data: {
+        code: input.code.trim().toUpperCase(),
         name: input.name.trim(),
         type: input.type,
         defaultAccountId: input.defaultAccountId,
@@ -65,15 +82,30 @@ export class JournalService {
       throw new NotFoundError("Journal not found");
     }
 
+    // Check if code already exists (if updating code)
+    if (input.code) {
+      const existingCode = await prisma.journal.findFirst({
+        where: {
+          code: input.code.trim().toUpperCase(),
+          NOT: { id: input.id },
+        },
+      });
+
+      if (existingCode) {
+        throw new ConflictError("Journal code already exists");
+      }
+    }
+
+    // Check if name already exists (if updating name)
     if (input.name) {
-      const existing = await prisma.journal.findFirst({
+      const existingName = await prisma.journal.findFirst({
         where: {
           name: input.name.trim(),
           NOT: { id: input.id },
         },
       });
 
-      if (existing) {
+      if (existingName) {
         throw new ConflictError("Journal name already exists");
       }
     }
@@ -91,6 +123,7 @@ export class JournalService {
     const updated = await prisma.journal.update({
       where: { id: input.id },
       data: {
+        code: input.code?.trim().toUpperCase(),
         name: input.name?.trim(),
         defaultAccountId: input.defaultAccountId,
       },
@@ -122,7 +155,10 @@ export class JournalService {
 
     const where: Prisma.JournalWhereInput = {
       ...(search && {
-        name: { contains: search, mode: "insensitive" },
+        OR: [
+          { code: { contains: search, mode: "insensitive" } },
+          { name: { contains: search, mode: "insensitive" } },
+        ],
       }),
       ...(type && { type }),
     };
@@ -132,7 +168,7 @@ export class JournalService {
       include: {
         defaultAccount: true,
       },
-      orderBy: { name: "asc" },
+      orderBy: { code: "asc" },
     });
 
     return journals;

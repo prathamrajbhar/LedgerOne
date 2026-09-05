@@ -1,6 +1,8 @@
 "use server";
 
 import { PrismaClient, DocumentStatus } from "@prisma/client";
+import { purchaseOrderService } from "@/lib/services/purchase-order.service";
+import { vendorBillService } from "@/lib/services/vendor-bill.service";
 
 const prisma = new PrismaClient();
 
@@ -60,10 +62,7 @@ export async function createPurchaseOrderAction(input: CreatePurchaseOrderInput)
 
 export async function confirmPurchaseOrderAction(id: string) {
   try {
-    const po = await prisma.purchaseOrder.update({
-      where: { id },
-      data: { status: DocumentStatus.CONFIRMED },
-    });
+    const po = await purchaseOrderService.confirm(id);
     return { success: true, data: po };
   } catch (error: unknown) {
     const err = error as Error;
@@ -144,13 +143,65 @@ export async function createStandaloneBillAction(input: CreateVendorBillInput) {
 
 export async function confirmBillAction(id: string) {
   try {
-    const bill = await prisma.vendorBill.update({
-      where: { id },
-      data: { status: DocumentStatus.CONFIRMED },
-    });
+    const bill = await vendorBillService.confirm(id);
     return { success: true, data: bill };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to confirm bill" };
+  }
+}
+
+export async function getPurchaseOrdersAction() {
+  try {
+    const pos = await prisma.purchaseOrder.findMany({
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+      },
+      orderBy: { orderDate: "desc" },
+    });
+    return { success: true, data: pos };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch purchase orders" };
+  }
+}
+
+export async function getVendorBillsAction() {
+  try {
+    const bills = await prisma.vendorBill.findMany({
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+      },
+      orderBy: { billDate: "desc" },
+    });
+    return { success: true, data: bills };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch vendor bills" };
+  }
+}
+
+export async function getAnalyticAccountsAction() {
+  try {
+    const accounts = await prisma.analyticAccount.findMany({
+      orderBy: { name: "asc" },
+    });
+    return { success: true, data: accounts };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to fetch analytic accounts" };
   }
 }

@@ -15,53 +15,144 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
-
-interface ExpenseRecord {
-  id: string;
-  code: string;
-  category: string;
-  title: string;
-  vendor: string;
-  date: string;
-  amount: number;
-}
-
-const initialExpenses: ExpenseRecord[] = [
-  { id: "1", code: "EXP-2024-078", category: "Rent & Utilities", title: "Showroom Commercial Rent - November", vendor: "Property Owners Trust", date: "16 Nov 2024", amount: 25000 },
-  { id: "2", code: "EXP-2024-077", category: "Manufacturing", title: "CNC Router Tooling & Saw Blades", vendor: "Apex Tooling Solutions", date: "12 Nov 2024", amount: 14500 },
-  { id: "3", code: "EXP-2024-076", category: "Raw Materials", title: "Teak Wood Finishing PU Polish & Thinner", vendor: "Asian Paints Woodtech", date: "09 Nov 2024", amount: 18200 },
-  { id: "4", code: "EXP-2024-075", category: "Transport", title: "Freight & Delivery for Mumbai Project", vendor: "VRL Logistics Ltd", date: "05 Nov 2024", amount: 8400 },
-  { id: "5", code: "EXP-2024-074", category: "Salaries", title: "Workshop Master Carpenters Advance", vendor: "Direct Staff Payroll", date: "01 Nov 2024", amount: 45000 },
-];
+import {
+  getExpensesAction,
+  getExpenseAccountsAction,
+  getAnalyticAccountsAction,
+  getBankCashJournalsAction,
+  ExpenseRecord,
+  ExpenseAccount,
+  AnalyticAccountOption,
+  JournalOption,
+} from "@/app/actions/expense.actions";
+import { createManualJournalEntryAction } from "@/app/actions/accounting.actions";
+import { useSession } from "next-auth/react";
 
 export default function ExpensesPage() {
-  const [expenses, setExpenses] = React.useState(initialExpenses);
+  const { data: session } = useSession();
+  const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
   const [openModal, setOpenModal] = React.useState(false);
-  const [title, setTitle] = React.useState("");
-  const [category, setCategory] = React.useState("Raw Materials");
-  const [vendor, setVendor] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const [expenseAccounts, setExpenseAccounts] = React.useState<ExpenseAccount[]>([]);
+  const [analyticAccounts, setAnalyticAccounts] = React.useState<AnalyticAccountOption[]>([]);
+  const [journals, setJournals] = React.useState<JournalOption[]>([]);
+
+  const [description, setDescription] = React.useState("");
+  const [expenseAccountId, setExpenseAccountId] = React.useState("");
+  const [analyticAccountId, setAnalyticAccountId] = React.useState("");
   const [amount, setAmount] = React.useState("");
+  const [journalId, setJournalId] = React.useState("");
+  const [expenseDate, setExpenseDate] = React.useState(
+    new Date().toISOString().split("T")[0]
+  );
 
-  const handleRecordExpense = (e: React.FormEvent) => {
+  // Fetch expenses on mount
+  React.useEffect(() => {
+    loadExpenses();
+  }, []);
+
+  // Fetch dropdown data when modal opens
+  React.useEffect(() => {
+    if (openModal) {
+      loadDropdownData();
+    }
+  }, [openModal]);
+
+  const loadExpenses = async () => {
+    setLoading(true);
+    const result = await getExpensesAction();
+    if (result.success && result.data) {
+      setExpenses(result.data);
+    } else {
+      toast.error(result.error || "Failed to load expenses");
+    }
+    setLoading(false);
+  };
+
+  const loadDropdownData = async () => {
+    const [accountsResult, analyticsResult, journalsResult] = await Promise.all([
+      getExpenseAccountsAction(),
+      getAnalyticAccountsAction(),
+      getBankCashJournalsAction(),
+    ]);
+
+    if (accountsResult.success && accountsResult.data) {
+      setExpenseAccounts(accountsResult.data);
+      if (accountsResult.data.length > 0) {
+        setExpenseAccountId(accountsResult.data[0].id);
+      }
+    }
+
+    if (analyticsResult.success && analyticsResult.data) {
+      setAnalyticAccounts(analyticsResult.data);
+    }
+
+    if (journalsResult.success && journalsResult.data) {
+      setJournals(journalsResult.data);
+      if (journalsResult.data.length > 0) {
+        setJournalId(journalsResult.data[0].id);
+      }
+    }
+  };
+
+  const handleRecordExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !amount) return;
+    if (!description || !expenseAccountId || !amount || !journalId || !session?.user?.id) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
 
-    const newExp: ExpenseRecord = {
-      id: `exp-${Date.now()}`,
-      code: `EXP-2024-${79 + expenses.length}`,
-      category,
-      title,
-      vendor: vendor || "Direct Payment",
-      date: "20 Nov 2024",
-      amount: Number(amount),
-    };
+    const expenseAmount = Number(amount);
+    if (expenseAmount <= 0) {
+      toast.error("Amount must be greater than zero");
+      return;
+    }
 
-    setExpenses([newExp, ...expenses]);
-    toast.success(`Expense ${newExp.code} recorded in General Ledger.`);
-    setOpenModal(false);
-    setTitle("");
-    setVendor("");
-    setAmount("");
+    const selectedJournal = journals.find((j) => j.id === journalId);
+    if (!selectedJournal) {
+      toast.error("Invalid journal selected");
+      return;
+    }
+
+    setSubmitting(true);
+
+    // Create manual journal entry: Debit Expense, Credit Bank/Cash
+    const lines = [
+      {
+        accountId: expenseAccountId,
+        partnerId: analyticAccountId || undefined,
+        debit: expenseAmount,
+        credit: 0,
+      },
+      {
+        accountId: selectedJournal.defaultAccountId,
+        partnerId: undefined,
+        debit: 0,
+        credit: expenseAmount,
+      },
+    ];
+
+    const result = await createManualJournalEntryAction({
+      journalId,
+      accountingDate: new Date(expenseDate),
+      lines,
+      userId: session.user.id,
+    });
+
+    if (result.success) {
+      toast.success("Expense recorded successfully as journal entry");
+      setOpenModal(false);
+      setDescription("");
+      setAmount("");
+      setAnalyticAccountId("");
+      setExpenseDate(new Date().toISOString().split("T")[0]);
+      loadExpenses();
+    } else {
+      toast.error(result.error || "Failed to record expense");
+    }
+    setSubmitting(false);
   };
 
   const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
@@ -85,30 +176,22 @@ export default function ExpensesPage() {
               </DialogHeader>
               <form onSubmit={handleRecordExpense} className="space-y-4 pt-2">
                 <FormInput
-                  label="Expense Title / Description"
+                  label="Expense Description"
                   required
                   placeholder="e.g. Sawmill Timber Cutting Services"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                 />
                 <FormSelect
-                  label="Expense Category"
-                  value={category}
-                  onValueChange={setCategory}
-                  options={[
-                    { value: "Raw Materials", label: "Raw Materials (Timber, Foam, Polish)" },
-                    { value: "Manufacturing", label: "Manufacturing & Machinery Tooling" },
-                    { value: "Salaries", label: "Salaries & Workshop Labor" },
-                    { value: "Rent & Utilities", label: "Rent & Showroom Utilities" },
-                    { value: "Transport", label: "Transport & Shipping Logistics" },
-                    { value: "Marketing", label: "Marketing & Catalog Photoshoots" },
-                  ]}
-                />
-                <FormInput
-                  label="Paid to Vendor / Party"
-                  placeholder="e.g. City Sawmill Ltd"
-                  value={vendor}
-                  onChange={(e) => setVendor(e.target.value)}
+                  label="Expense Account"
+                  value={expenseAccountId}
+                  onValueChange={setExpenseAccountId}
+                  options={expenseAccounts.map((acc) => ({
+                    value: acc.id,
+                    label: acc.name,
+                  }))}
+                  placeholder={expenseAccounts.length === 0 ? "No expense accounts found" : "Select expense account"}
+                  required
                 />
                 <FormInput
                   label="Amount (₹)"
@@ -117,13 +200,70 @@ export default function ExpensesPage() {
                   placeholder="12500"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
+                  step="0.01"
+                  min="0.01"
                 />
+                <FormSelect
+                  label="Payment Method (Journal)"
+                  value={journalId}
+                  onValueChange={setJournalId}
+                  options={journals.map((j) => ({
+                    value: j.id,
+                    label: `${j.name} (${j.defaultAccountName})`,
+                  }))}
+                  placeholder={journals.length === 0 ? "No payment journals found" : "Select payment method"}
+                  required
+                />
+                <FormInput
+                  label="Expense Date"
+                  type="date"
+                  required
+                  value={expenseDate}
+                  onChange={(e) => setExpenseDate(e.target.value)}
+                />
+                <FormSelect
+                  label="Analytic Account (Optional)"
+                  value={analyticAccountId}
+                  onValueChange={setAnalyticAccountId}
+                  options={[
+                    { value: "", label: "None" },
+                    ...analyticAccounts.map((acc) => ({
+                      value: acc.id,
+                      label: `${acc.name} (${acc.type})`,
+                    })),
+                  ]}
+                  placeholder="Select analytic account"
+                />
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900">
+                  <p className="font-semibold mb-1">Journal Entry Preview:</p>
+                  <div className="space-y-1">
+                    <div className="flex justify-between">
+                      <span>Dr. {expenseAccounts.find((a) => a.id === expenseAccountId)?.name || "Expense Account"}</span>
+                      <span className="font-mono">₹{amount || "0"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Cr. {journals.find((j) => j.id === journalId)?.defaultAccountName || "Bank/Cash Account"}</span>
+                      <span className="font-mono">₹{amount || "0"}</span>
+                    </div>
+                  </div>
+                </div>
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setOpenModal(false)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setOpenModal(false)}
+                    disabled={submitting}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" size="sm" className="bg-navy hover:bg-navy-hover text-white">
-                    Post Expense
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-navy hover:bg-navy-hover text-white"
+                    disabled={submitting || expenseAccounts.length === 0 || journals.length === 0}
+                  >
+                    {submitting ? "Recording..." : "Post Expense"}
                   </Button>
                 </div>
               </form>
@@ -132,52 +272,65 @@ export default function ExpensesPage() {
         }
       />
 
-      {/* Summary Banner */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">Recorded Expenses</span>
+          <span className="text-xs text-muted-foreground font-medium">Total Expenses</span>
           <p className="text-xl font-bold text-foreground mt-1">₹{totalExpenses.toLocaleString("en-IN")}</p>
-          <span className="text-[11px] text-muted-foreground block mt-0.5">Current Month Total</span>
+          <span className="text-[11px] text-muted-foreground block mt-0.5">Recorded to Date</span>
         </Card>
         <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">Largest Category</span>
-          <p className="text-xl font-bold text-navy mt-1">Raw Materials</p>
-          <span className="text-[11px] text-muted-foreground block mt-0.5">28.4% of total expenses</span>
+          <span className="text-xs text-muted-foreground font-medium">Expense Entries</span>
+          <p className="text-xl font-bold text-navy mt-1">{expenses.length}</p>
+          <span className="text-[11px] text-muted-foreground block mt-0.5">Journal entries posted</span>
         </Card>
         <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">Tax Deductible</span>
-          <p className="text-xl font-bold text-teal mt-1">₹{(totalExpenses * 0.18).toFixed(0)}</p>
-          <span className="text-[11px] text-teal block mt-0.5">Input Tax Credit (ITC)</span>
+          <span className="text-xs text-muted-foreground font-medium">Average Expense</span>
+          <p className="text-xl font-bold text-teal mt-1">
+            ₹{expenses.length > 0 ? Math.round(totalExpenses / expenses.length).toLocaleString("en-IN") : "0"}
+          </p>
+          <span className="text-[11px] text-teal block mt-0.5">Per transaction</span>
         </Card>
       </div>
 
       <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Voucher #</th>
-              <th className="py-3.5 px-4">Expense Title</th>
-              <th className="py-3.5 px-4">Category</th>
-              <th className="py-3.5 px-4">Paid To</th>
-              <th className="py-3.5 px-4">Date</th>
-              <th className="py-3.5 px-4 text-right">Amount (₹)</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {expenses.map((e) => (
-              <tr key={e.id} className="hover:bg-primary-light/30 transition-colors">
-                <td className="py-3.5 px-4 font-mono font-bold text-navy">{e.code}</td>
-                <td className="py-3.5 px-4 font-semibold text-foreground">{e.title}</td>
-                <td className="py-3.5 px-4 text-muted-foreground">{e.category}</td>
-                <td className="py-3.5 px-4 text-muted-foreground">{e.vendor}</td>
-                <td className="py-3.5 px-4 text-muted-foreground">{e.date}</td>
-                <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                  ₹{e.amount.toLocaleString("en-IN")}.00
-                </td>
+        {loading ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            Loading expenses...
+          </div>
+        ) : expenses.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            No expenses recorded yet. Click "Record Expense" to add one.
+          </div>
+        ) : (
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="py-3.5 px-4">Entry #</th>
+                <th className="py-3.5 px-4">Description</th>
+                <th className="py-3.5 px-4">Expense Account</th>
+                <th className="py-3.5 px-4">Analytic</th>
+                <th className="py-3.5 px-4">Date</th>
+                <th className="py-3.5 px-4">Method</th>
+                <th className="py-3.5 px-4 text-right">Amount (₹)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {expenses.map((e) => (
+                <tr key={e.id} className="hover:bg-primary-light/30 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{e.code}</td>
+                  <td className="py-3.5 px-4 font-semibold text-foreground">{e.description}</td>
+                  <td className="py-3.5 px-4 text-muted-foreground">{e.expenseAccount}</td>
+                  <td className="py-3.5 px-4 text-muted-foreground">{e.analyticAccount || "-"}</td>
+                  <td className="py-3.5 px-4 text-muted-foreground">{e.date}</td>
+                  <td className="py-3.5 px-4 text-muted-foreground">{e.paymentMethod}</td>
+                  <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                    ₹{e.amount.toLocaleString("en-IN")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

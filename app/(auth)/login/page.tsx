@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loginId, setLoginId] = useState("rohan.mehta");
-  const [password, setPassword] = useState("Password@123");
+  const [loginId, setLoginId] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -27,12 +28,25 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Simulate authentication
-      await new Promise((res) => setTimeout(res, 500));
-      toast.success("Welcome back, Rohan!");
-      router.push("/dashboard");
+      const result = await signIn("credentials", {
+        loginId,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error("Invalid Login ID or Password");
+        return;
+      }
+
+      if (result?.ok) {
+        toast.success("Welcome back!");
+        router.push("/dashboard");
+        router.refresh();
+      }
     } catch (error) {
-      toast.error("Invalid Login ID or Password");
+      console.error("Login error:", error);
+      toast.error("An error occurred during login. Please try again.");
     } finally {
       setLoading(false);
     }

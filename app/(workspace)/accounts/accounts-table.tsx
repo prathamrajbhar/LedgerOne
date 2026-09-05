@@ -25,7 +25,6 @@ export interface AccountItem {
     | "INCOME"
     | "EXPENSES"
     | "OTHER_EXPENSES";
-  balance: number;
   isArchived: boolean;
 }
 
@@ -62,7 +61,6 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
               <th className="py-3.5 px-4">Code</th>
               <th className="py-3.5 px-4">Account Name</th>
               <th className="py-3.5 px-4">Classification</th>
-              <th className="py-3.5 px-4 text-right">Current Balance</th>
               <th className="py-3.5 px-4 text-center">Status</th>
               <th className="py-3.5 px-4 text-center">Actions</th>
             </tr>
@@ -80,9 +78,6 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
                   {acc.name}
                 </td>
                 <td className="py-3.5 px-4">{getTypeBadge(acc.type)}</td>
-                <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                  ₹{acc.balance.toLocaleString("en-IN")}
-                </td>
                 <td className="py-3.5 px-4 text-center">
                   <Badge variant={acc.isArchived ? "muted" : "outline"} className="text-[10px]">
                     {acc.isArchived ? "Archived" : "Active"}

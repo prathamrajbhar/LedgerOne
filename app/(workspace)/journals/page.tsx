@@ -15,53 +15,117 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { toast } from "sonner";
+import {
+  getJournalsAction,
+  createJournalAction,
+  getSelectableAccountsAction,
+} from "@/app/actions/master-data.actions";
+import { JournalType } from "@prisma/client";
 
 interface JournalItem {
   id: string;
-  name: string;
   code: string;
-  type: "SALES" | "PURCHASE" | "BANK" | "CASH" | "GENERAL";
-  defaultAccount: string;
+  name: string;
+  type: "SALES" | "PURCHASE" | "BANK" | "CASH";
+  defaultAccount: {
+    id: string;
+    code: string;
+    name: string;
+  };
 }
 
-const initialJournals: JournalItem[] = [
-  { id: "j-1", name: "Customer Invoices Journal", code: "INV", type: "SALES", defaultAccount: "4000 Furniture Sales Revenue" },
-  { id: "j-2", name: "Vendor Bills & Timber Purchases", code: "BILL", type: "PURCHASE", defaultAccount: "5010 Raw Material Wood Purchases" },
-  { id: "j-3", name: "HDFC Bank Operations Journal", code: "BNK1", type: "BANK", defaultAccount: "1010 HDFC Bank Current A/c" },
-  { id: "j-4", name: "Showroom Cash Register Journal", code: "CSH1", type: "CASH", defaultAccount: "1020 Cash in Hand" },
-  { id: "j-5", name: "Miscellaneous & Year-End Adjustments", code: "MISC", type: "GENERAL", defaultAccount: "3000 Owner's Capital" },
-];
+interface AccountOption {
+  id: string;
+  code: string;
+  name: string;
+}
 
 export default function JournalsPage() {
-  const [journals, setJournals] = React.useState(initialJournals);
+  const [journals, setJournals] = React.useState<JournalItem[]>([]);
+  const [accounts, setAccounts] = React.useState<AccountOption[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [openModal, setOpenModal] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const [name, setName] = React.useState("");
   const [code, setCode] = React.useState("");
-  const [type, setType] = React.useState<JournalItem["type"]>("GENERAL");
-  const [defaultAccount, setDefaultAccount] = React.useState("");
+  const [name, setName] = React.useState("");
+  const [type, setType] = React.useState<JournalType>("SALES");
+  const [defaultAccountId, setDefaultAccountId] = React.useState("");
 
-  const handleCreate = (e: React.FormEvent) => {
+  // Fetch journals and accounts on mount
+  React.useEffect(() => {
+    loadJournals();
+    loadAccounts();
+  }, []);
+
+  const loadJournals = async () => {
+    setLoading(true);
+    try {
+      const result = await getJournalsAction();
+      if (result.success && result.data) {
+        setJournals(result.data);
+      } else {
+        toast.error(result.error || "Failed to load journals");
+      }
+    } catch (error) {
+      toast.error("Failed to load journals");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAccounts = async () => {
+    try {
+      const result = await getSelectableAccountsAction();
+      if (result.success && result.data) {
+        setAccounts(result.data);
+      }
+    } catch (error) {
+      console.error("Failed to load accounts:", error);
+    }
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !code) {
-      toast.error("Name and Code are required");
+
+    if (!code || !name) {
+      toast.error("Code and Name are required");
       return;
     }
 
-    const created: JournalItem = {
-      id: `j-${Date.now()}`,
-      name,
-      code: code.toUpperCase(),
-      type,
-      defaultAccount: defaultAccount || "General Ledger",
-    };
+    if (!defaultAccountId) {
+      toast.error("Default account is required");
+      return;
+    }
 
-    setJournals([...journals, created]);
-    toast.success(`Journal "${name}" configured.`);
-    setOpenModal(false);
-    setName("");
-    setCode("");
+    setSubmitting(true);
+    try {
+      const result = await createJournalAction({
+        code: code.toUpperCase(),
+        name,
+        type,
+        defaultAccountId,
+      });
+
+      if (result.success) {
+        toast.success(`Journal "${name}" configured.`);
+        setOpenModal(false);
+        setCode("");
+        setName("");
+        setType("SALES");
+        setDefaultAccountId("");
+        loadJournals(); // Reload journals
+      } else {
+        toast.error(result.error || "Failed to create journal");
+      }
+    } catch (error) {
+      toast.error("Failed to create journal");
+      console.error(error);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filtered = journals.filter(
@@ -69,6 +133,11 @@ export default function JournalsPage() {
       j.name.toLowerCase().includes(search.toLowerCase()) ||
       j.code.toLowerCase().includes(search.toLowerCase())
   );
+
+  const accountOptions = accounts.map((acc) => ({
+    value: acc.id,
+    label: `${acc.code} - ${acc.name}`,
+  }));
 
   return (
     <div className="space-y-5">
@@ -89,43 +158,55 @@ export default function JournalsPage() {
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4 pt-2">
                 <FormInput
-                  label="Journal Name"
+                  label="Journal Code"
                   required
-                  placeholder="e.g. Workshop Petty Cash"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                />
-                <FormInput
-                  label="Short Prefix Code"
-                  required
-                  placeholder="e.g. WPC"
+                  placeholder="e.g. INV"
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
+                />
+                <FormInput
+                  label="Journal Name"
+                  required
+                  placeholder="e.g. Customer Invoices"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                 />
                 <FormSelect
                   label="Journal Type"
                   value={type}
-                  onValueChange={(val) => setType(val as JournalItem["type"])}
+                  onValueChange={(val) => setType(val as JournalType)}
                   options={[
                     { value: "SALES", label: "Sales (Customer Invoices)" },
                     { value: "PURCHASE", label: "Purchase (Vendor Bills)" },
                     { value: "BANK", label: "Bank Account" },
                     { value: "CASH", label: "Cash Book" },
-                    { value: "GENERAL", label: "General Operations / Journal Entries" },
                   ]}
                 />
-                <FormInput
+                <FormSelect
                   label="Default Offset Account"
-                  placeholder="e.g. 1020 Cash in Hand"
-                  value={defaultAccount}
-                  onChange={(e) => setDefaultAccount(e.target.value)}
+                  required
+                  value={defaultAccountId}
+                  onValueChange={setDefaultAccountId}
+                  options={accountOptions}
+                  placeholder="Select an account"
                 />
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={() => setOpenModal(false)}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setOpenModal(false)}
+                    disabled={submitting}
+                  >
                     Cancel
                   </Button>
-                  <Button type="submit" size="sm" className="bg-navy hover:bg-navy-hover text-white">
-                    Save Journal
+                  <Button
+                    type="submit"
+                    size="sm"
+                    className="bg-navy hover:bg-navy-hover text-white"
+                    disabled={submitting}
+                  >
+                    {submitting ? "Saving..." : "Save Journal"}
                   </Button>
                 </div>
               </form>
@@ -147,38 +228,54 @@ export default function JournalsPage() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Prefix</th>
-              <th className="py-3.5 px-4">Journal Name</th>
-              <th className="py-3.5 px-4">Type</th>
-              <th className="py-3.5 px-4">Default Account</th>
-              <th className="py-3.5 px-4 text-center">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.map((j) => (
-              <tr key={j.id} className="hover:bg-primary-light/30 transition-colors">
-                <td className="py-3.5 px-4 font-mono font-bold text-navy">{j.code}</td>
-                <td className="py-3.5 px-4 font-semibold text-foreground">{j.name}</td>
-                <td className="py-3.5 px-4">
-                  <Badge variant="outline" className="text-[10px] bg-[#F6F7F9]">
-                    {j.type}
-                  </Badge>
-                </td>
-                <td className="py-3.5 px-4 text-muted-foreground">{j.defaultAccount}</td>
-                <td className="py-3.5 px-4 text-center">
-                  <Badge variant="success" className="text-[10px]">
-                    Active
-                  </Badge>
-                </td>
+      {loading ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">Loading journals...</p>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
+          <p className="text-sm text-muted-foreground">
+            {search
+              ? "No journals found matching your search"
+              : "No journals yet. Create your first journal to get started."}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                <th className="py-3.5 px-4">Code</th>
+                <th className="py-3.5 px-4">Journal Name</th>
+                <th className="py-3.5 px-4">Type</th>
+                <th className="py-3.5 px-4">Default Account</th>
+                <th className="py-3.5 px-4 text-center">Status</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((j) => (
+                <tr key={j.id} className="hover:bg-primary-light/30 transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{j.code}</td>
+                  <td className="py-3.5 px-4 font-semibold text-foreground">{j.name}</td>
+                  <td className="py-3.5 px-4">
+                    <Badge variant="outline" className="text-[10px] bg-[#F6F7F9]">
+                      {j.type}
+                    </Badge>
+                  </td>
+                  <td className="py-3.5 px-4 text-muted-foreground">
+                    {j.defaultAccount.code} - {j.defaultAccount.name}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <Badge variant="success" className="text-[10px]">
+                      Active
+                    </Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,16 +11,16 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { createContactAction, updateContactAction } from "@/app/actions/contact.actions";
+import { ContactType } from "@prisma/client";
 
 export interface ContactFormDataShape {
+  id?: string;
   name?: string;
   type?: "CUSTOMER" | "VENDOR" | "BOTH";
   email?: string;
   phone?: string;
   address?: string;
-  taxNumber?: string;
-  creditLimit?: string | number;
-  notes?: string;
 }
 
 interface ContactFormProps {
@@ -36,9 +36,6 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     address: initialData?.address || "",
-    taxNumber: initialData?.taxNumber || "",
-    creditLimit: initialData?.creditLimit || "",
-    notes: initialData?.notes || "",
   });
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -48,6 +45,7 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
+    // Basic client-side validation
     if (!formData.name.trim()) newErrors.name = "Full name / business name is required";
     if (!formData.email.trim()) newErrors.email = "Email address is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -61,15 +59,55 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    setErrors({});
+
+    try {
+      // Prepare contact data
+      const contactData = {
+        name: formData.name.trim(),
+        type: formData.type as ContactType,
+        email: formData.email.trim(),
+        phone: formData.phone.trim() || undefined,
+        address: formData.address.trim() || undefined,
+      };
+
+      let result;
+      if (isEdit && initialData?.id) {
+        // Update existing contact
+        result = await updateContactAction({
+          id: initialData.id,
+          ...contactData,
+        });
+      } else {
+        // Create new contact
+        result = await createContactAction(contactData);
+      }
+
+      if (result.success) {
+        toast.success(
+          isEdit
+            ? `Contact "${formData.name}" updated successfully.`
+            : `Contact "${formData.name}" created successfully.`
+        );
+        router.push("/contacts");
+        router.refresh(); // Refresh the contacts list
+      } else {
+        // Handle backend validation errors
+        toast.error(result.error || "Failed to save contact");
+
+        // Map specific field errors if available
+        if (result.error?.includes("email")) {
+          setErrors({ email: result.error });
+        } else if (result.error?.includes("name")) {
+          setErrors({ name: result.error });
+        }
+      }
+    } catch (error) {
+      console.error("Error saving contact:", error);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
       setLoading(false);
-      toast.success(
-        isEdit
-          ? `Contact "${formData.name}" updated successfully.`
-          : `Contact "${formData.name}" created successfully.`
-      );
-      router.push("/contacts");
-    }, 400);
+    }
   };
 
   return (
@@ -165,36 +203,6 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               placeholder="Enter full office / showroom address..."
               rows={3}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Section 3: Financial & GST Information */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Financial & Tax Details
-            </CardTitle>
-            <CardDescription>
-              GST identification and payment terms
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="GSTIN / Tax ID"
-              value={formData.taxNumber}
-              onChange={(e) => setFormData({ ...formData, taxNumber: e.target.value })}
-              placeholder="e.g. 27AAAAA0000A1Z5"
-              helperText="15-digit Indian GST number for electronic invoicing."
-            />
-
-            <FormInput
-              label="Credit Limit (₹)"
-              type="number"
-              value={formData.creditLimit}
-              onChange={(e) => setFormData({ ...formData, creditLimit: e.target.value })}
-              placeholder="e.g. 200000"
-              helperText="Maximum allowed outstanding amount."
             />
           </CardContent>
         </Card>

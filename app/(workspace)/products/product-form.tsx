@@ -10,10 +10,13 @@ import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { createProductAction, updateProductAction } from "@/app/actions/product.actions";
 
 export interface ProductFormDataShape {
+  id?: string;
   name?: string;
-  category?: string;
+  type?: "GOODS" | "SERVICE" | "COMBO";
+  categoryId?: string;
   sku?: string;
   material?: string;
   dimensions?: string;
@@ -21,27 +24,27 @@ export interface ProductFormDataShape {
   salesPrice?: string | number;
   stock?: string | number;
   reorderPoint?: string | number;
-  taxRate?: string;
 }
 
 interface ProductFormProps {
   initialData?: ProductFormDataShape;
+  categories: Array<{ id: string; name: string }>;
   isEdit?: boolean;
 }
 
-export function ProductForm({ initialData, isEdit }: ProductFormProps) {
+export function ProductForm({ initialData, categories, isEdit }: ProductFormProps) {
   const router = useRouter();
   const [formData, setFormData] = React.useState({
     name: initialData?.name || "",
-    category: initialData?.category || "Living Room",
+    type: (initialData?.type || "GOODS") as "GOODS" | "SERVICE" | "COMBO",
+    categoryId: initialData?.categoryId || (categories[0]?.id || ""),
     sku: initialData?.sku || "",
     material: initialData?.material || "",
     dimensions: initialData?.dimensions || "",
     cost: initialData?.cost || "",
     salesPrice: initialData?.salesPrice || "",
-    stock: initialData?.stock || "10",
-    reorderPoint: initialData?.reorderPoint || "4",
-    taxRate: initialData?.taxRate || "18%",
+    stock: initialData?.stock || "0",
+    reorderPoint: initialData?.reorderPoint || "10",
   });
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -52,6 +55,7 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) newErrors.name = "Product name is required";
+    if (!formData.categoryId) newErrors.categoryId = "Category is required";
     if (!formData.salesPrice) newErrors.salesPrice = "Sales price is required";
     if (!formData.cost) newErrors.cost = "Cost price is required";
 
@@ -62,15 +66,48 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
     }
 
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const productData = {
+        name: formData.name.trim(),
+        type: formData.type,
+        categoryId: formData.categoryId,
+        sku: formData.sku.trim() || undefined,
+        material: formData.material.trim() || undefined,
+        dimensions: formData.dimensions.trim() || undefined,
+        salesPrice: parseFloat(formData.salesPrice.toString()),
+        cost: parseFloat(formData.cost.toString()),
+        stock: parseInt(formData.stock.toString()) || 0,
+        reorderPoint: parseInt(formData.reorderPoint.toString()) || 10,
+      };
+
+      let result;
+      if (isEdit && initialData?.id) {
+        result = await updateProductAction({
+          id: initialData.id,
+          ...productData,
+        });
+      } else {
+        result = await createProductAction(productData);
+      }
+
+      if (result.success) {
+        toast.success(
+          isEdit
+            ? `Product "${formData.name}" updated successfully.`
+            : `Product "${formData.name}" created successfully.`
+        );
+        router.push("/products");
+        router.refresh();
+      } else {
+        toast.error(result.error || "Failed to save product");
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Error saving product:", error);
+      toast.error("An unexpected error occurred");
       setLoading(false);
-      toast.success(
-        isEdit
-          ? `Product "${formData.name}" updated successfully.`
-          : `Furniture product "${formData.name}" created successfully.`
-      );
-      router.push("/products");
-    }, 400);
+    }
   };
 
   return (
@@ -85,8 +122,8 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
       </div>
 
       <PageHeader
-        title={isEdit ? `Edit: ${formData.name}` : "Add Furniture Product"}
-        description="Configure product specifications, pricing, BOM costs, and inventory thresholds."
+        title={isEdit ? `Edit: ${formData.name}` : "Add Product"}
+        description="Configure product specifications, pricing, and inventory thresholds."
       />
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -97,13 +134,13 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               Product Overview
             </CardTitle>
             <CardDescription>
-              Name, collection category, and stock keeping unit (SKU)
+              Name, category, and stock keeping unit (SKU)
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <FormInput
-                label="Product Name / Model"
+                label="Product Name"
                 required
                 value={formData.name}
                 onChange={(e) => {
@@ -116,16 +153,30 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
             </div>
 
             <FormSelect
-              label="Furniture Category"
+              label="Product Type"
               required
-              value={formData.category}
-              onValueChange={(val) => setFormData({ ...formData, category: val })}
+              value={formData.type}
+              onValueChange={(val) => setFormData({ ...formData, type: val as "GOODS" | "SERVICE" | "COMBO" })}
               options={[
-                { value: "Living Room", label: "Living Room (Sofas, Coffee Tables, Lounge Chairs)" },
-                { value: "Dining", label: "Dining (Dining Tables, Dining Chairs, Sideboards)" },
-                { value: "Bedroom", label: "Bedroom (Beds, Wardrobes, Nightstands)" },
-                { value: "Office", label: "Office (Executive Desks, Ergonomic Chairs, File Cabinets)" },
+                { value: "GOODS", label: "Goods (Physical Product)" },
+                { value: "SERVICE", label: "Service" },
+                { value: "COMBO", label: "Combo (Goods + Service)" },
               ]}
+            />
+
+            <FormSelect
+              label="Category"
+              required
+              value={formData.categoryId}
+              onValueChange={(val) => {
+                setFormData({ ...formData, categoryId: val });
+                if (errors.categoryId) setErrors({ ...errors, categoryId: "" });
+              }}
+              options={categories.map((cat) => ({
+                value: cat.id,
+                label: cat.name,
+              }))}
+              error={errors.categoryId}
             />
 
             <FormInput
@@ -144,7 +195,7 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               Specifications & Material
             </CardTitle>
             <CardDescription>
-              Wood type, dimensions, and craftsmanship notes
+              Material type, dimensions, and product details
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -201,24 +252,12 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               error={errors.salesPrice}
             />
 
-            <FormSelect
-              label="GST Tax Rate"
-              value={formData.taxRate}
-              onValueChange={(val) => setFormData({ ...formData, taxRate: val })}
-              options={[
-                { value: "18%", label: "18% GST (Standard Furniture)" },
-                { value: "12%", label: "12% GST (Wood Turnings / Moldings)" },
-                { value: "28%", label: "28% GST (Luxury / Mattresses)" },
-                { value: "0%", label: "0% (Exempt)" },
-              ]}
-            />
-
             <FormInput
-              label="Initial In-Stock Count"
+              label="Initial Stock Count"
               type="number"
               value={formData.stock}
               onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-              placeholder="10"
+              placeholder="0"
             />
 
             <FormInput
@@ -226,7 +265,7 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
               type="number"
               value={formData.reorderPoint}
               onChange={(e) => setFormData({ ...formData, reorderPoint: e.target.value })}
-              placeholder="4"
+              placeholder="10"
               helperText="Triggers low-stock alert when remaining inventory reaches this."
             />
           </CardContent>
@@ -246,7 +285,7 @@ export function ProductForm({ initialData, isEdit }: ProductFormProps) {
             className="bg-navy hover:bg-navy-hover text-white gap-1.5"
           >
             <Save className="h-4 w-4" />
-            {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Furniture Product"}
+            {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Product"}
           </Button>
         </div>
       </form>
