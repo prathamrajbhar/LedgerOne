@@ -262,7 +262,7 @@ export function DashboardClient({
       {/* 3. Middle Row: Revenue & Expense Overview (Left) + Expense Breakdown (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Revenue & Expense Overview Chart */}
-        <Card className="lg:col-span-8 p-5 bg-white shadow-card">
+        <Card className="lg:col-span-7 p-5 bg-white shadow-card">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border">
             <div>
               <CardTitle className="text-base font-bold text-foreground">
@@ -351,7 +351,7 @@ export function DashboardClient({
         </Card>
 
         {/* Expense Breakdown (Donut & Bar Graph with Real Data) */}
-        <Card className="lg:col-span-4 p-5 bg-white shadow-card flex flex-col">
+        <Card className="lg:col-span-5 p-5 bg-white shadow-card flex flex-col">
           <div className="flex items-center justify-between pb-4 border-b border-border gap-2">
             <div className="flex items-center gap-2">
               <CardTitle className="text-base font-bold text-foreground">
@@ -418,17 +418,17 @@ export function DashboardClient({
               <p className="text-xs text-muted-foreground/80 mt-1">Confirmed vendor bills and journal entries will appear here.</p>
             </div>
           ) : expenseChartType === "donut" ? (
-            <div className="flex-1 flex flex-col sm:flex-row lg:flex-col xl:flex-row items-center justify-between gap-4 pt-4">
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
               {/* Animated Donut Chart with Center Total */}
-              <div className="relative w-48 h-48 flex-shrink-0 flex items-center justify-center">
+              <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={expenseBreakdown}
                       cx="50%"
                       cy="50%"
-                      innerRadius={54}
-                      outerRadius={78}
+                      innerRadius={50}
+                      outerRadius={72}
                       paddingAngle={3}
                       dataKey="value"
                       isAnimationActive={true}
@@ -461,37 +461,37 @@ export function DashboardClient({
                   </PieChart>
                 </ResponsiveContainer>
                 {/* Center Badge matching user design */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-2">
-                  <span className="text-base sm:text-lg font-extrabold text-[#16324F] tracking-tight">
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center px-1">
+                  <span className="text-sm sm:text-base font-extrabold text-[#16324F] tracking-tight">
                     ₹{totalExpensesBreakdown.toLocaleString("en-IN")}
                   </span>
-                  <span className="text-[11px] font-medium text-[#5E6B78]">
+                  <span className="text-[10px] font-medium text-[#5E6B78]">
                     Total Expenses
                   </span>
                 </div>
               </div>
 
               {/* Breakdown Category List */}
-              <div className="w-full flex-1 space-y-2 pl-2">
+              <div className="w-full flex-1 space-y-1.5 min-w-0 max-h-[220px] overflow-y-auto pr-1">
                 {expenseBreakdown.map((item) => (
                   <div
                     key={item.name}
-                    className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0 hover:bg-muted/30 px-1 rounded transition-colors"
+                    className="flex items-center justify-between text-xs py-1 border-b border-border/30 last:border-0 hover:bg-muted/30 px-1 rounded transition-colors gap-2"
                   >
-                    <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       <span
-                        className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                        className="h-2 w-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: item.color }}
                       />
-                      <span className="text-foreground font-medium text-xs truncate" title={item.name}>
+                      <span className="text-foreground font-medium text-[11px] truncate" title={item.name}>
                         {item.name}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-muted-foreground text-[11px]">
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      <span className="text-muted-foreground text-[11px] font-mono whitespace-nowrap">
                         {item.amount}
                       </span>
-                      <span className="font-bold text-foreground text-xs bg-muted/60 px-1.5 py-0.5 rounded text-[11px]">
+                      <span className="font-bold text-foreground text-[10px] bg-muted/60 px-1 py-0.5 rounded min-w-[36px] text-right">
                         {item.value}%
                       </span>
                     </div>
