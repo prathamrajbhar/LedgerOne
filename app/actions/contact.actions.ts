@@ -247,6 +247,25 @@ export async function restoreContactAction(id: string): Promise<ContactActionRes
 }
 
 /**
+ * Check whether a contact can be hard-deleted or has linked transactions
+ */
+export async function checkCanDeleteContactAction(id: string): Promise<ContactActionResult<{ canDelete: boolean }>> {
+  try {
+    const canDelete = await contactService.canDelete(id);
+    return {
+      success: true,
+      data: { canDelete },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to check contact usage";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
  * Hard delete a contact (Administrator only, records with zero transactions)
  */
 export async function deleteContactAction(id: string): Promise<ContactActionResult> {

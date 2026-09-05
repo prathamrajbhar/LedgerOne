@@ -256,6 +256,25 @@ export async function restoreAccountAction(id: string): Promise<ActionResult> {
 }
 
 /**
+ * Check whether an account can be hard-deleted or has linked journal lines/defaults
+ */
+export async function checkCanDeleteAccountAction(id: string): Promise<ActionResult<{ canDelete: boolean }>> {
+  try {
+    const canDelete = await chartOfAccountsService.canDelete(id);
+    return {
+      success: true,
+      data: { canDelete },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to check account usage";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
  * Hard delete an account (Administrator only, records with zero transactions)
  */
 export async function deleteAccountAction(id: string): Promise<ActionResult> {

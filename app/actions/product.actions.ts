@@ -235,6 +235,25 @@ export async function restoreProductAction(id: string): Promise<ProductActionRes
 }
 
 /**
+ * Check whether a product can be hard-deleted or has linked transactions
+ */
+export async function checkCanDeleteProductAction(id: string): Promise<ProductActionResult<{ canDelete: boolean }>> {
+  try {
+    const canDelete = await productService.canDelete(id);
+    return {
+      success: true,
+      data: { canDelete },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to check product usage";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
  * Hard delete a product (Administrator only, records with zero transactions)
  */
 export async function deleteProductAction(id: string): Promise<ProductActionResult> {

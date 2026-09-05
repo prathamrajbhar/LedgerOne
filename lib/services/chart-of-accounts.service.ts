@@ -132,7 +132,7 @@ export class ChartOfAccountsService {
         ],
       }),
       ...(type && { type }),
-      ...(!includeArchived && { isArchived: false }),
+      isArchived: includeArchived,
     };
 
     const accounts = await prisma.chartOfAccount.findMany({

@@ -16,28 +16,22 @@ import {
   archiveAccountAction,
   restoreAccountAction,
   deleteAccountAction,
+  checkCanDeleteAccountAction,
 } from "@/app/actions/master-data.actions";
 import {
   DestructiveConfirmDialog,
   ConfirmActionType,
 } from "@/components/ui/destructive-confirm-dialog";
 import { useSession } from "next-auth/react";
-import { UserRole } from "@prisma/client";
+import { UserRole, AccountType } from "@prisma/client";
 
 export interface AccountItem {
   id: string;
   code: string;
   name: string;
-  type:
-    | "ASSET"
-    | "LIABILITY"
-    | "BANK"
-    | "CAPITAL"
-    | "CASH"
-    | "INCOME"
-    | "EXPENSES"
-    | "OTHER_EXPENSES";
+  type: AccountType;
   isArchived: boolean;
+  createdAt: string;
 }
 
 interface AccountsTableProps {
@@ -53,20 +47,53 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
     open: boolean;
     type: ConfirmActionType;
     account: AccountItem | null;
+    isReferenced: boolean;
+    checkingUsage: boolean;
   }>({
     open: false,
     type: "archive",
     account: null,
+    isReferenced: false,
+    checkingUsage: false,
   });
+
+  const handleOpenDialog = async (type: ConfirmActionType, account: AccountItem) => {
+    if (type === "delete") {
+      setConfirmDialog({
+        open: true,
+        type: "delete",
+        account,
+        isReferenced: false,
+        checkingUsage: true,
+      });
+
+      const res = await checkCanDeleteAccountAction(account.id);
+      const canDelete = res.success && res.data?.canDelete;
+
+      setConfirmDialog((prev) => ({
+        ...prev,
+        isReferenced: !canDelete,
+        checkingUsage: false,
+      }));
+    } else {
+      setConfirmDialog({
+        open: true,
+        type,
+        account,
+        isReferenced: false,
+        checkingUsage: false,
+      });
+    }
+  };
 
   const handleExecuteAction = async () => {
     if (!confirmDialog.account) return;
     const { id, name } = confirmDialog.account;
 
-    if (confirmDialog.type === "archive") {
+    if (confirmDialog.type === "archive" || (confirmDialog.type === "delete" && confirmDialog.isReferenced)) {
       const res = await archiveAccountAction(id);
       if (res.success) {
-        toast.success(`Account "${name}" archived`);
+        toast.success(`Account "${name}" archived successfully`);
         onRefresh?.();
       } else {
         toast.error(res.error || "Failed to archive account");
@@ -74,7 +101,7 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
     } else if (confirmDialog.type === "restore") {
       const res = await restoreAccountAction(id);
       if (res.success) {
-        toast.success(`Account "${name}" restored`);
+        toast.success(`Account "${name}" restored successfully`);
         onRefresh?.();
       } else {
         toast.error(res.error || "Failed to restore account");
@@ -158,13 +185,7 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
 
                       {acc.isArchived ? (
                         <DropdownMenuItem
-                          onClick={() =>
-                            setConfirmDialog({
-                              open: true,
-                              type: "restore",
-                              account: acc,
-                            })
-                          }
+                          onClick={() => handleOpenDialog("restore", acc)}
                           className="text-navy gap-2"
                         >
                           <RotateCcw className="h-3.5 w-3.5" />
@@ -172,13 +193,7 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
                         </DropdownMenuItem>
                       ) : (
                         <DropdownMenuItem
-                          onClick={() =>
-                            setConfirmDialog({
-                              open: true,
-                              type: "archive",
-                              account: acc,
-                            })
-                          }
+                          onClick={() => handleOpenDialog("archive", acc)}
                           className="text-amber-700 gap-2"
                         >
                           <Archive className="h-3.5 w-3.5" />
@@ -188,13 +203,7 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
 
                       {isAdmin && (
                         <DropdownMenuItem
-                          onClick={() =>
-                            setConfirmDialog({
-                              open: true,
-                              type: "delete",
-                              account: acc,
-                            })
-                          }
+                          onClick={() => handleOpenDialog("delete", acc)}
                           className="text-destructive focus:text-destructive gap-2"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -218,6 +227,8 @@ export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
           actionType={confirmDialog.type}
           recordName={`${confirmDialog.account.code} - ${confirmDialog.account.name}`}
           recordType="Account"
+          isReferenced={confirmDialog.isReferenced}
+          checkingUsage={confirmDialog.checkingUsage}
           onConfirm={handleExecuteAction}
         />
       )}
