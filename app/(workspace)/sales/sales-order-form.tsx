@@ -69,17 +69,18 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
       ]);
 
       if (customersResult.success && customersResult.data) {
-        const allCustomers = customersResult.data.contacts.filter(
+        const contactData = customersResult.data as { contacts?: CustomerOption[] };
+        const allCustomers = (contactData.contacts || []).filter(
           (c: { type: string }) => c.type === "CUSTOMER" || c.type === "BOTH"
         );
         setCustomers(allCustomers);
       }
 
       if (productsResult.success && productsResult.data) {
-        setProducts(productsResult.data.data);
+        const prodData = productsResult.data as { data?: ProductOption[] };
+        setProducts(prodData.data || []);
       }
-    } catch (error) {
-      console.error("Error loading form data:", error);
+    } catch {
       toast.error("Failed to load form data");
     } finally {
       setLoadingData(false);

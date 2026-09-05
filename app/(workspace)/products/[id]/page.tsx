@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getProductByIdAction } from "@/app/actions/product.actions";
 import { notFound } from "next/navigation";
+import { Product, ProductCategory } from "@prisma/client";
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const result = await getProductByIdAction(params.id);
@@ -15,7 +16,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
     notFound();
   }
 
-  const product = result.data;
+  const product = result.data as Product & { category: ProductCategory };
   const margin = Number(product.salesPrice) - Number(product.cost);
   const marginPercent = ((margin / Number(product.salesPrice)) * 100).toFixed(1);
 

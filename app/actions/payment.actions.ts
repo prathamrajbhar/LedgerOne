@@ -170,6 +170,8 @@ export async function getUnpaidBillsAction() {
   }
 }
 
+import { requireAuth } from "@/lib/auth/session";
+
 export interface RecordPaymentActionInput {
   documentId: string;
   documentType: "BILL" | "INVOICE";
@@ -177,11 +179,17 @@ export interface RecordPaymentActionInput {
   paymentMethod: PaymentMethod;
   paymentDate: Date;
   note?: string;
-  userId: string;
+  userId?: string;
 }
 
 export async function recordPaymentAction(input: RecordPaymentActionInput) {
   try {
+    let effectiveUserId = input.userId;
+    if (!effectiveUserId) {
+      const session = await requireAuth();
+      effectiveUserId = session.user.id;
+    }
+
     const paymentInput: RecordManualPaymentInput = {
       documentId: input.documentId,
       documentType: input.documentType,
@@ -189,7 +197,7 @@ export async function recordPaymentAction(input: RecordPaymentActionInput) {
       paymentMethod: input.paymentMethod,
       paymentDate: input.paymentDate,
       note: input.note,
-      userId: input.userId,
+      userId: effectiveUserId,
     };
 
     const payment = await paymentService.recordManualPayment(paymentInput);

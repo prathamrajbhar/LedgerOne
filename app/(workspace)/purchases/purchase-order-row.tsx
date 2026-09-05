@@ -13,7 +13,7 @@ interface PurchaseOrderData {
   vendor?: { name: string } | null;
   orderDate: string | Date;
   status: string;
-  totalAmount: number | string;
+  total: unknown;
   _count?: { lines: number };
   lines?: unknown[];
 }

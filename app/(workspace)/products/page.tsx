@@ -3,6 +3,9 @@ import { PageHeader } from "@/components/ui/page-header";
 import { getProductsAction, getProductCategoriesAction } from "@/app/actions/product.actions";
 import { ProductsPageClient } from "./products-page-client";
 
+import { FurnitureProductItem } from "./products-table";
+import { ProductCategory } from "@prisma/client";
+
 export default async function ProductsPage({
   searchParams,
 }: {
@@ -37,10 +40,18 @@ export default async function ProductsPage({
     );
   }
 
-  const products = productsResult.data?.data || [];
-  const total = productsResult.data?.total || 0;
-  const totalPages = productsResult.data?.totalPages || 1;
-  const categories = categoriesResult.success ? categoriesResult.data || [] : [];
+  const prodResultData = productsResult.data as {
+    data?: FurnitureProductItem[];
+    total?: number;
+    totalPages?: number;
+  } | undefined;
+
+  const products = prodResultData?.data || [];
+  const total = prodResultData?.total || 0;
+  const totalPages = prodResultData?.totalPages || 1;
+  const categories = categoriesResult.success
+    ? (categoriesResult.data as ProductCategory[]) || []
+    : [];
 
   return (
     <ProductsPageClient

@@ -38,7 +38,7 @@ export default function ContactsPage() {
 
     if (result.success && result.data) {
       // Map backend data to ContactItem format
-      const contactList = result.data as { contacts: Array<{ id: string; name: string; type: ContactType; email: string; phone?: string | null; address?: string | null }> };
+      const contactList = result.data as { contacts: Array<{ id: string; name: string; type: ContactType; email: string; phone?: string | null; address?: string | null }>; totalPages: number; total: number };
       const mappedContacts: ContactItem[] = (contactList.contacts || []).map((c) => ({
         id: c.id,
         name: c.name,
@@ -50,8 +50,8 @@ export default function ContactsPage() {
       }));
 
       setContacts(mappedContacts);
-      setTotalPages(result.data.totalPages);
-      setTotalItems(result.data.total);
+      setTotalPages(contactList.totalPages);
+      setTotalItems(contactList.total);
     } else {
       setError(result.error || "Failed to load contacts");
       toast.error(result.error || "Failed to load contacts");

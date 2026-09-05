@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { getContactByIdAction } from "@/app/actions/contact.actions";
 import { notFound } from "next/navigation";
+import { Contact } from "@prisma/client";
+
+type ContactWithUser = Contact & {
+  user?: {
+    id: string;
+    loginId: string;
+    isActive: boolean;
+  } | null;
+};
 
 export default async function ContactDetailPage({ params }: { params: { id: string } }) {
   const result = await getContactByIdAction(params.id);
@@ -15,7 +24,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
     notFound();
   }
 
-  const contact = result.data;
+  const contact = result.data as ContactWithUser;
 
   // TODO: Calculate these from actual transactions when implemented
   const totalPurchased = 0;

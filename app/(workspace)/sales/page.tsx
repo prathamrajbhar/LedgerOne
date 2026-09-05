@@ -17,7 +17,7 @@ interface SalesOrderItem {
   customer?: { name: string } | null;
   orderDate: string | Date;
   status: string;
-  totalAmount: number | string;
+  total: unknown;
   lines?: unknown[];
 }
 
@@ -32,7 +32,8 @@ export default function SalesOrdersPage() {
     try {
       const result = await getSalesOrdersAction({ limit: 50 });
       if (result.success && result.data) {
-        setSalesOrders(result.data.data);
+        const orderData = result.data as { data?: SalesOrderItem[] };
+        setSalesOrders(orderData.data || []);
       } else {
         toast.error(result.error || "Failed to load sales orders");
       }
@@ -58,9 +59,8 @@ export default function SalesOrdersPage() {
       } else {
         toast.error(result.error || "Failed to confirm sales order");
       }
-    } catch (error) {
-      console.error("Error confirming sales order:", error);
-      toast.error("An unexpected error occurred");
+    } catch {
+      toast.error("An error occurred");
     } finally {
       setActionLoading(null);
     }
@@ -76,16 +76,15 @@ export default function SalesOrdersPage() {
       } else {
         toast.error(result.error || "Failed to create invoice");
       }
-    } catch (error) {
-      console.error("Error creating invoice:", error);
-      toast.error("An unexpected error occurred");
+    } catch {
+      toast.error("An error occurred");
     } finally {
       setActionLoading(null);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+  const formatDate = (dateValue: string | Date) => {
+    return new Date(dateValue).toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -120,15 +119,10 @@ export default function SalesOrdersPage() {
         <EmptyState
           title="No sales orders yet"
           description="Create your first sales order to get started"
-          action={
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5"
-            >
-              <Plus className="h-4 w-4" />
-              Create Sales Order
-            </Button>
-          }
+          action={{
+            label: "Create Sales Order",
+            onClick: () => setDialogOpen(true),
+          }}
         />
       ) : (
         <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
@@ -148,9 +142,9 @@ export default function SalesOrdersPage() {
               {salesOrders.map((so) => (
                 <tr key={so.id} className="hover:bg-primary-light/30">
                   <td className="py-3.5 px-4 font-mono font-bold text-navy">{so.soNumber}</td>
-                  <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer.name}</td>
+                  <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer?.name || "N/A"}</td>
                   <td className="py-3.5 px-4 text-muted-foreground">{formatDate(so.orderDate)}</td>
-                  <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines.length}</td>
+                  <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines?.length || 0}</td>
                   <td className="py-3.5 px-4 text-right font-bold text-foreground">
                     ₹{Number(so.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </td>

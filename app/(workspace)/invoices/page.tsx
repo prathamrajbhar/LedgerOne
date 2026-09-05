@@ -25,7 +25,6 @@ import { getProductsAction } from "@/app/actions/product.actions";
 import { recordPaymentAction } from "@/app/actions/payment.actions";
 import { DocumentStatus, PaymentStatus, PaymentMethod, Prisma } from "@prisma/client";
 import type { CustomerInvoice, Contact, Product } from "@prisma/client";
-import { useSession } from "next-auth/react";
 
 interface InvoiceWithRelations extends CustomerInvoice {
   customer: Contact;
@@ -44,7 +43,6 @@ interface InvoiceWithRelations extends CustomerInvoice {
 }
 
 export default function InvoicesPage() {
-  const { data: session } = useSession();
   const [invoices, setInvoices] = React.useState<InvoiceWithRelations[]>([]);
   const [customers, setCustomers] = React.useState<Contact[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -95,22 +93,25 @@ export default function InvoicesPage() {
       }
 
       if (customersResult.success && customersResult.data) {
-        setCustomers(customersResult.data.contacts);
-        if (customersResult.data.contacts.length > 0) {
-          setCustomerId(customersResult.data.contacts[0].id);
+        const contactData = customersResult.data as { contacts?: Contact[] };
+        const customerList = contactData.contacts || [];
+        setCustomers(customerList);
+        if (customerList.length > 0) {
+          setCustomerId(customerList[0].id);
         }
       }
 
       if (productsResult.success && productsResult.data) {
-        setProducts(productsResult.data.data);
-        if (productsResult.data.data.length > 0) {
-          setProductId(productsResult.data.data[0].id);
-          setUnitPrice(productsResult.data.data[0].salesPrice.toString());
+        const prodData = productsResult.data as { data?: Product[] };
+        const productList = prodData.data || [];
+        setProducts(productList);
+        if (productList.length > 0) {
+          setProductId(productList[0].id);
+          setUnitPrice(String(productList[0].salesPrice));
         }
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load data");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -189,8 +190,8 @@ export default function InvoicesPage() {
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedInvoiceForPayment || !paymentAmount || !session?.user?.id) {
-      toast.error("Missing required payment information");
+    if (!selectedInvoiceForPayment || !paymentAmount) {
+      toast.error("Please fill in all required fields");
       return;
     }
 
@@ -216,7 +217,6 @@ export default function InvoicesPage() {
         paymentMethod,
         paymentDate: new Date(paymentDate),
         note: paymentNote || undefined,
-        userId: session.user.id,
       });
 
       if (result.success) {

@@ -50,7 +50,7 @@ interface ProductOption {
 interface AnalyticAccountOption {
   id: string;
   name: string;
-  code: string;
+  code?: string;
 }
 
 export function PurchaseOrderForm() {
@@ -91,16 +91,18 @@ export function PurchaseOrderForm() {
       ]);
 
       if (vendorsResult.success && vendorsResult.data) {
-        const allVendors = vendorsResult.data.contacts || [];
+        const contactData = vendorsResult.data as { contacts?: VendorOption[] };
+        const allVendors = contactData.contacts || [];
         setVendors(allVendors);
       }
 
       if (productsResult.success && productsResult.data) {
-        setProducts(productsResult.data.data || []);
+        const prodData = productsResult.data as { data?: ProductOption[] };
+        setProducts(prodData.data || []);
       }
 
       if (analyticAccountsResult.success && analyticAccountsResult.data) {
-        setAnalyticAccounts(analyticAccountsResult.data);
+        setAnalyticAccounts(analyticAccountsResult.data as AnalyticAccountOption[]);
       }
     } catch {
       toast.error("Failed to load form data");

@@ -23,10 +23,8 @@ import {
   UnpaidDocument,
 } from "@/app/actions/payment.actions";
 import { PaymentMethod } from "@prisma/client";
-import { useSession } from "next-auth/react";
 
 export default function PaymentsPage() {
-  const { data: session } = useSession();
   const [payments, setPayments] = React.useState<PaymentRecord[]>([]);
   const [search, setSearch] = React.useState("");
   const [openModal, setOpenModal] = React.useState(false);
@@ -83,7 +81,7 @@ export default function PaymentsPage() {
 
   const handleRecordPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDocument || !amount || !session?.user?.id) return;
+    if (!selectedDocument || !amount) return;
 
     const selectedDoc = unpaidDocuments.find((d) => d.id === selectedDocument);
     if (!selectedDoc) {
@@ -110,7 +108,6 @@ export default function PaymentsPage() {
       paymentMethod,
       paymentDate: new Date(),
       note,
-      userId: session.user.id,
     });
 
     if (result.success) {

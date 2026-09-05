@@ -66,8 +66,8 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     }
     if (entry.billPayment) {
       return {
-        ref: entry.billPayment.bill.billNumber,
-        party: entry.billPayment.bill.vendor.name,
+        ref: entry.billPayment.vendorBill.billNumber,
+        party: entry.billPayment.vendorBill.vendor.name,
         type: "Bill Payment",
       };
     }

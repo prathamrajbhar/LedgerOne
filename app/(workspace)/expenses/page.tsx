@@ -26,10 +26,8 @@ import {
   JournalOption,
 } from "@/app/actions/expense.actions";
 import { createManualJournalEntryAction } from "@/app/actions/accounting.actions";
-import { useSession } from "next-auth/react";
 
 export default function ExpensesPage() {
-  const { data: session } = useSession();
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
   const [openModal, setOpenModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
@@ -99,7 +97,7 @@ export default function ExpensesPage() {
 
   const handleRecordExpense = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || !expenseAccountId || !amount || !journalId || !session?.user?.id) {
+    if (!description || !expenseAccountId || !amount || !journalId) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -138,7 +136,6 @@ export default function ExpensesPage() {
       journalId,
       accountingDate: new Date(expenseDate),
       lines,
-      userId: session.user.id,
     });
 
     if (result.success) {

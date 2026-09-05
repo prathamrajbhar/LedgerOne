@@ -45,7 +45,7 @@ export default function AnalyticAccountsPage() {
     try {
       const result = await getAnalyticAccountsAction();
       if (result.success && result.data) {
-        setAccounts(result.data);
+        setAccounts(result.data as AnalyticAccount[]);
       } else {
         toast.error(result.error || "Failed to load analytic accounts");
       }

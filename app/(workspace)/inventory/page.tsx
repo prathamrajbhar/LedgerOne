@@ -53,13 +53,13 @@ export default function InventoryPage() {
       ]);
 
       if (metricsResult.success && metricsResult.data) {
-        setMetrics(metricsResult.data);
+        setMetrics(metricsResult.data as InventoryMetrics);
       } else {
         toast.error(metricsResult.error || "Failed to load inventory metrics");
       }
 
       if (alertsResult.success && alertsResult.data) {
-        setAlerts(alertsResult.data);
+        setAlerts(alertsResult.data as RestockAlert[]);
       } else {
         toast.error(alertsResult.error || "Failed to load restock alerts");
       }

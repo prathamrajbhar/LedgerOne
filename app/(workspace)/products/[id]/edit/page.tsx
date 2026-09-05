@@ -1,6 +1,7 @@
 import { ProductForm } from "../../product-form";
 import { getProductByIdAction, getProductCategoriesAction } from "@/app/actions/product.actions";
 import { notFound } from "next/navigation";
+import { Product, ProductCategory } from "@prisma/client";
 
 export default async function EditProductPage({ params }: { params: { id: string } }) {
   const [productResult, categoriesResult] = await Promise.all([
@@ -12,7 +13,9 @@ export default async function EditProductPage({ params }: { params: { id: string
     notFound();
   }
 
-  if (!categoriesResult.success || !categoriesResult.data || categoriesResult.data.length === 0) {
+  const categories = (categoriesResult.data as ProductCategory[]) || [];
+
+  if (!categoriesResult.success || categories.length === 0) {
     return (
       <div className="space-y-5">
         <div className="text-center py-12 text-red-600">
@@ -22,7 +25,7 @@ export default async function EditProductPage({ params }: { params: { id: string
     );
   }
 
-  const product = productResult.data;
+  const product = productResult.data as Product;
 
   const initialData = {
     id: product.id,
@@ -38,5 +41,5 @@ export default async function EditProductPage({ params }: { params: { id: string
     reorderPoint: product.reorderPoint,
   };
 
-  return <ProductForm initialData={initialData} categories={categoriesResult.data} isEdit />;
+  return <ProductForm initialData={initialData} categories={categories} isEdit />;
 }

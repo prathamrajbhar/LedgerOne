@@ -48,7 +48,7 @@ export default function TaxRatesPage() {
     try {
       const result = await getTaxRatesAction();
       if (result.success && result.data) {
-        setRates(result.data);
+        setRates(result.data as TaxRateItem[]);
       } else {
         toast.error(result.error || "Failed to load tax rates");
       }

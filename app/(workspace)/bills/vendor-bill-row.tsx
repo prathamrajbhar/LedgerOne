@@ -15,8 +15,9 @@ interface VendorBillData {
   dueDate: string | Date;
   status: string;
   paymentStatus: string;
-  total: number | string;
-  amountDue: number | string;
+  total: unknown;
+  amountPaid?: unknown;
+  amountDue: unknown;
 }
 
 interface VendorBillRowProps {

@@ -50,7 +50,7 @@ interface ProductOption {
 interface AnalyticAccountOption {
   id: string;
   name: string;
-  code: string;
+  code?: string;
 }
 
 export function VendorBillForm() {
@@ -58,18 +58,19 @@ export function VendorBillForm() {
   const [loading, setLoading] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const [vendors, setVendors] = React.useState<VendorOption[]>([]);
-  const [products, setProducts] = React.useState<ProductOption[]>([]);
-  const [analyticAccounts, setAnalyticAccounts] = React.useState<AnalyticAccountOption[]>([]);
-
+  // Form State
   const [vendorId, setVendorId] = React.useState("");
-  const [billDate, setBillDate] = React.useState(new Date().toISOString().split("T")[0]);
+  const [billDate, setBillDate] = React.useState(
+    new Date().toISOString().split("T")[0]
+  );
   const [dueDate, setDueDate] = React.useState(
-    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .split("T")[0]
   );
   const [lines, setLines] = React.useState<LineItem[]>([
     {
-      id: Math.random().toString(36).substr(2, 9),
+      id: "1",
       productId: "",
       analyticAccountId: "",
       quantity: 1,
@@ -77,6 +78,13 @@ export function VendorBillForm() {
       lineTotal: 0,
     },
   ]);
+
+  // Options State
+  const [vendors, setVendors] = React.useState<VendorOption[]>([]);
+  const [products, setProducts] = React.useState<ProductOption[]>([]);
+  const [analyticAccounts, setAnalyticAccounts] = React.useState<
+    AnalyticAccountOption[]
+  >([]);
 
   React.useEffect(() => {
     if (open) {
@@ -94,16 +102,18 @@ export function VendorBillForm() {
       ]);
 
       if (vendorsResult.success && vendorsResult.data) {
-        const allVendors = vendorsResult.data.contacts || [];
+        const contactData = vendorsResult.data as { contacts?: VendorOption[] };
+        const allVendors = contactData.contacts || [];
         setVendors(allVendors);
       }
 
       if (productsResult.success && productsResult.data) {
-        setProducts(productsResult.data.data || []);
+        const prodData = productsResult.data as { data?: ProductOption[] };
+        setProducts(prodData.data || []);
       }
 
       if (analyticAccountsResult.success && analyticAccountsResult.data) {
-        setAnalyticAccounts(analyticAccountsResult.data);
+        setAnalyticAccounts(analyticAccountsResult.data as AnalyticAccountOption[]);
       }
     } catch {
       toast.error("Failed to load form data");
