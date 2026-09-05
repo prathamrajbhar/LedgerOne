@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { requireCustomerAccess } from "@/lib/auth/portal-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { PrismaClient, PaymentStatus } from "@prisma/client";
-import { FileText } from "lucide-react";
+import { FileText, CreditCard } from "lucide-react";
 
 const prisma = new PrismaClient();
 
@@ -62,17 +64,26 @@ export default async function PortalInvoicesPage() {
                   <CardTitle className="text-lg font-semibold">
                     {invoice.invoiceNumber}
                   </CardTitle>
-                  <span
-                    className={`text-xs px-3 py-1 rounded-full font-medium ${
-                      invoice.paymentStatus === PaymentStatus.PAID
-                        ? "bg-green-100 text-green-700"
-                        : invoice.paymentStatus === PaymentStatus.PARTIAL
-                        ? "bg-orange-100 text-orange-700"
-                        : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {invoice.paymentStatus}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-xs px-3 py-1 rounded-full font-medium ${
+                        invoice.paymentStatus === PaymentStatus.PAID
+                          ? "bg-green-100 text-green-700"
+                          : invoice.paymentStatus === PaymentStatus.PARTIAL
+                          ? "bg-orange-100 text-orange-700"
+                          : "bg-red-100 text-red-700"
+                      }`}
+                    >
+                      {invoice.paymentStatus}
+                    </span>
+                    {invoice.paymentStatus !== PaymentStatus.PAID && (
+                      <Link href={`/portal/invoices/${invoice.id}/pay`}>
+                        <Button size="sm" className="text-xs h-7 bg-navy hover:bg-navy-dark text-white gap-1.5">
+                          <CreditCard className="h-3 w-3" /> Pay Invoice
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>

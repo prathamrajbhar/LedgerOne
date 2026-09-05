@@ -3,89 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Receipt,
-  FileText,
-  CreditCard,
-  Wallet,
-  BookOpen,
-  BookText,
-  Users,
-  UserCheck,
-  Package,
-  Boxes,
-  ShoppingBag,
-  ShoppingCart,
-  BarChart3,
-  TrendingUp,
-  Bell,
-  Settings,
-  ArrowRight,
-  Armchair,
-} from "lucide-react";
+import { ArrowRight, Armchair } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-  badge?: string | number;
-}
-
-interface NavSection {
-  title?: string;
-  items: NavItem[];
-}
-
-const navSections: NavSection[] = [
-  {
-    items: [
-      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    ],
-  },
-  {
-    title: "Finance",
-    items: [
-      { name: "Transactions", href: "/transactions", icon: Receipt },
-      { name: "Invoices", href: "/invoices", icon: FileText },
-      { name: "Payments", href: "/payments", icon: CreditCard },
-      { name: "Expenses", href: "/expenses", icon: Wallet },
-      { name: "Journal Entries", href: "/journal-entries", icon: BookText },
-      { name: "Accounts", href: "/accounts", icon: BookOpen },
-    ],
-  },
-  {
-    title: "Business",
-    items: [
-      { name: "Customers", href: "/contacts", icon: Users },
-      { name: "Suppliers", href: "/contacts?type=VENDOR", icon: UserCheck },
-      { name: "Products", href: "/products", icon: Package },
-      { name: "Inventory", href: "/inventory", icon: Boxes },
-    ],
-  },
-  {
-    title: "Sales & Purchases",
-    items: [
-      { name: "Sales", href: "/sales", icon: ShoppingBag },
-      { name: "Purchases", href: "/purchases", icon: ShoppingCart },
-    ],
-  },
-  {
-    title: "Analytics",
-    items: [
-      { name: "Reports", href: "/reports", icon: BarChart3 },
-      { name: "Financial Reports", href: "/financial-reports", icon: TrendingUp },
-    ],
-  },
-  {
-    title: "System",
-    items: [
-      { name: "Notifications", href: "/notifications", icon: Bell, badge: 3 },
-      { name: "Settings", href: "/settings", icon: Settings },
-    ],
-  },
-];
+import { navSections } from "./sidebar-items";
 
 export function Sidebar({
   isOpen,
