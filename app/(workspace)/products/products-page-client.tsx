@@ -36,13 +36,16 @@ export function ProductsPageClient({
   const [viewMode, setViewMode] = React.useState<"list" | "kanban">("list");
   const [search, setSearch] = React.useState(initialSearch);
   const [selectedCategory, setSelectedCategory] = React.useState(initialCategoryId || "ALL");
+  const [selectedStatus, setSelectedStatus] = React.useState<"ACTIVE" | "ARCHIVED">(
+    searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE"
+  );
 
   const updateSearchParams = React.useCallback(
     (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
 
       Object.entries(updates).forEach(([key, value]) => {
-        if (value && value !== "ALL") {
+        if (value && value !== "ALL" && value !== "ACTIVE") {
           params.set(key, value);
         } else {
           params.delete(key);
@@ -126,6 +129,36 @@ export function ProductsPageClient({
                 {cat.name}
               </button>
             ))}
+          </div>
+
+          {/* Active vs Archived status toggle */}
+          <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border flex-shrink-0">
+            <button
+              onClick={() => {
+                setSelectedStatus("ACTIVE");
+                updateSearchParams({ status: "ACTIVE", page: "1" });
+              }}
+              className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                selectedStatus === "ACTIVE"
+                  ? "bg-white text-navy font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => {
+                setSelectedStatus("ARCHIVED");
+                updateSearchParams({ status: "ARCHIVED", page: "1" });
+              }}
+              className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                selectedStatus === "ARCHIVED"
+                  ? "bg-white text-amber-700 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Archived
+            </button>
           </div>
 
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border flex-shrink-0">

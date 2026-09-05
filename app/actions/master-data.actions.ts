@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import {
   chartOfAccountsService,
   CreateAccountInput,
@@ -12,7 +13,10 @@ import {
   UpdateJournalInput,
   ListJournalsParams,
 } from "@/lib/services/journal.service";
-import { AccountType, JournalType } from "@prisma/client";
+import { AccountType, JournalType, PrismaClient } from "@prisma/client";
+import { requireRole } from "@/lib/auth/session";
+
+const prisma = new PrismaClient();
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
 
 export interface ActionResult<T = unknown> {
@@ -223,6 +227,7 @@ export async function archiveAccountAction(id: string): Promise<ActionResult> {
 export async function restoreAccountAction(id: string): Promise<ActionResult> {
   try {
     await chartOfAccountsService.restore(id);
+    revalidatePath("/accounts");
     return {
       success: true,
       data: { message: "Account restored successfully" },
@@ -246,6 +251,39 @@ export async function restoreAccountAction(id: string): Promise<ActionResult> {
     return {
       success: false,
       error: "Failed to restore account. Please try again.",
+    };
+  }
+}
+
+/**
+ * Hard delete an account (Administrator only, records with zero transactions)
+ */
+export async function deleteAccountAction(id: string): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+
+    const canDelete = await chartOfAccountsService.canDelete(id);
+    if (!canDelete) {
+      return {
+        success: false,
+        error: "Cannot delete account linked to journal entry lines or used as default journal account. Please archive instead.",
+      };
+    }
+
+    await prisma.chartOfAccount.delete({
+      where: { id },
+    });
+
+    revalidatePath("/accounts");
+    return {
+      success: true,
+      data: { message: "Account deleted permanently" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete account";
+    return {
+      success: false,
+      error: message,
     };
   }
 }

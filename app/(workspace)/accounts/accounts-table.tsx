@@ -3,14 +3,26 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Archive, RotateCcw, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import {
+  archiveAccountAction,
+  restoreAccountAction,
+  deleteAccountAction,
+} from "@/app/actions/master-data.actions";
+import {
+  DestructiveConfirmDialog,
+  ConfirmActionType,
+} from "@/components/ui/destructive-confirm-dialog";
+import { useSession } from "next-auth/react";
+import { UserRole } from "@prisma/client";
 
 export interface AccountItem {
   id: string;
@@ -30,9 +42,53 @@ export interface AccountItem {
 
 interface AccountsTableProps {
   accounts: AccountItem[];
+  onRefresh?: () => void;
 }
 
-export function AccountsTable({ accounts }: AccountsTableProps) {
+export function AccountsTable({ accounts, onRefresh }: AccountsTableProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
+
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    open: boolean;
+    type: ConfirmActionType;
+    account: AccountItem | null;
+  }>({
+    open: false,
+    type: "archive",
+    account: null,
+  });
+
+  const handleExecuteAction = async () => {
+    if (!confirmDialog.account) return;
+    const { id, name } = confirmDialog.account;
+
+    if (confirmDialog.type === "archive") {
+      const res = await archiveAccountAction(id);
+      if (res.success) {
+        toast.success(`Account "${name}" archived`);
+        onRefresh?.();
+      } else {
+        toast.error(res.error || "Failed to archive account");
+      }
+    } else if (confirmDialog.type === "restore") {
+      const res = await restoreAccountAction(id);
+      if (res.success) {
+        toast.success(`Account "${name}" restored`);
+        onRefresh?.();
+      } else {
+        toast.error(res.error || "Failed to restore account");
+      }
+    } else if (confirmDialog.type === "delete") {
+      const res = await deleteAccountAction(id);
+      if (res.success) {
+        toast.success(`Account "${name}" deleted permanently`);
+        onRefresh?.();
+      } else {
+        toast.error(res.error || "Failed to delete account");
+      }
+    }
+  };
   const getTypeBadge = (type: AccountItem["type"]) => {
     switch (type) {
       case "ASSET":
@@ -97,6 +153,54 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
                       <DropdownMenuItem onClick={() => toast.success(`Account ${acc.code} details copied.`)}>
                         Copy Account Code
                       </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+
+                      {acc.isArchived ? (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setConfirmDialog({
+                              open: true,
+                              type: "restore",
+                              account: acc,
+                            })
+                          }
+                          className="text-navy gap-2"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          Restore Account
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setConfirmDialog({
+                              open: true,
+                              type: "archive",
+                              account: acc,
+                            })
+                          }
+                          className="text-amber-700 gap-2"
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                          Archive Account
+                        </DropdownMenuItem>
+                      )}
+
+                      {isAdmin && (
+                        <DropdownMenuItem
+                          onClick={() =>
+                            setConfirmDialog({
+                              open: true,
+                              type: "delete",
+                              account: acc,
+                            })
+                          }
+                          className="text-destructive focus:text-destructive gap-2"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Delete Permanently
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>
@@ -105,6 +209,18 @@ export function AccountsTable({ accounts }: AccountsTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.account && (
+        <DestructiveConfirmDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
+          actionType={confirmDialog.type}
+          recordName={`${confirmDialog.account.code} - ${confirmDialog.account.name}`}
+          recordType="Account"
+          onConfirm={handleExecuteAction}
+        />
+      )}
     </div>
   );
 }

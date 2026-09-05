@@ -1,8 +1,12 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { contactService, CreateContactInput, UpdateContactInput, ListContactsParams } from "@/lib/services/contact.service";
-import { ContactType } from "@prisma/client";
+import { ContactType, PrismaClient } from "@prisma/client";
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
+import { requireRole } from "@/lib/auth/session";
+
+const prisma = new PrismaClient();
 
 export interface ContactActionResult<T = unknown> {
   success: boolean;
@@ -16,6 +20,7 @@ export interface ContactActionResult<T = unknown> {
 export async function getContactsAction(params?: {
   search?: string;
   type?: ContactType;
+  isArchived?: boolean;
   page?: number;
   limit?: number;
 }): Promise<ContactActionResult> {
@@ -27,7 +32,7 @@ export async function getContactsAction(params?: {
     const listParams: ListContactsParams = {
       search: params?.search,
       type: params?.type,
-      isArchived: false,
+      isArchived: params?.isArchived ?? false,
       limit,
       offset,
     };
@@ -227,6 +232,7 @@ export async function archiveContactAction(id: string): Promise<ContactActionRes
 export async function restoreContactAction(id: string): Promise<ContactActionResult> {
   try {
     await contactService.restore(id);
+    revalidatePath("/contacts");
     return {
       success: true,
       data: { message: "Contact restored successfully" },
@@ -236,6 +242,39 @@ export async function restoreContactAction(id: string): Promise<ContactActionRes
     return {
       success: false,
       error: "Failed to restore contact. Please try again.",
+    };
+  }
+}
+
+/**
+ * Hard delete a contact (Administrator only, records with zero transactions)
+ */
+export async function deleteContactAction(id: string): Promise<ContactActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+
+    const canDelete = await contactService.canDelete(id);
+    if (!canDelete) {
+      return {
+        success: false,
+        error: "Cannot delete contact with linked sales orders, invoices, or bills. Please archive instead.",
+      };
+    }
+
+    await prisma.contact.delete({
+      where: { id },
+    });
+
+    revalidatePath("/contacts");
+    return {
+      success: true,
+      data: { message: "Contact deleted permanently" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete contact";
+    return {
+      success: false,
+      error: message,
     };
   }
 }

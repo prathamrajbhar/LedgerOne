@@ -22,6 +22,7 @@ export default function ContactsPage() {
   const [typeFilter, setTypeFilter] = React.useState<string>(
     initialType === "CUSTOMER" || initialType === "VENDOR" ? initialType : "ALL"
   );
+  const [statusFilter, setStatusFilter] = React.useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
   const [page, setPage] = React.useState(1);
 
   React.useEffect(() => {
@@ -47,13 +48,26 @@ export default function ContactsPage() {
     const result = await getContactsAction({
       search: search || undefined,
       type: typeFilter !== "ALL" ? (typeFilter as ContactType) : undefined,
+      isArchived: statusFilter === "ARCHIVED",
       page,
       limit: 25,
     });
 
     if (result.success && result.data) {
       // Map backend data to ContactItem format
-      const contactList = result.data as { contacts: Array<{ id: string; name: string; type: ContactType; email: string; phone?: string | null; address?: string | null }>; totalPages: number; total: number };
+      const contactList = result.data as {
+        contacts: Array<{
+          id: string;
+          name: string;
+          type: ContactType;
+          email: string;
+          phone?: string | null;
+          address?: string | null;
+          isArchived?: boolean;
+        }>;
+        totalPages: number;
+        total: number;
+      };
       const mappedContacts: ContactItem[] = (contactList.contacts || []).map((c) => ({
         id: c.id,
         name: c.name,
@@ -61,7 +75,8 @@ export default function ContactsPage() {
         email: c.email,
         phone: c.phone || undefined,
         address: c.address || undefined,
-        outstandingBalance: 0, // TODO: Calculate from transactions when implemented
+        isArchived: c.isArchived,
+        outstandingBalance: 0,
       }));
 
       setContacts(mappedContacts);
@@ -73,7 +88,7 @@ export default function ContactsPage() {
     }
 
     setLoading(false);
-  }, [search, typeFilter, page]);
+  }, [search, typeFilter, statusFilter, page]);
 
   // Fetch on mount and when filters change
   React.useEffect(() => {
@@ -123,6 +138,7 @@ export default function ContactsPage() {
 
         {/* Type Filter Buttons + List/Kanban Toggle */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+          {/* Type Filter Buttons */}
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
             {["ALL", "CUSTOMER", "VENDOR"].map((type) => (
               <button
@@ -141,6 +157,38 @@ export default function ContactsPage() {
                 {type === "ALL" ? "All" : type === "CUSTOMER" ? "Customers" : "Suppliers"}
               </button>
             ))}
+          </div>
+
+          {/* Status Filter (Active vs Archived) */}
+          <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
+            <button
+              onClick={() => {
+                setStatusFilter("ACTIVE");
+                setPage(1);
+              }}
+              disabled={loading}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                statusFilter === "ACTIVE"
+                  ? "bg-white text-navy font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => {
+                setStatusFilter("ARCHIVED");
+                setPage(1);
+              }}
+              disabled={loading}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                statusFilter === "ARCHIVED"
+                  ? "bg-white text-amber-700 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Archived
+            </button>
           </div>
 
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
@@ -225,7 +273,7 @@ export default function ContactsPage() {
       {!loading && !error && contacts.length > 0 && (
         <>
           {viewMode === "list" ? (
-            <ContactsTable contacts={contacts} />
+            <ContactsTable contacts={contacts} onRefresh={fetchContacts} />
           ) : (
             <ContactsKanban contacts={contacts} />
           )}

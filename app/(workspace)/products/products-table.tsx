@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MoreHorizontal, Package } from "lucide-react";
+import { MoreHorizontal, Package, Archive, RotateCcw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -10,9 +10,14 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { archiveProductAction, restoreProductAction, deleteProductAction } from "@/app/actions/product.actions";
+import { DestructiveConfirmDialog, ConfirmActionType } from "@/components/ui/destructive-confirm-dialog";
+import { useSession } from "next-auth/react";
+import { UserRole } from "@prisma/client";
 
 export interface FurnitureProductItem {
   id: string;
@@ -25,6 +30,7 @@ export interface FurnitureProductItem {
   stock: number;
   reorderPoint: number;
   status: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
+  isArchived?: boolean;
 }
 
 interface ProductsTableProps {
@@ -33,6 +39,49 @@ interface ProductsTableProps {
 }
 
 export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: ProductsTableProps) {
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
+
+  const [confirmDialog, setConfirmDialog] = React.useState<{
+    open: boolean;
+    type: ConfirmActionType;
+    product: FurnitureProductItem | null;
+  }>({
+    open: false,
+    type: "archive",
+    product: null,
+  });
+
+  const handleExecuteAction = async () => {
+    if (!confirmDialog.product) return;
+    const { id, name } = confirmDialog.product;
+
+    if (confirmDialog.type === "archive") {
+      const res = await archiveProductAction(id);
+      if (res.success) {
+        toast.success(`Product "${name}" archived`);
+        window.location.reload();
+      } else {
+        toast.error(res.error || "Failed to archive product");
+      }
+    } else if (confirmDialog.type === "restore") {
+      const res = await restoreProductAction(id);
+      if (res.success) {
+        toast.success(`Product "${name}" restored`);
+        window.location.reload();
+      } else {
+        toast.error(res.error || "Failed to restore product");
+      }
+    } else if (confirmDialog.type === "delete") {
+      const res = await deleteProductAction(id);
+      if (res.success) {
+        toast.success(`Product "${name}" deleted permanently`);
+        window.location.reload();
+      } else {
+        toast.error(res.error || "Failed to delete product");
+      }
+    }
+  };
   return (
     <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
       <div className="overflow-x-auto">
@@ -119,6 +168,54 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
                         <DropdownMenuItem asChild>
                           <Link href={`/invoices`}>Create Invoice Line</Link>
                         </DropdownMenuItem>
+
+                        <DropdownMenuSeparator />
+
+                        {item.isArchived ? (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setConfirmDialog({
+                                open: true,
+                                type: "restore",
+                                product: item,
+                              })
+                            }
+                            className="text-navy gap-2"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            Restore Product
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setConfirmDialog({
+                                open: true,
+                                type: "archive",
+                                product: item,
+                              })
+                            }
+                            className="text-amber-700 gap-2"
+                          >
+                            <Archive className="h-3.5 w-3.5" />
+                            Archive Product
+                          </DropdownMenuItem>
+                        )}
+
+                        {isAdmin && (
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setConfirmDialog({
+                                open: true,
+                                type: "delete",
+                                product: item,
+                              })
+                            }
+                            className="text-destructive focus:text-destructive gap-2"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete Permanently
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
@@ -128,6 +225,18 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
           </tbody>
         </table>
       </div>
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.product && (
+        <DestructiveConfirmDialog
+          open={confirmDialog.open}
+          onOpenChange={(open) => setConfirmDialog((prev) => ({ ...prev, open }))}
+          actionType={confirmDialog.type}
+          recordName={confirmDialog.product.name}
+          recordType="Product"
+          onConfirm={handleExecuteAction}
+        />
+      )}
     </div>
   );
 }

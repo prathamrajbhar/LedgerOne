@@ -9,11 +9,13 @@ import { ProductCategory } from "@prisma/client";
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string; category?: string };
+  searchParams: { page?: string; search?: string; category?: string; status?: string };
 }) {
   const page = parseInt(searchParams.page || "1");
   const search = searchParams.search || "";
   const categoryId = searchParams.category || "";
+  const status = searchParams.status || "ACTIVE";
+  const isArchived = status === "ARCHIVED";
 
   const [productsResult, categoriesResult] = await Promise.all([
     getProductsAction({
@@ -21,7 +23,7 @@ export default async function ProductsPage({
       categoryId: categoryId && categoryId !== "ALL" ? categoryId : undefined,
       page,
       limit: 20,
-      includeArchived: false,
+      includeArchived: isArchived,
     }),
     getProductCategoriesAction(),
   ]);

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { productService, CreateProductInput, UpdateProductInput, ListProductsParams } from "@/lib/services/product.service";
 import { ValidationError, NotFoundError, ConflictError } from "@/lib/utils/errors";
 import { prisma } from "@/lib/prisma";
+import { requireRole } from "@/lib/auth/session";
 
 export interface ProductActionResult<T = unknown> {
   success: boolean;
@@ -229,6 +230,39 @@ export async function restoreProductAction(id: string): Promise<ProductActionRes
     return {
       success: false,
       error: "Failed to restore product. Please try again.",
+    };
+  }
+}
+
+/**
+ * Hard delete a product (Administrator only, records with zero transactions)
+ */
+export async function deleteProductAction(id: string): Promise<ProductActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+
+    const canDelete = await productService.canDelete(id);
+    if (!canDelete) {
+      return {
+        success: false,
+        error: "Cannot delete product referenced in purchase orders, sales orders, bills, or invoices. Please archive instead.",
+      };
+    }
+
+    await prisma.product.delete({
+      where: { id },
+    });
+
+    revalidatePath("/products");
+    return {
+      success: true,
+      data: { message: "Product deleted permanently" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to delete product";
+    return {
+      success: false,
+      error: message,
     };
   }
 }

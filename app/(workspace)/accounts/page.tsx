@@ -26,6 +26,7 @@ export default function AccountsPage() {
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
   const [typeFilter, setTypeFilter] = React.useState("ALL");
+  const [statusFilter, setStatusFilter] = React.useState<"ACTIVE" | "ARCHIVED">("ACTIVE");
   const [openModal, setOpenModal] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
 
@@ -34,15 +35,12 @@ export default function AccountsPage() {
   const [newName, setNewName] = React.useState("");
   const [newType, setNewType] = React.useState<AccountType>("ASSET");
 
-  // Fetch accounts on mount
-  React.useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  const loadAccounts = async () => {
+  const loadAccounts = React.useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getChartOfAccountsAction({ includeArchived: false });
+      const result = await getChartOfAccountsAction({
+        includeArchived: statusFilter === "ARCHIVED",
+      });
       if (result.success && result.data) {
         setAccounts(result.data as AccountItem[]);
       } else {
@@ -53,7 +51,12 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusFilter]);
+
+  // Fetch accounts on mount or status change
+  React.useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,20 +185,45 @@ export default function AccountsPage() {
           />
         </div>
 
-        <div className="flex items-center gap-1.5 p-0.5 rounded-lg bg-[#F6F7F9] border border-border overflow-x-auto w-full sm:w-auto">
-          {["ALL", "BANK", "ASSET", "LIABILITY", "INCOME", "EXPENSES"].map((t) => (
+        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
+            {["ALL", "BANK", "ASSET", "LIABILITY", "INCOME", "EXPENSES"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setTypeFilter(t)}
+                className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                  typeFilter === t
+                    ? "bg-white text-navy font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border shrink-0">
             <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
+              onClick={() => setStatusFilter("ACTIVE")}
               className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
-                typeFilter === t
+                statusFilter === "ACTIVE"
                   ? "bg-white text-navy font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t}
+              Active
             </button>
-          ))}
+            <button
+              onClick={() => setStatusFilter("ARCHIVED")}
+              className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
+                statusFilter === "ARCHIVED"
+                  ? "bg-white text-amber-700 font-semibold shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Archived
+            </button>
+          </div>
         </div>
       </div>
 
@@ -212,7 +240,7 @@ export default function AccountsPage() {
           </p>
         </div>
       ) : (
-        <AccountsTable accounts={filtered} />
+        <AccountsTable accounts={filtered} onRefresh={loadAccounts} />
       )}
     </div>
   );
