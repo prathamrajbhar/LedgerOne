@@ -6,6 +6,7 @@ import { authService } from "@/lib/services/auth.service";
 import { prisma } from "@/lib/prisma";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     // Unified login (Admin, Accountant, and Contact Portal users) - uses loginId or email

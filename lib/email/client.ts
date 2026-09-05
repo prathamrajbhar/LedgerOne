@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import type { Transporter } from "nodemailer";
+import { getAppBaseUrl } from "@/lib/utils/url";
 
 export interface SendEmailInput {
   to: string;
@@ -77,7 +78,7 @@ export class EmailService {
     temporaryPassword: string,
     contactName: string
   ) {
-    const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/login`;
+    const portalUrl = `${getAppBaseUrl()}/login`;
 
     const html = `
 <!DOCTYPE html>
@@ -262,7 +263,7 @@ export class EmailService {
   }
 
   async sendWelcomeEmail(email: string, userName: string, roleName?: string) {
-    const loginUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/login`;
+    const loginUrl = `${getAppBaseUrl()}/login`;
 
     const html = `
 <!DOCTYPE html>
@@ -451,7 +452,7 @@ export class EmailService {
     remainingBalance: string,
     invoiceId: string
   ) {
-    const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/portal/invoices/${invoiceId}`;
+    const portalUrl = `${getAppBaseUrl()}/portal/invoices/${invoiceId}`;
 
     const isPaidInFull = Number(remainingBalance) <= 0;
 
@@ -608,7 +609,7 @@ export class EmailService {
     resetToken: string,
     userName?: string | null
   ) {
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const baseUrl = getAppBaseUrl();
     const resetUrl = `${baseUrl}/reset-password?token=${encodeURIComponent(resetToken)}`;
 
     const html = `
@@ -753,7 +754,7 @@ export class EmailService {
     isOverdue: boolean;
     daysDiff: number;
   }) {
-    const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/bills`;
+    const portalUrl = `${getAppBaseUrl()}/bills`;
 
     const statusBadgeText = input.isOverdue
       ? `Overdue by ${input.daysDiff} Day${input.daysDiff === 1 ? "" : "s"}`
@@ -927,7 +928,7 @@ export class EmailService {
     daysDiff: number;
     invoiceId: string;
   }) {
-    const payUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/portal/invoices/${input.invoiceId}/pay`;
+    const payUrl = `${getAppBaseUrl()}/portal/invoices/${input.invoiceId}/pay`;
 
     const statusBadgeText = input.isOverdue
       ? `Overdue by ${input.daysDiff} Day${input.daysDiff === 1 ? "" : "s"}`

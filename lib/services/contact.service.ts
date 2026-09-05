@@ -181,6 +181,8 @@ export class ContactService {
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         outstandingBalance,
+        userId: c.userId,
+        hasPortalAccess: !!c.userId,
       };
     });
 

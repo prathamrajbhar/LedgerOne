@@ -39,6 +39,8 @@ export interface ContactItem {
   outstandingBalance?: number;
   totalTransactions?: number;
   isArchived?: boolean;
+  userId?: string | null;
+  hasPortalAccess?: boolean;
 }
 
 interface ContactsTableProps {
@@ -164,6 +166,7 @@ export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal,
             <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
               <th className="py-3.5 px-4">Contact</th>
               <th className="py-3.5 px-4">Type</th>
+              <th className="py-3.5 px-4">Portal Access</th>
               <th className="py-3.5 px-4">Phone</th>
               <th className="py-3.5 px-4">Address</th>
               <th className="py-3.5 px-4 text-right">Outstanding</th>
@@ -173,7 +176,7 @@ export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal,
           <tbody className="divide-y divide-border text-xs">
             {contacts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                <td colSpan={7} className="py-12 text-center text-muted-foreground">
                   No contacts found.
                 </td>
               </tr>
@@ -215,6 +218,17 @@ export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal,
                     >
                       {contact.type}
                     </Badge>
+                  </td>
+                  <td className="py-3.5 px-4">
+                    {contact.hasPortalAccess ? (
+                      <Badge variant="outline" className="text-[10px] bg-green-50 text-green-700 border-green-200">
+                        ✓ Active
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] text-gray-500 border-gray-200">
+                        No Access
+                      </Badge>
+                    )}
                   </td>
                   <td className="py-3.5 px-4 text-muted-foreground">
                     {contact.phone || "—"}

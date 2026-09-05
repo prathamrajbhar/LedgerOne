@@ -11,8 +11,8 @@ BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
-# Target Application URL
-BASE_URL = os.getenv("TEST_BASE_URL", "http://localhost:3000").rstrip("/")
+# Target Application URL (purely from .env)
+BASE_URL = (os.getenv("TEST_BASE_URL") or os.getenv("NEXTAUTH_URL") or "").rstrip("/")
 
 # Timeouts in milliseconds
 DEFAULT_TIMEOUT_MS = int(os.getenv("TEST_TIMEOUT_MS", "25000"))
