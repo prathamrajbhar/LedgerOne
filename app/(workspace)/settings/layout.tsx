@@ -1,7 +1,7 @@
 import * as React from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth.config";
-import { SettingsSidebar } from "@/components/settings/SettingsSidebar";
+import { SettingsLayoutClient } from "@/components/settings/SettingsLayoutClient";
 
 export default async function SettingsLayout({
   children,
@@ -16,16 +16,8 @@ export default async function SettingsLayout({
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
-        {/* Left Settings Sidebar */}
-        <SettingsSidebar userRole={session.user.role} />
-
-        {/* Main Content Area */}
-        <div className="flex-1 w-full min-w-0">
-          {children}
-        </div>
-      </div>
-    </div>
+    <SettingsLayoutClient userRole={session.user.role}>
+      {children}
+    </SettingsLayoutClient>
   );
 }
