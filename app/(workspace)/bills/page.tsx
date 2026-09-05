@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -17,13 +18,9 @@ import {
   Clock,
   Trash2,
   Eye,
-  Printer,
-  Ban,
-  BookOpen,
   Check,
   Mail,
   Send,
-  History,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -45,7 +42,6 @@ import {
 import {
   sendBillReminderAction,
   dispatchBatchDueBillAlertsAction,
-  getBillEmailLogsAction,
 } from "@/app/actions/bill-reminder.actions";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
@@ -130,6 +126,7 @@ interface FormBillLineRow {
 }
 
 export default function VendorBillsPage() {
+  const router = useRouter();
   const [bills, setBills] = React.useState<VendorBillWithRelations[]>([]);
   const [vendors, setVendors] = React.useState<Contact[]>([]);
   const [products, setProducts] = React.useState<Product[]>([]);
@@ -150,8 +147,6 @@ export default function VendorBillsPage() {
 
   // Modals state
   const [openCreateModal, setOpenCreateModal] = React.useState(false);
-  const [openDetailsModal, setOpenDetailsModal] = React.useState(false);
-  const [selectedBillForView, setSelectedBillForView] = React.useState<VendorBillWithRelations | null>(null);
 
   // Payment modal state
   const [openPaymentModal, setOpenPaymentModal] = React.useState(false);
@@ -168,8 +163,6 @@ export default function VendorBillsPage() {
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
   const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
   const [runningBatchAlerts, setRunningBatchAlerts] = React.useState(false);
-  const [modalEmailLogs, setModalEmailLogs] = React.useState<BillEmailLogItem[]>([]);
-  const [loadingLogs, setLoadingLogs] = React.useState(false);
 
   // Add Vendor Bill Form State
   const [formVendor, setFormVendor] = React.useState("");
@@ -421,11 +414,6 @@ export default function VendorBillsPage() {
       if (result.success) {
         toast.success("Vendor bill posted! Journal Entry created: Debit Purchase Expense, Credit Vendor Payable.");
         await fetchData();
-        if (selectedBillForView?.id === billId) {
-          setSelectedBillForView((prev) =>
-            prev ? { ...prev, status: DocumentStatus.CONFIRMED } : null
-          );
-        }
       } else {
         toast.error(result.error || "Failed to confirm vendor bill");
       }
@@ -447,11 +435,6 @@ export default function VendorBillsPage() {
       if (result.success) {
         toast.success("Vendor bill has been marked as Cancelled");
         await fetchData();
-        if (selectedBillForView?.id === billId) {
-          setSelectedBillForView((prev) =>
-            prev ? { ...prev, status: DocumentStatus.CANCELLED } : null
-          );
-        }
       } else {
         toast.error(result.error || "Failed to cancel vendor bill");
       }
@@ -532,9 +515,6 @@ export default function VendorBillsPage() {
         toast.success("Vendor payment recorded successfully & journal entry created");
         setOpenPaymentModal(false);
         await fetchData();
-        if (selectedBillForView?.id === selectedBillForPayment.id) {
-          setOpenDetailsModal(false);
-        }
       } else {
         toast.error(res.error || "Failed to record payment");
       }
@@ -545,23 +525,9 @@ export default function VendorBillsPage() {
     }
   };
 
-  // Open Details Modal and fetch fresh email logs
-  const handleOpenDetails = async (bill: VendorBillWithRelations) => {
-    setSelectedBillForView(bill);
-    setOpenDetailsModal(true);
-    setLoadingLogs(true);
-    try {
-      const logsRes = await getBillEmailLogsAction(bill.id);
-      if (logsRes.success && logsRes.data) {
-        setModalEmailLogs(logsRes.data as BillEmailLogItem[]);
-      } else {
-        setModalEmailLogs(bill.emailLogs || []);
-      }
-    } catch {
-      setModalEmailLogs(bill.emailLogs || []);
-    } finally {
-      setLoadingLogs(false);
-    }
+  // Navigate to dedicated bill detail page
+  const handleOpenDetails = (bill: VendorBillWithRelations) => {
+    router.push(`/bills/${bill.id}`);
   };
 
   // Send single on-demand payment reminder email
@@ -572,12 +538,6 @@ export default function VendorBillsPage() {
       if (res.success) {
         toast.success(res.message || "Reminder email sent successfully");
         await fetchData();
-        if (selectedBillForView?.id === billId) {
-          const freshLogs = await getBillEmailLogsAction(billId);
-          if (freshLogs.success && freshLogs.data) {
-            setModalEmailLogs(freshLogs.data as BillEmailLogItem[]);
-          }
-        }
       } else {
         toast.error(res.error || "Failed to send reminder email");
       }
@@ -830,23 +790,50 @@ export default function VendorBillsPage() {
         </Card>
 
         {/* Overdue */}
-        <Card className="p-4 sm:p-5 border-border shadow-2xs bg-white hover:border-border-strong transition-all">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground">Overdue</span>
-            <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <Clock className="w-4 h-4" />
+        <Card className="p-4 sm:p-5 border-border shadow-2xs bg-white hover:border-border-strong transition-all flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">Overdue</span>
+              <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                <Clock className="w-4 h-4" />
+              </div>
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-bold tracking-tight text-rose-600">
+                ₹{summaryMetrics.overdueAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                {summaryMetrics.overdueAmount === 0
+                  ? "No overdue vendor payables"
+                  : "Bills past due payment date"}
+              </p>
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-2xl font-bold tracking-tight text-rose-600">
-              ₹{summaryMetrics.overdueAmount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+
+          {summaryMetrics.overdueAmount > 0 && (
+            <div className="pt-3 mt-3 border-t border-rose-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRunBatchAlerts}
+                disabled={runningBatchAlerts}
+                className="w-full h-7 text-[11px] font-semibold text-rose-700 bg-rose-50/70 border-rose-200 hover:bg-rose-100/80 hover:text-rose-800 gap-1.5 shadow-2xs transition-colors"
+                title="Send automated overdue payment reminder alerts to vendors"
+              >
+                {runningBatchAlerts ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin text-rose-600" />
+                    Sending Alerts...
+                  </>
+                ) : (
+                  <>
+                    <Mail className="h-3 w-3 text-rose-600" />
+                    Send Overdue Reminders
+                  </>
+                )}
+              </Button>
             </div>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              {summaryMetrics.overdueAmount === 0
-                ? "No overdue vendor payables"
-                : "Bills past due payment date"}
-            </p>
-          </div>
+          )}
         </Card>
       </div>
 
@@ -1163,6 +1150,24 @@ export default function VendorBillsPage() {
                               <Download className="w-3.5 h-3.5" />
                             )}
                           </Button>
+
+                          {/* Cancel Bill */}
+                          {bill.status !== DocumentStatus.CANCELLED && (!bill.payments || bill.payments.length === 0) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={cancellingBillId === bill.id}
+                              onClick={() => handleCancelBill(bill.id)}
+                              className="h-7 px-1.5 text-[11px] text-destructive hover:bg-destructive/10"
+                              title="Cancel Bill"
+                            >
+                              {cancellingBillId === bill.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                "Cancel"
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1562,434 +1567,6 @@ export default function VendorBillsPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ========================================================================= */}
-      {/* VENDOR BILL DETAILS MODAL */}
-      {/* ========================================================================= */}
-      <Dialog open={openDetailsModal} onOpenChange={setOpenDetailsModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
-          {selectedBillForView && (
-            <div className="space-y-6">
-              {/* Modal Header & Quick Actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-bold text-navy">
-                      Bill #{selectedBillForView.billNumber}
-                    </h2>
-                    <StatusBadge status={getDisplayStatus(selectedBillForView)} />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Vendor Bill • Billed on{" "}
-                    {new Date(selectedBillForView.billDate).toLocaleDateString("en-IN", {
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Download PDF */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDownloadPDF(selectedBillForView)}
-                    disabled={downloadingId === selectedBillForView.id}
-                    className="h-8 text-xs gap-1"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Download PDF
-                  </Button>
-
-                  {/* Print */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.print()}
-                    className="h-8 text-xs gap-1"
-                  >
-                    <Printer className="w-3.5 h-3.5" />
-                    Print
-                  </Button>
-
-                  {/* Send Reminder Email */}
-                  {selectedBillForView.status === DocumentStatus.CONFIRMED &&
-                    Number(selectedBillForView.amountDue) > 0 &&
-                    selectedBillForView.vendor?.email && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={sendingReminderId === selectedBillForView.id}
-                        onClick={() => handleSendReminder(selectedBillForView.id)}
-                        className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5 font-medium shadow-2xs"
-                      >
-                        {sendingReminderId === selectedBillForView.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Mail className="w-3.5 h-3.5 text-amber-600" />
-                        )}
-                        Send Reminder
-                      </Button>
-                    )}
-
-                  {/* Record Payment */}
-                  {selectedBillForView.status === DocumentStatus.CONFIRMED &&
-                    Number(selectedBillForView.amountDue) > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={() => {
-                          handleOpenPayment(selectedBillForView);
-                        }}
-                        className="h-8 text-xs bg-teal hover:bg-teal/90 text-white font-semibold gap-1"
-                      >
-                        <DollarSign className="w-3.5 h-3.5" />
-                        Record Payment
-                      </Button>
-                    )}
-
-                  {/* Cancel Bill */}
-                  {selectedBillForView.status !== DocumentStatus.CANCELLED && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={cancellingBillId === selectedBillForView.id}
-                      onClick={() => handleCancelBill(selectedBillForView.id)}
-                      className="h-8 text-xs text-destructive hover:bg-destructive/10 gap-1"
-                    >
-                      <Ban className="w-3.5 h-3.5" />
-                      Cancel Bill
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {/* Vendor & Bill Information Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Bill Information */}
-                <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-border space-y-2 text-xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Bill Information
-                  </span>
-                  <div className="space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Number:</span>
-                      <span className="font-mono font-bold text-navy">
-                        {selectedBillForView.billNumber}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Due Date:</span>
-                      <span className="font-medium">
-                        {new Date(selectedBillForView.dueDate).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </span>
-                    </div>
-                    {selectedBillForView.purchaseOrder && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Purchase Order:</span>
-                        <span className="font-semibold text-navy">
-                          {selectedBillForView.purchaseOrder.poNumber}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Vendor Information */}
-                <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-border space-y-2 text-xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Vendor Information
-                  </span>
-                  <div className="space-y-1">
-                    <p className="font-bold text-navy">
-                      {selectedBillForView.vendor?.name}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {selectedBillForView.vendor?.email || "No email on record"}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {selectedBillForView.vendor?.phone || "No phone on record"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Vendor Address & GSTIN */}
-                <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-border space-y-2 text-xs">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                    Vendor Address & Tax ID
-                  </span>
-                  <div className="text-muted-foreground space-y-1">
-                    {selectedBillForView.vendor?.address ? (
-                      <p className="whitespace-pre-line leading-relaxed">
-                        {selectedBillForView.vendor.address}
-                      </p>
-                    ) : (
-                      <p className="italic">Vendor address not provided</p>
-                    )}
-                    <div className="pt-1 text-[11px]">
-                      <span className="font-semibold text-navy">GSTIN: </span>
-                      <span>Verified Active</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Purchased Products Table */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-navy">
-                  Purchased Products / Materials
-                </span>
-                <div className="border border-border rounded-xl overflow-hidden">
-                  <table className="w-full text-xs text-left">
-                    <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold">
-                      <tr>
-                        <th className="py-2.5 px-3">Item / Material</th>
-                        <th className="py-2.5 px-3">Cost Center</th>
-                        <th className="py-2.5 px-3 text-right">Quantity</th>
-                        <th className="py-2.5 px-3 text-right">Unit Cost</th>
-                        <th className="py-2.5 px-3 text-right">Line Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {selectedBillForView.lines?.map((line) => (
-                        <tr key={line.id} className="hover:bg-surface-subtle/40">
-                          <td className="py-2.5 px-3 font-medium text-foreground">
-                            {line.product?.name || "Product"}
-                            {line.product?.sku && (
-                              <span className="text-[10px] text-muted-foreground ml-1.5 font-normal">
-                                ({line.product.sku})
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 text-muted-foreground">
-                            {line.analyticAccount?.name || "Default Cost Center"}
-                          </td>
-                          <td className="py-2.5 px-3 text-right">{Number(line.quantity)}</td>
-                          <td className="py-2.5 px-3 text-right">
-                            ₹{Number(line.unitPrice).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </td>
-                          <td className="py-2.5 px-3 text-right font-semibold text-navy">
-                            ₹{Number(line.lineTotal).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Financial Totals & Outstanding */}
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                {/* Payment History */}
-                <div className="w-full sm:w-1/2 space-y-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-navy">
-                    Payment History
-                  </span>
-                  {selectedBillForView.payments && selectedBillForView.payments.length > 0 ? (
-                    <div className="space-y-1.5 border border-border rounded-xl p-3 bg-white">
-                      {selectedBillForView.payments.map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center justify-between text-xs py-1 border-b border-border/40 last:border-0"
-                        >
-                          <div>
-                            <span className="font-semibold text-foreground">
-                              ₹{Number(p.amount).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                            </span>
-                            <span className="text-[11px] text-muted-foreground ml-1.5">
-                              via {p.paymentMethod}
-                            </span>
-                          </div>
-                          <span className="text-muted-foreground text-[11px]">
-                            {new Date(p.paymentDate).toLocaleDateString("en-IN", {
-                              day: "2-digit",
-                              month: "short",
-                              year: "numeric",
-                            })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-surface-subtle/50 border border-dashed border-border text-center text-xs text-muted-foreground">
-                      No vendor disbursement payments recorded for this bill yet.
-                    </div>
-                  )}
-                </div>
-
-                {/* Amount breakdown */}
-                <div className="w-full sm:w-80 p-4 rounded-xl bg-[#F8FAFC] border border-border space-y-2 text-xs">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Total Bill Amount:</span>
-                    <span className="font-bold text-foreground">
-                      ₹{Number(selectedBillForView.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-emerald-600">
-                    <span>Amount Paid:</span>
-                    <span className="font-medium">
-                      ₹{Number(selectedBillForView.amountPaid).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-sm font-bold text-navy border-t border-border pt-2 mt-1">
-                    <span>Outstanding Balance:</span>
-                    <span className={Number(selectedBillForView.amountDue) > 0 ? "text-amber-600" : "text-muted-foreground"}>
-                      ₹{Number(selectedBillForView.amountDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* ================================================================= */}
-              {/* ACCOUNTING SECTION */}
-              {/* ================================================================= */}
-              <div className="p-4 rounded-xl bg-[#16324F]/5 border border-navy/15 space-y-3">
-                <div className="flex items-center gap-2">
-                  <BookOpen className="w-4 h-4 text-navy" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
-                    Accounting Entry (Double Entry Posting)
-                  </h3>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Confirming/posting this vendor bill debits expense accounts and credits vendor payable obligations:
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-                  <div className="p-2.5 rounded-lg bg-white border border-border shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-teal">Purchase Expense</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-                        DEBIT
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Material cost recognized in P&L
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-white border border-border shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-foreground">Input Tax (GST)</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">
-                        DEBIT
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Input tax credit claimable on purchases
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 rounded-lg bg-white border border-border shadow-2xs">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-semibold text-navy">Vendor Payable</span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">
-                        CREDIT
-                      </span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      Accounts payable liability owed to vendor
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* ================================================================= */}
-              {/* EMAIL REMINDER AUDIT LOG SECTION */}
-              {/* ================================================================= */}
-              <div className="p-4 rounded-xl bg-[#F8FAFC] border border-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <History className="w-4 h-4 text-navy" />
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
-                      Email Reminder & Audit History
-                    </h3>
-                  </div>
-                  {modalEmailLogs.length > 0 && (
-                    <span className="text-[11px] font-medium text-muted-foreground">
-                      {modalEmailLogs.length} reminder{modalEmailLogs.length === 1 ? "" : "s"} recorded
-                    </span>
-                  )}
-                </div>
-
-                {loadingLogs ? (
-                  <div className="py-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="w-4 h-4 animate-spin text-navy" />
-                    Loading email communication logs...
-                  </div>
-                ) : modalEmailLogs.length > 0 ? (
-                  <div className="border border-border rounded-xl overflow-hidden bg-white">
-                    <table className="w-full text-xs text-left">
-                      <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px]">
-                        <tr>
-                          <th className="py-2.5 px-3">Date & Time Sent</th>
-                          <th className="py-2.5 px-3">Recipient</th>
-                          <th className="py-2.5 px-3">Type</th>
-                          <th className="py-2.5 px-3">Subject</th>
-                          <th className="py-2.5 px-3 text-right">Delivery Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border/60">
-                        {modalEmailLogs.map((log) => (
-                          <tr key={log.id} className="hover:bg-[#F8FAFC]/50">
-                            <td className="py-2.5 px-3 font-mono text-[11px] text-foreground font-medium">
-                              {new Date(log.sentAt).toLocaleString("en-IN", {
-                                day: "2-digit",
-                                month: "short",
-                                year: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                hour12: true,
-                              })}
-                            </td>
-                            <td className="py-2.5 px-3 text-muted-foreground">
-                              {log.recipientEmail}
-                            </td>
-                            <td className="py-2.5 px-3">
-                              <span
-                                className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                                  log.emailType === "OVERDUE"
-                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
-                                    : log.emailType === "DUE_SOON"
-                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
-                                    : "bg-blue-50 text-blue-700 border border-blue-200"
-                                }`}
-                              >
-                                {log.emailType.replace("_", " ")}
-                              </span>
-                            </td>
-                            <td className="py-2.5 px-3 text-muted-foreground max-w-[220px] truncate" title={log.subject}>
-                              {log.subject}
-                            </td>
-                            <td className="py-2.5 px-3 text-right">
-                              <span
-                                className={`inline-flex items-center gap-1 font-semibold text-[11px] ${
-                                  log.status === "SENT" ? "text-emerald-600" : "text-destructive"
-                                }`}
-                              >
-                                <span className={`w-1.5 h-1.5 rounded-full ${log.status === "SENT" ? "bg-emerald-600" : "bg-destructive"}`} />
-                                {log.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-white border border-dashed border-border text-center text-xs text-muted-foreground">
-                    No reminder emails have been dispatched for this bill yet.
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 
