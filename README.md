@@ -45,15 +45,15 @@ LedgerOne replaces fragmented spreadsheets and manual ledgers with a structured,
 
 ## 📸 Admin Screenshots
 
-> Add the final screenshot assets in a folder like `docs/screenshots/` and update the image links below when the files are ready for GitHub.
+> These are local placeholder screenshots so the GitHub README renders correctly. Replace each file later with the final admin page screenshots.
 
 | Module | Screenshot | Description |
 | --- | --- | --- |
-| Products & Inventory | ![Products & Inventory](docs/screenshots/products-inventory.png) | Product catalog, stock status, search, filters, and inventory overview. |
-| User & Access Management | ![User & Access Management](docs/screenshots/user-access-management.png) | Admin controls for user accounts, role assignment, status management, and associated entities. |
-| Purchase Orders | ![Purchase Orders](docs/screenshots/purchase-orders.png) | Purchase order listing with status tracking, totals, and confirmation workflow. |
-| Payments & Banking | ![Payments & Banking](docs/screenshots/payments-banking.png) | Payment records, bank transfers, cash transactions, and account reconciliation view. |
-| Profit & Loss | ![Profit & Loss](docs/screenshots/profit-loss.png) | Performance analysis with revenue, expenses, net loss, and account-level drilldown. |
+| Products & Inventory | ![Products & Inventory](./docs/screenshots/products-inventory.svg) | Product catalog, stock status, search, filters, and inventory overview. |
+| User & Access Management | ![User & Access Management](./docs/screenshots/user-access-management.svg) | Admin controls for user accounts, role assignment, status management, and associated entities. |
+| Purchase Orders | ![Purchase Orders](./docs/screenshots/purchase-orders.svg) | Purchase order listing with status tracking, totals, and confirmation workflow. |
+| Payments & Banking | ![Payments & Banking](./docs/screenshots/payments-banking.svg) | Payment records, bank transfers, cash transactions, and account reconciliation view. |
+| Profit & Loss | ![Profit & Loss](./docs/screenshots/profit-loss.svg) | Performance analysis with revenue, expenses, net loss, and account-level drilldown. |
 
 ### Upcoming Vendor / Client Screenshots
 
