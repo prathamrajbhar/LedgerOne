@@ -3,14 +3,13 @@
 import * as React from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Decimal } from "@prisma/client/runtime/library";
 
-interface JournalEntryLine {
+export interface SerializedJournalEntryLine {
   id: string;
   accountId: string;
   partnerId: string | null;
-  debit: Decimal;
-  credit: Decimal;
+  debit: number;
+  credit: number;
   account: {
     code: string;
     name: string;
@@ -20,35 +19,46 @@ interface JournalEntryLine {
   } | null;
 }
 
-interface JournalEntryWithDetails {
+export interface SerializedJournalEntry {
   id: string;
   entryNumber: string;
-  accountingDate: Date;
+  accountingDate: string;
   status: string;
-  totalDebit: Decimal;
-  totalCredit: Decimal;
+  totalDebit: number;
+  totalCredit: number;
   journal: {
     name: string;
   };
-  lines: JournalEntryLine[];
+  lines: SerializedJournalEntryLine[];
 }
 
 interface TransactionRowProps {
-  entry: JournalEntryWithDetails;
+  entry: SerializedJournalEntry;
   docRef: { ref: string; party: string; type: string };
   isBalanced: boolean;
-  formatDate: (date: Date) => string;
-  formatAmount: (amount: Decimal | number) => string;
 }
 
 export function TransactionRow({
   entry,
   docRef,
   isBalanced,
-  formatDate,
-  formatAmount,
 }: TransactionRowProps) {
   const [expanded, setExpanded] = React.useState(false);
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+    });
+  };
+
+  const formatAmount = (amount: number) => {
+    return Number(amount || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
 
   return (
     <>
@@ -129,14 +139,10 @@ export function TransactionRow({
                           {line.partner?.name || "-"}
                         </td>
                         <td className="py-2 px-3 text-right font-semibold text-foreground">
-                          {parseFloat(line.debit.toString()) > 0
-                            ? `₹${formatAmount(line.debit)}`
-                            : "-"}
+                          {line.debit > 0 ? `₹${formatAmount(line.debit)}` : "-"}
                         </td>
                         <td className="py-2 px-3 text-right font-semibold text-foreground">
-                          {parseFloat(line.credit.toString()) > 0
-                            ? `₹${formatAmount(line.credit)}`
-                            : "-"}
+                          {line.credit > 0 ? `₹${formatAmount(line.credit)}` : "-"}
                         </td>
                       </tr>
                     ))}

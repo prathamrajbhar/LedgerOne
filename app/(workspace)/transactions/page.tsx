@@ -5,7 +5,6 @@ import { Download } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { getJournalEntriesAction } from "@/app/actions/accounting.actions";
 import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
 import { TransactionFilters } from "./_components/transaction-filters";
 import { TransactionRow } from "./_components/transaction-row";
 
@@ -85,19 +84,6 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
     };
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
-  const formatAmount = (amount: Decimal | number | string) => {
-    const num = typeof amount === "number" ? amount : parseFloat(amount.toString());
-    return num.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  };
-
   return (
     <div className="space-y-5">
       <PageHeader
@@ -147,16 +133,38 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
               <tbody className="divide-y divide-border">
                 {entries.map((entry) => {
                   const docRef = getDocumentReference(entry);
-                  const isBalanced = entry.totalDebit.equals(entry.totalCredit);
+                  const isBalanced = Number(entry.totalDebit) === Number(entry.totalCredit);
+
+                  const serializedEntry = {
+                    id: entry.id,
+                    entryNumber: entry.entryNumber,
+                    accountingDate: entry.accountingDate.toISOString(),
+                    status: entry.status,
+                    totalDebit: Number(entry.totalDebit),
+                    totalCredit: Number(entry.totalCredit),
+                    journal: {
+                      name: entry.journal.name,
+                    },
+                    lines: (entry.lines || []).map((line) => ({
+                      id: line.id,
+                      accountId: line.accountId,
+                      partnerId: line.partnerId,
+                      debit: Number(line.debit),
+                      credit: Number(line.credit),
+                      account: {
+                        code: line.account.code,
+                        name: line.account.name,
+                      },
+                      partner: line.partner ? { name: line.partner.name } : null,
+                    })),
+                  };
 
                   return (
                     <TransactionRow
                       key={entry.id}
-                      entry={entry}
+                      entry={serializedEntry}
                       docRef={docRef}
                       isBalanced={isBalanced}
-                      formatDate={formatDate}
-                      formatAmount={formatAmount}
                     />
                   );
                 })}

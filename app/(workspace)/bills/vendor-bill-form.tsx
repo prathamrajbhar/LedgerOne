@@ -25,6 +25,9 @@ import { toast } from "sonner";
 import { createStandaloneBillAction, getAnalyticAccountsAction } from "@/app/actions/purchase.actions";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
+import { AiFileUploader } from "@/components/ai/ai-file-uploader";
+import { parseVendorBillAction } from "@/app/actions/ai-document.actions";
+import { ParsedVendorBillResult } from "@/lib/services/ai-document-parser.service";
 
 interface LineItem {
   id: string;
@@ -120,6 +123,47 @@ export function VendorBillForm() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAiParsedData = (raw: unknown) => {
+    const data = raw as ParsedVendorBillResult;
+    if (!data) return;
+
+    if (data.vendorId) {
+      setVendorId(data.vendorId);
+    }
+    if (data.billDate) {
+      setBillDate(data.billDate);
+    }
+    if (data.dueDate) {
+      setDueDate(data.dueDate);
+    }
+
+    if (data.lines && data.lines.length > 0) {
+      const newLines: LineItem[] = data.lines.map((l, index) => {
+        let matchedPid = l.productId || "";
+        if (!matchedPid && products.length > 0) {
+          const found = products.find((p) => p.name.toLowerCase().includes(l.productName.toLowerCase()));
+          matchedPid = found ? found.id : products[0]?.id || "";
+        }
+
+        const defaultAnalytic = l.analyticAccountId || analyticAccounts[0]?.id || "";
+        const qty = l.quantity > 0 ? l.quantity : 1;
+        const price = l.unitPrice > 0 ? l.unitPrice : 0;
+
+        return {
+          id: Math.random().toString(36).substr(2, 9) + index,
+          productId: matchedPid,
+          analyticAccountId: defaultAnalytic,
+          quantity: qty,
+          unitPrice: price,
+          lineTotal: qty * price,
+        };
+      });
+      setLines(newLines);
+    }
+
+    toast.success(`Form auto-filled from bill data with ${data.lines?.length || 0} line item(s)!`);
   };
 
   const addLine = () => {
@@ -262,9 +306,18 @@ export function VendorBillForm() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
+          <div className="space-y-6">
+            {/* AI Document & Image Upload Auto-Fill */}
+            <AiFileUploader
+              onParsedData={handleAiParsedData}
+              parseAction={parseVendorBillAction}
+              label="Auto-Fill Bill with AI Document Scan"
+              description="Drop vendor invoice PDF or bill photo to auto-detect vendor, dates, and line items"
+            />
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
                 <Label htmlFor="vendor">Vendor *</Label>
                 <Select value={vendorId} onValueChange={setVendorId}>
                   <SelectTrigger id="vendor">
@@ -440,8 +493,9 @@ export function VendorBillForm() {
               </Button>
             </DialogFooter>
           </form>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      )}
+    </DialogContent>
+  </Dialog>
   );
 }

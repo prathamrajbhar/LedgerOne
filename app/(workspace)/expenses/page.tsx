@@ -26,6 +26,9 @@ import {
   JournalOption,
 } from "@/app/actions/expense.actions";
 import { createManualJournalEntryAction } from "@/app/actions/accounting.actions";
+import { AiFileUploader } from "@/components/ai/ai-file-uploader";
+import { parseExpenseReceiptAction } from "@/app/actions/ai-document.actions";
+import { ParsedExpenseResult } from "@/lib/services/ai-document-parser.service";
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
@@ -93,6 +96,26 @@ export default function ExpensesPage() {
         setJournalId(journalsResult.data[0].id);
       }
     }
+  };
+
+  const handleAiParsedExpense = (raw: unknown) => {
+    const data = raw as ParsedExpenseResult;
+    if (!data) return;
+
+    if (data.description) {
+      setDescription(data.description);
+    }
+    if (data.amount && data.amount > 0) {
+      setAmount(String(data.amount));
+    }
+    if (data.expenseDate) {
+      setExpenseDate(data.expenseDate);
+    }
+    if (data.recommendedAccountId) {
+      setExpenseAccountId(data.recommendedAccountId);
+    }
+
+    toast.success(`Expense details auto-filled: ₹${data.amount || 0}`);
   };
 
   const handleRecordExpense = async (e: React.FormEvent) => {
@@ -167,10 +190,21 @@ export default function ExpensesPage() {
                 Record Expense
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Record Operational Expense</DialogTitle>
               </DialogHeader>
+
+              {/* AI Receipt / Slip Auto-Fill */}
+              <div className="pt-1">
+                <AiFileUploader
+                  onParsedData={handleAiParsedExpense}
+                  parseAction={parseExpenseReceiptAction}
+                  label="Scan Receipt with AI"
+                  description="Drop petrol slip, utility bill, or vendor invoice to auto-extract amount & category"
+                />
+              </div>
+
               <form onSubmit={handleRecordExpense} className="space-y-4 pt-2">
                 <FormInput
                   label="Expense Description"

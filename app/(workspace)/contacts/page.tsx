@@ -11,7 +11,7 @@ import { Pagination } from "@/components/ui/pagination";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { ContactType } from "@prisma/client";
 import { toast } from "sonner";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 
 export default function ContactsPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialType = searchParams.get("type")?.toUpperCase() || "ALL";
 
@@ -113,16 +114,55 @@ export default function ContactsPage() {
     return () => clearTimeout(timer);
   }, [searchInput]);
 
+  // Dynamic titles and labels based on active filter
+  const pageMeta = React.useMemo(() => {
+    if (typeFilter === "CUSTOMER") {
+      return {
+        title: "Customers",
+        description: "Manage retail & wholesale client accounts, billing information, and portal access.",
+        buttonText: "New Customer",
+        createUrl: "/contacts/new?type=CUSTOMER",
+        searchPlaceholder: "Search customers by name, email, or phone...",
+      };
+    }
+    if (typeFilter === "VENDOR") {
+      return {
+        title: "Vendors & Suppliers",
+        description: "Manage raw material suppliers, timber sawmills, logistics providers, and payment terms.",
+        buttonText: "New Vendor",
+        createUrl: "/contacts/new?type=VENDOR",
+        searchPlaceholder: "Search vendors by company, email, or phone...",
+      };
+    }
+    return {
+      title: "Contacts Directory",
+      description: "Manage customers, furniture vendors, and contractor accounts in one unified directory.",
+      buttonText: "New Contact",
+      createUrl: "/contacts/new",
+      searchPlaceholder: "Search contacts by name, email, or phone...",
+    };
+  }, [typeFilter]);
+
+  const handleTypeChange = (val: string) => {
+    setTypeFilter(val);
+    setPage(1);
+    if (val === "ALL") {
+      router.replace("/contacts");
+    } else {
+      router.replace(`/contacts?type=${val}`);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Contacts"
-        description="Manage customers, furniture vendors, and contractor accounts."
+        title={pageMeta.title}
+        description={pageMeta.description}
         actions={
-          <Link href="/contacts/new">
+          <Link href={pageMeta.createUrl}>
             <Button className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm">
               <Plus className="h-4 w-4" />
-              New Contact
+              {pageMeta.buttonText}
             </Button>
           </Link>
         }
@@ -137,7 +177,7 @@ export default function ContactsPage() {
             type="text"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search by name, email, or phone..."
+            placeholder={pageMeta.searchPlaceholder}
             className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
             disabled={loading}
           />
@@ -148,10 +188,7 @@ export default function ContactsPage() {
           {/* Type Filter Dropdown */}
           <Select
             value={typeFilter}
-            onValueChange={(val) => {
-              setTypeFilter(val);
-              setPage(1);
-            }}
+            onValueChange={handleTypeChange}
             disabled={loading}
           >
             <SelectTrigger className="h-9 w-[140px] text-xs bg-white border-border text-foreground font-medium">
