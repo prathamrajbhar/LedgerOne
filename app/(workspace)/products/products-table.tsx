@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { MoreHorizontal, Package, Archive, RotateCcw, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Package, Archive, RotateCcw, Trash2, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -39,6 +40,7 @@ interface ProductsTableProps {
 }
 
 export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: ProductsTableProps) {
+  const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
 
@@ -60,7 +62,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       const res = await archiveProductAction(id);
       if (res.success) {
         toast.success(`Product "${name}" archived`);
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error(res.error || "Failed to archive product");
       }
@@ -68,7 +70,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       const res = await restoreProductAction(id);
       if (res.success) {
         toast.success(`Product "${name}" restored`);
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error(res.error || "Failed to restore product");
       }
@@ -76,7 +78,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       const res = await deleteProductAction(id);
       if (res.success) {
         toast.success(`Product "${name}" deleted permanently`);
-        window.location.reload();
+        router.refresh();
       } else {
         toast.error(res.error || "Failed to delete product");
       }
@@ -157,6 +159,12 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild>
+                          <Link href={`/products/${item.id}/edit`} className="gap-2">
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit Product
+                          </Link>
+                        </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href={`/products/${item.id}`}>View Specs</Link>
                         </DropdownMenuItem>

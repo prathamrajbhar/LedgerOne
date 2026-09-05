@@ -191,7 +191,7 @@ export class ProductService {
       }),
       ...(categoryId && { categoryId }),
       ...(type && { type }),
-      ...(!includeArchived && { isArchived: false }),
+      isArchived: includeArchived,
     };
 
     const [products, total] = await Promise.all([
