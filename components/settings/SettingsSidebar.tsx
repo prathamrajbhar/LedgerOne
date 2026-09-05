@@ -68,10 +68,10 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
   return (
     <nav className="w-full lg:w-64 shrink-0 space-y-1">
       <div className="px-3 pb-2">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground/80">
+        <h2 className="text-xs font-normal tracking-wide text-muted-foreground/80">
           Settings
         </h2>
-        <p className="text-[11px] text-muted-foreground mt-0.5">
+        <p className="text-[11px] text-muted-foreground mt-0.5 font-normal">
           Workspace administration
         </p>
       </div>

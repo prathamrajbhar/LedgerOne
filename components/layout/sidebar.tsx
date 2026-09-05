@@ -130,7 +130,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                 <button
                   onClick={() => toggleSection(section.title)}
                   className={cn(
-                    "w-full px-2 py-1.5 flex items-center justify-between text-[11px] font-bold uppercase tracking-wider transition-colors rounded-md group",
+                    "w-full px-2 py-1.5 flex items-center justify-between text-xs font-normal transition-colors rounded-md group",
                     hasActiveChild
                       ? "text-navy"
                       : "text-muted-foreground/80 hover:text-foreground hover:bg-[#F6F7F9]"
@@ -161,9 +161,9 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                           href={item.href}
                           onClick={onClose}
                           className={cn(
-                            "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all group",
+                            "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-normal transition-all group",
                             active
-                              ? "bg-[#E8F0F7] text-navy font-semibold shadow-2xs"
+                              ? "bg-[#E8F0F7] text-navy font-medium shadow-2xs"
                               : "text-muted-foreground hover:bg-[#F6F7F9] hover:text-foreground"
                           )}
                         >
