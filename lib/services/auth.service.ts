@@ -94,11 +94,19 @@ export class AuthService {
   }
 
   /**
-   * Login with credentials (for workspace users: Admin/Accountant)
+   * Login with credentials (for all users: Admin, Accountant, and Contact Portal users)
+   * Supports authentication by either loginId or email
    */
   async login(input: LoginInput) {
-    const user = await prisma.user.findUnique({
-      where: { loginId: input.loginId },
+    const identifier = input.loginId.trim();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { loginId: identifier },
+          { email: identifier },
+        ],
+      },
       select: {
         id: true,
         loginId: true,
@@ -107,6 +115,18 @@ export class AuthService {
         role: true,
         password: true,
         isActive: true,
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            email: true,
+            phone: true,
+            address: true,
+            profileImage: true,
+            isArchived: true,
+          },
+        },
       },
     });
 
@@ -116,6 +136,10 @@ export class AuthService {
 
     if (!user.isActive) {
       throw new UnauthorizedError("Account is deactivated");
+    }
+
+    if (user.contact?.isArchived) {
+      throw new UnauthorizedError("Contact account is archived");
     }
 
     const isValidPassword = await compare(input.password, user.password);
@@ -331,6 +355,61 @@ export class AuthService {
       userId: user.id,
       loginId: user.loginId,
       temporaryPassword: tempPassword, // Only returned for initial setup/manual sharing
+      emailSent,
+      emailError,
+    };
+  }
+
+  /**
+   * Resend portal invitation with a new temporary password
+   */
+  async resendPortalInvitation(userId: string, requestedByUserId: string) {
+    await this.verifyInternalUser(requestedByUserId);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { contact: true },
+    });
+
+    if (!user) {
+      throw new ValidationError("User not found");
+    }
+
+    if (user.role !== UserRole.CONTACT || !user.contact) {
+      throw new ValidationError("Only portal contacts can receive invitation emails");
+    }
+
+    const tempPassword = this.generateTemporaryPassword();
+    const hashedPassword = await hash(tempPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        isActive: true,
+      },
+    });
+
+    let emailSent = false;
+    let emailError: string | null = null;
+
+    try {
+      await emailService.sendPortalInvitation(
+        user.email,
+        user.loginId,
+        tempPassword,
+        user.contact.name
+      );
+      emailSent = true;
+    } catch (error) {
+      emailError = error instanceof Error ? error.message : "Failed to send email";
+      console.error(`Failed to resend portal invite to ${user.email}:`, emailError);
+    }
+
+    return {
+      userId: user.id,
+      loginId: user.loginId,
+      temporaryPassword: tempPassword,
       emailSent,
       emailError,
     };

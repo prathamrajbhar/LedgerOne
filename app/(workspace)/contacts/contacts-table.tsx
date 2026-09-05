@@ -20,6 +20,7 @@ import {
   getContactUsageDetailsAction,
   deleteContactDependencyAction,
 } from "@/app/actions/contact.actions";
+import { inviteContactToPortalAction } from "@/app/actions/user-management.actions";
 import {
   DestructiveConfirmDialog,
   ConfirmActionType,
@@ -239,11 +240,27 @@ export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal,
                           <Link href={`/contacts/${contact.id}/edit`}>Edit Details</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => {
+                          onClick={async () => {
                             if (onInvitePortal) {
                               onInvitePortal(contact);
                             } else {
-                              toast.success(`Portal invite sent to ${contact.email}`);
+                              toast.loading("Generating credentials & sending invitation...", { id: `invite-${contact.id}` });
+                              try {
+                                const res = await inviteContactToPortalAction(contact.id);
+                                if (res.success && res.data) {
+                                  const inv = res.data as { loginId: string; temporaryPassword: string; emailSent?: boolean; emailError?: string };
+                                  if (inv.emailSent) {
+                                    toast.success(`Portal invite & credentials emailed to ${contact.email}!`, { id: `invite-${contact.id}` });
+                                  } else {
+                                    toast.warning(`Portal activated (Login: ${inv.loginId}, Pass: ${inv.temporaryPassword}). Email delivery failed: ${inv.emailError}`, { id: `invite-${contact.id}`, duration: 8000 });
+                                  }
+                                  onRefresh?.();
+                                } else {
+                                  toast.error(res.error || "Failed to invite to portal", { id: `invite-${contact.id}` });
+                                }
+                              } catch {
+                                toast.error("An error occurred while inviting contact", { id: `invite-${contact.id}` });
+                              }
                             }
                           }}
                         >

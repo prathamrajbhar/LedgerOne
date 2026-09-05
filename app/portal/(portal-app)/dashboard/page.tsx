@@ -123,7 +123,7 @@ export default async function PortalDashboardPage() {
   const session = await auth();
 
   if (!session?.user?.contactId) {
-    redirect("/portal/login");
+    redirect("/login");
   }
 
   const contactId = session.user.contactId;

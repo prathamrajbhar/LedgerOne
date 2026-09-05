@@ -12,9 +12,9 @@ export default async function PortalLayout({
 }) {
   const session = await auth();
 
-  // Redirect to portal login if not authenticated
+  // Redirect to unified login if not authenticated
   if (!session?.user) {
-    redirect("/portal/login");
+    redirect("/login");
   }
 
   // Ensure user is a contact (not admin/accountant)

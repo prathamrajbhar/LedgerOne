@@ -36,6 +36,7 @@ export class EmailService {
     }
 
     // Otherwise create an automatic Ethereal test account for development/testing
+    console.warn("SMTP_USER or SMTP_PASS not set. Falling back to Ethereal Mail test account.");
     const testAccount = await nodemailer.createTestAccount();
     this.transporter = nodemailer.createTransport({
       host: testAccount.smtp.host,
@@ -76,7 +77,7 @@ export class EmailService {
     temporaryPassword: string,
     contactName: string
   ) {
-    const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/portal/login`;
+    const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/login`;
 
     const html = `
       <!DOCTYPE html>

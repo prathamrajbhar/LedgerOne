@@ -4,6 +4,7 @@ import { authService } from "@/lib/services/auth.service";
 import { emailService } from "@/lib/email/client";
 import { z } from "zod";
 import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 // Validation schemas
 const signUpSchema = z.object({
@@ -94,6 +95,28 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
       success: false,
       error: "Failed to create account. Please try again.",
     };
+  }
+}
+
+/**
+ * Get destination path for user after login based on their role
+ */
+export async function getPostLoginRedirectAction(identifier: string): Promise<string> {
+  try {
+    const trimmed = identifier.trim();
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [{ loginId: trimmed }, { email: trimmed }],
+      },
+      select: { role: true },
+    });
+
+    if (user?.role === UserRole.CONTACT) {
+      return "/portal/dashboard";
+    }
+    return "/dashboard";
+  } catch {
+    return "/dashboard";
   }
 }
 

@@ -42,7 +42,7 @@ export default function PortalSidebar({ contactType }: PortalSidebarProps) {
   const pathname = usePathname();
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/portal/login" });
+    await signOut({ callbackUrl: "/login" });
   };
 
   // Build menu structure per docs/rbac.md
@@ -50,7 +50,7 @@ export default function PortalSidebar({ contactType }: PortalSidebarProps) {
     // Dashboard - always visible (limited for portal users)
     {
       label: "Dashboard",
-      href: "/portal/home",
+      href: "/portal/dashboard",
       icon: LayoutDashboard,
       visibleFor: [ContactType.CUSTOMER, ContactType.VENDOR, ContactType.BOTH],
     },

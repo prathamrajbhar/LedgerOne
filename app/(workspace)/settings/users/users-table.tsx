@@ -3,10 +3,10 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { toggleUserStatusAction } from "@/app/actions/user-management.actions";
+import { toggleUserStatusAction, resendContactPortalInvitationAction } from "@/app/actions/user-management.actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, UserCheck, ExternalLink, Power } from "lucide-react";
+import { ShieldCheck, UserCheck, ExternalLink, Power, Mail, Loader2 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
 export interface SystemUser {
@@ -23,6 +23,7 @@ export interface SystemUser {
 export function UsersTable({ users }: { users: SystemUser[] }) {
   const router = useRouter();
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
+  const [resendingId, setResendingId] = React.useState<string | null>(null);
 
   const handleToggle = async (userId: string, currentStatus: boolean) => {
     setTogglingId(userId);
@@ -38,6 +39,28 @@ export function UsersTable({ users }: { users: SystemUser[] }) {
       toast.error("An error occurred");
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleResendEmail = async (userId: string, userEmail: string) => {
+    setResendingId(userId);
+    try {
+      const res = await resendContactPortalInvitationAction(userId);
+      if (res.success && res.data) {
+        const inv = res.data as { emailSent: boolean; emailError?: string };
+        if (inv.emailSent) {
+          toast.success(`Invitation email resent to ${userEmail}!`);
+        } else {
+          toast.warning(`Credentials reset, but email failed: ${inv.emailError || "Check SMTP"}`);
+        }
+        router.refresh();
+        return;
+      }
+      toast.error(res.error || "Failed to resend invitation email");
+    } catch {
+      toast.error("An error occurred while resending email");
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -81,6 +104,7 @@ export function UsersTable({ users }: { users: SystemUser[] }) {
           <tbody className="divide-y divide-border">
             {users.map((user) => {
               const isToggling = togglingId === user.id;
+              const isResending = resendingId === user.id;
 
               return (
                 <tr key={user.id} className="hover:bg-primary-light/30 transition-colors">
@@ -109,20 +133,39 @@ export function UsersTable({ users }: { users: SystemUser[] }) {
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={isToggling}
-                      onClick={() => handleToggle(user.id, user.isActive)}
-                      className={`h-8 px-2.5 text-xs ${
-                        user.isActive
-                          ? "text-muted-foreground hover:text-destructive"
-                          : "text-green-700 hover:text-green-800"
-                      }`}
-                    >
-                      <Power className="h-3.5 w-3.5 mr-1" />
-                      {user.isActive ? "Deactivate" : "Activate"}
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      {user.role === UserRole.CONTACT && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          disabled={isResending}
+                          onClick={() => handleResendEmail(user.id, user.email)}
+                          className="h-8 px-2 text-xs text-navy hover:text-navy-dark hover:bg-slate-100 gap-1"
+                          title="Resend invitation email with new temporary password"
+                        >
+                          {isResending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Mail className="h-3.5 w-3.5" />
+                          )}
+                          Resend Email
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={isToggling}
+                        onClick={() => handleToggle(user.id, user.isActive)}
+                        className={`h-8 px-2.5 text-xs ${
+                          user.isActive
+                            ? "text-muted-foreground hover:text-destructive"
+                            : "text-green-700 hover:text-green-800"
+                        }`}
+                      >
+                        <Power className="h-3.5 w-3.5 mr-1" />
+                        {user.isActive ? "Deactivate" : "Activate"}
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               );

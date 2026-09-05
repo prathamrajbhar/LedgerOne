@@ -91,7 +91,13 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [selectedContactId, setSelectedContactId] = React.useState(contacts[0]?.id || "");
-  const [invitationResult, setInvitationResult] = React.useState<{ loginId: string; temporaryPassword: string } | null>(null);
+  const [invitationResult, setInvitationResult] = React.useState<{
+    loginId: string;
+    temporaryPassword: string;
+    emailSent?: boolean;
+    emailError?: string | null;
+    email?: string;
+  } | null>(null);
   const [copied, setCopied] = React.useState(false);
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -99,11 +105,20 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
     if (!selectedContactId) return toast.error("Please select a contact");
     setLoading(true);
     try {
+      const selectedContact = contacts.find((c) => c.id === selectedContactId);
       const res = await inviteContactToPortalAction(selectedContactId);
       if (res.success && res.data) {
         toast.success("Contact portal credentials generated!");
-        const inv = res.data as { loginId: string; temporaryPassword: string };
-        setInvitationResult(inv);
+        const inv = res.data as {
+          loginId: string;
+          temporaryPassword: string;
+          emailSent?: boolean;
+          emailError?: string | null;
+        };
+        setInvitationResult({
+          ...inv,
+          email: selectedContact?.email,
+        });
         router.refresh();
         return;
       }
@@ -136,9 +151,19 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
         </DialogHeader>
         {invitationResult ? (
           <div className="space-y-4 pt-2">
-            <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-900 text-xs leading-relaxed">
-              <p className="font-bold">Portal Access Activated!</p>
-              <p className="mt-1">Provide these credentials to the customer or vendor:</p>
+            <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-green-900 text-xs leading-relaxed space-y-1.5">
+              <p className="font-bold flex items-center gap-1.5">
+                <Check className="h-4 w-4 text-green-600" /> Portal Access Activated!
+              </p>
+              {invitationResult.emailSent ? (
+                <p className="text-green-800">
+                  An invitation email with login instructions was successfully sent to <strong>{invitationResult.email || "the user"}</strong>.
+                </p>
+              ) : (
+                <p className="text-amber-800 bg-amber-50 p-2 rounded border border-amber-200 mt-1">
+                  Email delivery note: {invitationResult.emailError || "Could not connect to SMTP server"}. Please share credentials below directly.
+                </p>
+              )}
             </div>
             <div className="p-3 bg-muted rounded-lg font-mono text-xs space-y-1 border border-border">
               <div><span className="text-muted-foreground">Login ID: </span><span className="font-bold text-navy">{invitationResult.loginId}</span></div>

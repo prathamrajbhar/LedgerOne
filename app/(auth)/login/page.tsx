@@ -7,6 +7,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
+import { getPostLoginRedirectAction } from "@/app/actions/auth.actions";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,7 +20,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginId || !password) {
-      toast.error("Please enter both Login ID and password");
+      toast.error("Please enter both Login ID or Email and password");
       return;
     }
 
@@ -27,19 +28,21 @@ export default function LoginPage() {
 
     try {
       const result = await signIn("credentials", {
-        loginId,
+        loginId: loginId.trim(),
         password,
         redirect: false,
       });
 
       if (result?.error) {
-        toast.error("Invalid Login ID or Password");
+        toast.error("Invalid Login ID / Email or Password");
         return;
       }
 
       if (result?.ok) {
         toast.success("Welcome back!");
-        router.push("/dashboard");
+        // Determine correct landing page based on role (Portal vs Workspace)
+        const targetUrl = await getPostLoginRedirectAction(loginId);
+        router.push(targetUrl);
         router.refresh();
       }
     } catch (error) {
@@ -91,7 +94,7 @@ export default function LoginPage() {
             <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="admin001"
+              placeholder="e.g. cust006, admin001, or email"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
               className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
@@ -157,7 +160,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
-          {loading ? "Signing in..." : "Sign In to Workspace"}
+          {loading ? "Signing in..." : "Sign In"}
           {!loading && <ArrowRight className="h-3.5 w-3.5" />}
         </button>
       </form>

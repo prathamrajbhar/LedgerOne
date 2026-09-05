@@ -8,12 +8,12 @@ import { prisma } from "@/lib/prisma";
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
-    // Workspace login (Admin/Accountant) - uses loginId
+    // Unified login (Admin, Accountant, and Contact Portal users) - uses loginId or email
     CredentialsProvider({
       id: "credentials",
-      name: "Workspace Login",
+      name: "Unified Login",
       credentials: {
-        loginId: { label: "Login ID", type: "text" },
+        loginId: { label: "Login ID or Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
@@ -27,16 +27,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: credentials.password as string,
           });
 
-          // Only allow Admin and Accountant roles
-          if (result.role === UserRole.CONTACT) {
-            return null;
-          }
-
           return {
             id: result.id,
             email: result.email,
-            name: result.name,
+            name: result.name || result.contact?.name || result.loginId,
             role: result.role,
+            contactId: result.contact?.id,
+            contactType: result.contact?.type,
+            contactName: result.contact?.name,
           };
         } catch {
           return null;

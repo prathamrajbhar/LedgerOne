@@ -102,6 +102,24 @@ export async function inviteContactToPortalAction(contactId: string): Promise<Us
   }
 }
 
+export async function resendContactPortalInvitationAction(userId: string): Promise<UserManagementResult> {
+  try {
+    const session = await requireRole(["ADMINISTRATOR", "ACCOUNTANT"]);
+
+    const invitation = await authService.resendPortalInvitation(
+      userId,
+      session.user.id
+    );
+
+    revalidatePath("/settings/users");
+    revalidatePath("/settings/users-management");
+    return { success: true, data: invitation };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to resend portal invitation";
+    return { success: false, error: message };
+  }
+}
+
 export async function toggleUserStatusAction(userId: string, isActive: boolean): Promise<UserManagementResult> {
   try {
     await requireRole(["ADMINISTRATOR"]);

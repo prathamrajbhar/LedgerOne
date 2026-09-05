@@ -19,7 +19,7 @@ interface PortalHeaderProps {
 
 export default function PortalHeader({ contactName }: PortalHeaderProps) {
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/portal/login" });
+    await signOut({ callbackUrl: "/login" });
   };
 
   const initials = contactName

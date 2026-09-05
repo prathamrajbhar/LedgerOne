@@ -17,11 +17,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect to login if not authenticated
+  // Redirect to unified login if not authenticated
   if (!token) {
-    if (pathname.startsWith("/portal")) {
-      return NextResponse.redirect(new URL("/portal/login", request.url));
-    }
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
@@ -50,7 +47,7 @@ export async function middleware(request: NextRequest) {
   if (isWorkspaceRoute) {
     // CONTACT users should go to portal
     if (userRole === "CONTACT") {
-      return NextResponse.redirect(new URL("/portal/home", request.url));
+      return NextResponse.redirect(new URL("/portal/dashboard", request.url));
     }
 
     // ADMINISTRATOR-only routes per docs/rbac.md
