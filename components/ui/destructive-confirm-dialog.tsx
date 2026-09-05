@@ -261,7 +261,7 @@ export function DestructiveConfirmDialog({
                                   disabled={isDeletingThis || !dep.canDeleteDirectly}
                                   onClick={() => handleDeleteDependencyItem(dep)}
                                   className="h-6 px-2 text-[11px] text-destructive hover:bg-rose-50 hover:text-destructive"
-                                  title={dep.canDeleteDirectly ? "Delete this blocking document/line" : "Cannot delete locked/confirmed document directly. Please cancel it first."}
+                                  title={dep.canDeleteDirectly ? "Delete this product line from the document" : "Locked document. Click 'View' to cancel or unlink first."}
                                 >
                                   {isDeletingThis ? (
                                     <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -283,7 +283,7 @@ export function DestructiveConfirmDialog({
 
             {usageDetails?.dependencies && usageDetails.dependencies.length > 0 && (
               <p className="text-[11px] text-muted-foreground italic px-1">
-                Tip: Confirmed orders or invoices must be cancelled/voided in their respective screens before their foreign key can be deleted.
+                Click <strong>Delete</strong> on each row to remove that line item from the order/invoice, or click <strong>View</strong> to open the full document.
               </p>
             )}
           </div>

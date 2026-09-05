@@ -110,14 +110,6 @@ export default function JournalEntriesPage() {
       debit: "",
       credit: "",
     },
-    {
-      id: crypto.randomUUID(),
-      accountId: "",
-      partnerId: "",
-      description: "",
-      debit: "",
-      credit: "",
-    },
   ]);
 
   // Fetch data on mount
@@ -193,8 +185,8 @@ export default function JournalEntriesPage() {
   };
 
   const removeLine = (id: string) => {
-    if (lines.length <= 2) {
-      toast.error("At least 2 lines are required");
+    if (lines.length <= 1) {
+      toast.error("At least 1 line is required");
       return;
     }
     setLines(lines.filter((line) => line.id !== id));
@@ -202,9 +194,17 @@ export default function JournalEntriesPage() {
 
   const updateLine = (id: string, field: keyof JournalEntryLine, value: string) => {
     setLines(
-      lines.map((line) =>
-        line.id === id ? { ...line, [field]: value } : line
-      )
+      lines.map((line) => {
+        if (line.id !== id) return line;
+        // Mutual exclusivity: A line is either a Debit or a Credit
+        if (field === "debit" && value !== "") {
+          return { ...line, debit: value, credit: "" };
+        }
+        if (field === "credit" && value !== "") {
+          return { ...line, credit: value, debit: "" };
+        }
+        return { ...line, [field]: value };
+      })
     );
   };
 
@@ -235,14 +235,6 @@ export default function JournalEntriesPage() {
         debit: "",
         credit: "",
       },
-      {
-        id: crypto.randomUUID(),
-        accountId: "",
-        partnerId: "",
-        description: "",
-        debit: "",
-        credit: "",
-      },
     ]);
   };
 
@@ -260,7 +252,7 @@ export default function JournalEntriesPage() {
     }
 
     if (lines.length < 2) {
-      toast.error("At least 2 lines are required");
+      toast.error("A balanced double-entry transaction requires at least 2 lines (Debit and Credit). Please click '+ Add Line'.");
       return;
     }
 
@@ -271,9 +263,20 @@ export default function JournalEntriesPage() {
       return;
     }
 
+    // Validate each line has either debit or credit > 0
+    const invalidAmount = lines.some((line) => {
+      const d = parseFloat(line.debit) || 0;
+      const c = parseFloat(line.credit) || 0;
+      return d <= 0 && c <= 0;
+    });
+    if (invalidAmount) {
+      toast.error("Every line must have either a Debit or Credit amount greater than 0");
+      return;
+    }
+
     // Check if balanced
     if (!isBalanced) {
-      toast.error("Entry must be balanced (Total Debit = Total Credit)");
+      toast.error(`Entry is unbalanced. Total Debit ($${totalDebit.toFixed(2)}) must equal Total Credit ($${totalCredit.toFixed(2)}).`);
       return;
     }
 
@@ -487,7 +490,7 @@ export default function JournalEntriesPage() {
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => removeLine(line.id)}
-                                disabled={lines.length <= 2}
+                                disabled={lines.length <= 1}
                                 className="h-7 w-7 p-0 hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
