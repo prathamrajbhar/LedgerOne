@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import {
   Save,
@@ -122,11 +123,13 @@ export function CompanySettingsForm({
   const assetAccountOptions = assetAccounts.map((acc) => ({
     value: acc.id,
     label: `${acc.code} - ${acc.name}`,
+    subLabel: `Account #${acc.code}`,
   }));
 
   const liabilityAccountOptions = liabilityAccounts.map((acc) => ({
     value: acc.id,
     label: `${acc.code} - ${acc.name}`,
+    subLabel: `Account #${acc.code}`,
   }));
 
   const showProfile = defaultSection === "all" || defaultSection === "profile";
@@ -184,26 +187,43 @@ export function CompanySettingsForm({
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormSelect
-                label="Debtors Account (Receivables)"
-                value={debtorsAccountId}
-                onValueChange={setDebtorsAccountId}
-                options={[
-                  { value: "", label: "-- Select Asset Account --" },
-                  ...assetAccountOptions,
-                ]}
-                helperText="Default account for customer receivables"
-              />
-              <FormSelect
-                label="Creditors Account (Payables)"
-                value={creditorsAccountId}
-                onValueChange={setCreditorsAccountId}
-                options={[
-                  { value: "", label: "-- Select Liability Account --" },
-                  ...liabilityAccountOptions,
-                ]}
-                helperText="Default account for vendor payables"
-              />
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground block">
+                  Debtors Account (Receivables)
+                </label>
+                <SearchableSelect
+                  value={debtorsAccountId}
+                  onChange={setDebtorsAccountId}
+                  options={[
+                    { value: "", label: "-- Select Asset Account --" },
+                    ...assetAccountOptions,
+                  ]}
+                  placeholder="-- Select Asset Account --"
+                  searchPlaceholder="Search asset account by code or name..."
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Default account for customer receivables
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground block">
+                  Creditors Account (Payables)
+                </label>
+                <SearchableSelect
+                  value={creditorsAccountId}
+                  onChange={setCreditorsAccountId}
+                  options={[
+                    { value: "", label: "-- Select Liability Account --" },
+                    ...liabilityAccountOptions,
+                  ]}
+                  placeholder="-- Select Liability Account --"
+                  searchPlaceholder="Search liability account by code or name..."
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Default account for vendor payables
+                </p>
+              </div>
             </CardContent>
           </Card>
         </>
