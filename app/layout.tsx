@@ -1,14 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
+import { Open_Sans } from "next/font/google";
 import { Toaster } from "sonner";
-import { SessionProvider } from "@/components/providers/session-provider";
+import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-open-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "LedgerOne - Accounting System",
-  description: "Production-grade accounting system for small business",
+  title: "LedgerOne - Enterprise Accounting & Furniture ERP",
+  description: "Next-generation accounting and business-management platform for furniture enterprises.",
 };
 
 export default function RootLayout({
@@ -17,12 +20,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <SessionProvider>
-          {children}
-          <Toaster richColors closeButton position="top-right" />
-        </SessionProvider>
+    <html lang="en" className={openSans.variable}>
+      <body className="font-sans antialiased bg-background text-foreground selection:bg-teal/20 selection:text-teal">
+        {children}
+        <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
   );

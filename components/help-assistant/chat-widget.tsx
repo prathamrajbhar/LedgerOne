@@ -1,180 +1,199 @@
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
-import { MessageSquare, X, Send, Bot, User, Sparkles } from "lucide-react";
+import { MessageCircle, X, Send, Bot, Sparkles, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
 
+const initialSuggestions = [
+  "How do I record a new furniture sale invoice?",
+  "How do I track low stock for dining chairs?",
+  "What is the difference between Customer & Vendor contact?",
+  "How to record a GST vendor bill payment?",
+];
+
 export function HelpAssistantWidget() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello! I am your LedgerOne Help Assistant. How can I help you navigate the system or understand accounting workflows today?",
-    },
-  ]);
+  const [open, setOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
+  const sendMessage = async (textToSend?: string) => {
+    const text = textToSend || input;
+    if (!text.trim()) return;
 
-    const userMessage: Message = { role: "user", content: input.trim() };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
-    setInput("");
+    const userMessage: Message = { role: "user", content: text };
+    setMessages((prev) => [...prev, userMessage]);
+    if (!textToSend) setInput("");
     setLoading(true);
 
     try {
-      const res = await fetch("/api/help-assistant", {
+      const response = await fetch("/api/help-assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: [...messages, userMessage] }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              data.message ||
-              "Here to assist with your accounting and system navigation questions!",
-          },
-        ]);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content:
-              "I'm ready to answer any questions about creating Purchase Orders, Sales Invoices, Budgets, and Journal Entries.",
-          },
-        ]);
+      if (!response.ok) {
+        throw new Error("Failed to get response");
       }
-    } catch {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "LedgerOne Help: You can manage Purchase Orders under Purchase > Orders, Sales Invoices under Sales > Invoices, and monitor Budgets under Budgets.",
-        },
-      ]);
+
+      const data = await response.json();
+      setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
+    } catch (error) {
+      // Fallback friendly offline assistant response
+      let fallbackReply = "I can guide you through LedgerOne accounting workflows! ";
+      const lower = text.toLowerCase();
+      if (lower.includes("invoice") || lower.includes("sale")) {
+        fallbackReply =
+          "To create a Customer Invoice: Navigate to Invoices in the sidebar, click '+ New Invoice', select your customer (e.g. Modern Living Interiors), add furniture line items, review GST amounts, and click 'Confirm'.";
+      } else if (lower.includes("stock") || lower.includes("product") || lower.includes("chair")) {
+        fallbackReply =
+          "In Products & Inventory: You can check current stock counts, set reorder levels, and view items in 'Low Stock' (amber badge) or 'Out of Stock' (red badge). Click '+ New Product' to register new furniture items.";
+      } else if (lower.includes("payment") || lower.includes("bill")) {
+        fallbackReply =
+          "To record a Payment: Open the Invoice or Vendor Bill, click 'Record Payment', choose the bank/cash account (e.g., HDFC Bank Current), enter the received amount, and post the entry.";
+      } else {
+        fallbackReply =
+          "LedgerOne handles double-entry bookkeeping, furniture stock management, GST invoicing, and financial reports. You can ask me how to perform any specific action in the app!";
+      }
+
+      setMessages((prev) => [...prev, { role: "assistant", content: fallbackReply }]);
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="fixed bottom-6 right-6 z-50">
-      {!isOpen && (
-        <Button
-          onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full shadow-xl bg-primary text-primary-foreground hover:bg-primary/90 flex items-center justify-center p-0"
-          aria-label="Open Help Assistant"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </Button>
-      )}
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="fixed bottom-5 right-5 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-navy text-white shadow-lg hover:bg-navy-hover transition-all hover:scale-105 active:scale-95 group border-2 border-white/80"
+        aria-label="Open Help Assistant"
+      >
+        <MessageCircle className="h-5 w-5" />
+        <span className="sr-only">Help Assistant</span>
+      </button>
+    );
+  }
 
-      {isOpen && (
-        <Card className="w-80 sm:w-96 h-[500px] shadow-2xl flex flex-col border border-border">
-          <CardHeader className="p-4 bg-gray-900 text-white flex flex-row items-center justify-between rounded-t-xl">
-            <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center">
-                <Bot className="h-5 w-5 text-white" />
+  return (
+    <Card className="fixed bottom-5 right-5 z-50 w-96 max-w-[calc(100vw-2.5rem)] h-[520px] flex flex-col shadow-2xl border border-border bg-white rounded-2xl overflow-hidden animate-in slide-in-from-bottom-5">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
+        <div className="flex items-center gap-2">
+          <div className="p-1 rounded-md bg-teal/30 text-teal-light">
+            <Bot className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-xs font-semibold leading-tight">LedgerOne Assistant</h3>
+            <p className="text-[10px] text-white/70">Accounting & ERP Guide</p>
+          </div>
+        </div>
+        <button
+          onClick={() => setOpen(false)}
+          className="p-1 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Message History */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 bg-[#F9FAFB]">
+        {messages.length === 0 && (
+          <div className="space-y-3 pt-2">
+            <div className="p-3 rounded-xl bg-white border border-border text-xs text-foreground space-y-1">
+              <div className="flex items-center gap-1.5 font-semibold text-navy">
+                <Sparkles className="h-3.5 w-3.5 text-teal" />
+                <span>Hello, Rohan!</span>
               </div>
-              <div>
-                <CardTitle className="text-sm font-semibold flex items-center gap-1 text-white">
-                  Help Assistant <Sparkles className="h-3 w-3 text-amber-400" />
-                </CardTitle>
-                <p className="text-xs text-gray-400">Product usage & FAQ</p>
+              <p className="text-muted-foreground leading-relaxed">
+                I&apos;m your LedgerOne accounting assistant. Ask me anything about managing your furniture business, invoices, payments, or reports.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-1">
+                Common Inquiries
+              </span>
+              <div className="flex flex-col gap-1.5">
+                {initialSuggestions.map((item, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => sendMessage(item)}
+                    className="text-left text-xs p-2 rounded-lg bg-white border border-border hover:border-teal/40 hover:bg-[#E8F0F7]/40 text-foreground transition-all flex items-start gap-2"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5 text-teal mt-0.5 flex-shrink-0" />
+                    <span>{item}</span>
+                  </button>
+                ))}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-800"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </CardHeader>
+          </div>
+        )}
 
-          <CardContent className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50/50">
-            {messages.map((m, idx) => (
-              <div
-                key={idx}
-                className={`flex gap-2 ${
-                  m.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
-                {m.role === "assistant" && (
-                  <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
-                    <Bot className="h-4 w-4" />
-                  </div>
-                )}
-                <div
-                  className={`rounded-2xl px-3.5 py-2 text-sm max-w-[80%] leading-relaxed ${
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-br-none"
-                      : "bg-white text-gray-900 border border-gray-200 rounded-bl-none shadow-sm"
-                  }`}
-                >
-                  {m.content}
-                </div>
-                {m.role === "user" && (
-                  <div className="h-7 w-7 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center shrink-0 mt-0.5">
-                    <User className="h-4 w-4" />
-                  </div>
-                )}
-              </div>
-            ))}
-            {loading && (
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="animate-pulse flex space-x-1">
-                  <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                  <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                </div>
-                Thinking...
-              </div>
-            )}
-          </CardContent>
-
-          <CardFooter className="p-3 bg-white border-t border-border flex gap-2">
-            <Input
-              placeholder="Ask a question..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  sendMessage();
-                }
-              }}
-              className="text-sm"
-            />
-            <Button
-              size="icon"
-              onClick={sendMessage}
-              disabled={loading || !input.trim()}
-              className="shrink-0"
+        {messages.map((msg, idx) => (
+          <div
+            key={idx}
+            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+          >
+            <div
+              className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-navy text-white rounded-br-none shadow-xs"
+                  : "bg-white text-foreground border border-border rounded-bl-none shadow-xs"
+              }`}
             >
-              <Send className="h-4 w-4" />
-            </Button>
-          </CardFooter>
-        </Card>
-      )}
-    </div>
+              {msg.content}
+            </div>
+          </div>
+        ))}
+
+        {loading && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-border rounded-xl px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce" />
+              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce [animation-delay:0.2s]" />
+              <span className="inline-block w-2 h-2 rounded-full bg-teal animate-bounce [animation-delay:0.4s]" />
+              <span>Thinking...</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Input Form */}
+      <div className="p-2.5 border-t border-border bg-white">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            sendMessage();
+          }}
+          className="flex gap-1.5"
+        >
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a question..."
+            disabled={loading}
+            className="h-9 text-xs"
+          />
+          <Button
+            type="submit"
+            size="sm"
+            disabled={loading || !input.trim()}
+            className="h-9 w-9 p-0 flex-shrink-0 bg-navy hover:bg-navy-hover"
+          >
+            <Send className="h-3.5 w-3.5" />
+          </Button>
+        </form>
+      </div>
+    </Card>
   );
 }

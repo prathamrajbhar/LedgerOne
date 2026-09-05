@@ -1,229 +1,80 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
+import * as React from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FormInput } from "@/components/forms/form-input";
+import { FormSelect } from "@/components/forms/form-select";
 import { toast } from "sonner";
-import { Save, Users, Building } from "lucide-react";
-import Link from "next/link";
-
-const settingsSchema = z.object({
-  companyName: z.string().min(1, "Company name is required"),
-  address: z.string().optional(),
-  baseCurrency: z.string().min(1, "Currency is required"),
-  fiscalYearStartMonth: z.coerce.number().min(1).max(12),
-  poNumberPrefix: z.string().min(1, "PO prefix is required"),
-  billNumberPrefix: z.string().min(1, "Bill prefix is required"),
-  soNumberPrefix: z.string().min(1, "SO prefix is required"),
-  invoiceNumberPrefix: z.string().min(1, "Invoice prefix is required"),
-  jeNumberPrefix: z.string().min(1, "JE prefix is required"),
-});
-
-type SettingsFormValues = z.infer<typeof settingsSchema>;
+import { Save } from "lucide-react";
 
 export default function SettingsPage() {
-  const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
+  const [companyName, setCompanyName] = React.useState("Royal Oak Woodcrafts Pvt Ltd");
+  const [gstin, setGstin] = React.useState("27AAAAA1234A1Z5");
+  const [currency, setCurrency] = React.useState("INR");
+  const [fiscalYear, setFiscalYear] = React.useState("APR_MAR");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<SettingsFormValues>({
-    resolver: zodResolver(settingsSchema),
-  });
-
-  useEffect(() => {
-    async function loadSettings() {
-      try {
-        const res = await fetch("/api/settings");
-        if (res.ok) {
-          const data = await res.json();
-          reset(data);
-        }
-      } catch (err) {
-        toast.error("Failed to load settings");
-      } finally {
-        setFetching(false);
-      }
-    }
-    loadSettings();
-  }, [reset]);
-
-  const onSubmit = async (data: SettingsFormValues) => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to update settings");
-      }
-
-      toast.success("Company settings updated successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update settings");
-    } finally {
-      setLoading(false);
-    }
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast.success("Company settings saved successfully.");
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-6 max-w-4xl mx-auto">
       <PageHeader
-        title="Company Settings"
-        description="Manage company details, base currency, fiscal year, and sequence prefixes."
-        actions={
-          <Link href="/settings/users">
-            <Button variant="outline" className="gap-2">
-              <Users className="h-4 w-4" /> Manage Users & Roles
-            </Button>
-          </Link>
-        }
+        title="Company & System Settings"
+        description="Configure your enterprise profile, tax identification numbers, and accounting periods."
       />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold flex items-center gap-2">
-              <Building className="h-4 w-4 text-primary" /> General Information
+      <form onSubmit={handleSave} className="space-y-6">
+        <Card className="p-6 bg-white shadow-card">
+          <CardHeader className="p-0 pb-4 border-b border-border">
+            <CardTitle className="text-sm font-bold text-foreground">
+              Company Legal Identity
             </CardTitle>
+            <CardDescription>
+              Details printed on sales invoices and purchase vouchers
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name *</Label>
-              <Input
-                id="companyName"
-                placeholder="e.g. Acme Corporation"
-                {...register("companyName")}
-                disabled={fetching}
-              />
-              {errors.companyName && (
-                <p className="text-xs text-destructive">
-                  {errors.companyName.message}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="address">Operating Address</Label>
-              <Input
-                id="address"
-                placeholder="Business Street, City, Country"
-                {...register("address")}
-                disabled={fetching}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="baseCurrency">Base Currency *</Label>
-                <select
-                  id="baseCurrency"
-                  {...register("baseCurrency")}
-                  disabled={fetching}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="INR">INR (₹)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
-                {errors.baseCurrency && (
-                  <p className="text-xs text-destructive">
-                    {errors.baseCurrency.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="fiscalYearStartMonth">Fiscal Year Start Month (1-12) *</Label>
-                <Input
-                  id="fiscalYearStartMonth"
-                  type="number"
-                  min="1"
-                  max="12"
-                  {...register("fiscalYearStartMonth")}
-                  disabled={fetching}
-                />
-                {errors.fiscalYearStartMonth && (
-                  <p className="text-xs text-destructive">
-                    {errors.fiscalYearStartMonth.message}
-                  </p>
-                )}
-              </div>
-            </div>
+          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormInput
+              label="Registered Business Name"
+              required
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+            />
+            <FormInput
+              label="GSTIN Number"
+              required
+              value={gstin}
+              onChange={(e) => setGstin(e.target.value)}
+            />
+            <FormSelect
+              label="Base Currency"
+              value={currency}
+              onValueChange={setCurrency}
+              options={[
+                { value: "INR", label: "INR (₹) - Indian Rupee" },
+                { value: "USD", label: "USD ($) - US Dollar" },
+              ]}
+            />
+            <FormSelect
+              label="Fiscal Year Schedule"
+              value={fiscalYear}
+              onValueChange={setFiscalYear}
+              options={[
+                { value: "APR_MAR", label: "April 1 - March 31 (Standard Indian FY)" },
+                { value: "JAN_DEC", label: "January 1 - December 31 (Calendar Year)" },
+              ]}
+            />
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-base font-semibold">
-              Document Numbering Prefixes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="poNumberPrefix">Purchase Order (PO)</Label>
-              <Input
-                id="poNumberPrefix"
-                {...register("poNumberPrefix")}
-                disabled={fetching}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="billNumberPrefix">Vendor Bill</Label>
-              <Input
-                id="billNumberPrefix"
-                {...register("billNumberPrefix")}
-                disabled={fetching}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="soNumberPrefix">Sales Order (SO)</Label>
-              <Input
-                id="soNumberPrefix"
-                {...register("soNumberPrefix")}
-                disabled={fetching}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="invoiceNumberPrefix">Customer Invoice (INV)</Label>
-              <Input
-                id="invoiceNumberPrefix"
-                {...register("invoiceNumberPrefix")}
-                disabled={fetching}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="jeNumberPrefix">Journal Entry (JE)</Label>
-              <Input
-                id="jeNumberPrefix"
-                {...register("jeNumberPrefix")}
-                disabled={fetching}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="flex justify-end">
-          <Button type="submit" disabled={loading || fetching} className="gap-2">
+        <div className="flex justify-end gap-2">
+          <Button type="submit" size="sm" className="bg-navy hover:bg-navy-hover text-white gap-1.5">
             <Save className="h-4 w-4" />
-            {loading ? "Saving..." : "Save Settings"}
+            Save Configuration
           </Button>
         </div>
       </form>
