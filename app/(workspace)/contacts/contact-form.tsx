@@ -8,7 +8,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormTextarea } from "@/components/forms/form-textarea";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Users, Mail, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createContactAction, updateContactAction } from "@/app/actions/contact.actions";
@@ -111,33 +111,79 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-2">
+    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+      {/* Top Breadcrumb / Navigation */}
+      <div className="flex items-center justify-between">
         <Link href="/contacts">
-          <Button variant="ghost" size="sm" className="gap-1 text-xs">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
             Back to Contacts
           </Button>
         </Link>
+        <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
+          {isEdit ? "Editing Mode" : "New Directory Entry"}
+        </span>
       </div>
 
-      <PageHeader
-        title={isEdit ? `Edit: ${formData.name}` : "Create New Contact"}
-        description="Register a new customer, furniture supplier, or interior design client."
-      />
+      {/* Hero Header Card */}
+      <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
+            <Users className="h-6 w-6 text-navy" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+                {isEdit ? `Edit: ${formData.name}` : "Create New Contact"}
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
+                Directory
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Register customer accounts, furniture suppliers, raw material vendors, and business partners.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-end sm:self-center">
+          <Link href="/contacts">
+            <Button type="button" variant="outline" size="sm" className="text-xs">
+              Cancel
+            </Button>
+          </Link>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading}
+            size="sm"
+            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Contact"}
+          </Button>
+        </div>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Basic Information */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Basic Information
-            </CardTitle>
-            <CardDescription>
-              Primary business identity and relationship classification
-            </CardDescription>
+        <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+          <CardHeader className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80">
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-navy/10 text-navy flex items-center justify-center">
+                <Building2 className="h-3.5 w-3.5 text-navy" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Entity Profile & Relationship Type
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Primary business identity and relationship classification
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormInput
               label="Contact / Company Name"
               required
@@ -165,16 +211,23 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
         </Card>
 
         {/* Section 2: Contact & Communication */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Contact & Address Details
-            </CardTitle>
-            <CardDescription>
-              Official address for invoice delivery and portal access
-            </CardDescription>
+        <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+          <CardHeader className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80">
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-[#E3F3F3] text-[#167C80] flex items-center justify-center">
+                <MapPin className="h-3.5 w-3.5 text-[#167C80]" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Communication & Billing Address
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
+                  Official contact details for invoice dispatch, statements, and shipment delivery.
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-0 pt-5 space-y-4">
+          <CardContent className="p-5 sm:p-6 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormInput
                 label="Email Address (Portal & Invoices)"
@@ -201,16 +254,16 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
               label="Physical & Billing Address"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              placeholder="Enter full office / showroom address..."
+              placeholder="Enter full office, showroom, or warehouse address..."
               rows={3}
             />
           </CardContent>
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center justify-end gap-3 pt-1">
           <Link href="/contacts">
-            <Button type="button" variant="secondary" size="sm">
+            <Button type="button" variant="outline" size="sm" className="text-xs">
               Cancel
             </Button>
           </Link>
@@ -218,9 +271,9 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
             type="submit"
             disabled={loading}
             size="sm"
-            className="bg-navy hover:bg-navy-hover text-white gap-1.5"
+            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
           >
-            <Save className="h-4 w-4" />
+            <Save className="h-3.5 w-3.5" />
             {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Contact"}
           </Button>
         </div>

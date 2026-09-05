@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { PageHeader } from "@/components/ui/page-header";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Package, Layers, IndianRupee, Sliders } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createProductAction, updateProductAction } from "@/app/actions/product.actions";
@@ -133,230 +133,338 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center gap-2">
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+      {/* Top Breadcrumb / Action Bar */}
+      <div className="flex items-center justify-between">
         <Link href="/products">
-          <Button variant="ghost" size="sm" className="gap-1 text-xs">
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Back to Products
+            Back to Products Catalog
           </Button>
         </Link>
+        <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
+          {isEdit ? "Editing Mode" : "New Inventory Entry"}
+        </span>
       </div>
 
-      <PageHeader
-        title={isEdit ? `Edit: ${formData.name}` : "Add Product"}
-        description="Configure product specifications, pricing, and inventory thresholds."
-      />
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Basic Details */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Product Overview
-            </CardTitle>
-            <CardDescription>
-              Name, category, and stock keeping unit (SKU)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <FormInput
-                label="Product Name"
-                required
-                value={formData.name}
-                onChange={(e) => {
-                  setFormData({ ...formData, name: e.target.value });
-                  if (errors.name) setErrors({ ...errors, name: "" });
-                }}
-                placeholder="e.g. Teak Wood 6-Seater Dining Table"
-                error={errors.name}
-              />
+      {/* Hero Header Card */}
+      <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
+            <Package className="h-6 w-6 text-navy" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+                {isEdit ? `Edit: ${formData.name}` : "Create New Product"}
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
+                Furniture ERP
+              </span>
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configure product specifications, pricing, bill of materials, and stock control thresholds.
+            </p>
+          </div>
+        </div>
 
-            <FormSelect
-              label="Product Type"
-              required
-              value={formData.type}
-              onValueChange={(val) => setFormData({ ...formData, type: val as "GOODS" | "SERVICE" | "COMBO" })}
-              options={[
-                { value: "GOODS", label: "Goods (Physical Product)" },
-                { value: "SERVICE", label: "Service" },
-                { value: "COMBO", label: "Combo (Goods + Service)" },
-              ]}
-            />
-
-            <FormSelect
-              label="Category"
-              required
-              value={formData.categoryId}
-              onValueChange={(val) => {
-                setFormData({ ...formData, categoryId: val });
-                if (errors.categoryId) setErrors({ ...errors, categoryId: "" });
-              }}
-              options={categories.map((cat) => ({
-                value: cat.id,
-                label: cat.name,
-              }))}
-              error={errors.categoryId}
-            />
-
-            <FormInput
-              label="SKU Code"
-              value={formData.sku}
-              onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-              placeholder="e.g. FUR-DIN-001"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Material & Specifications */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Specifications & Material
-            </CardTitle>
-            <CardDescription>
-              Material type, dimensions, and product details
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormInput
-              label="Material / Finish"
-              value={formData.material}
-              onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-              placeholder="e.g. Solid Teak Wood + Natural Matte PU Finish"
-            />
-
-            <FormInput
-              label="Dimensions (L x W x H)"
-              value={formData.dimensions}
-              onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-              placeholder="e.g. 180cm x 90cm x 75cm"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Pricing & Stock Levels */}
-        <Card className="p-6 bg-white shadow-card">
-          <CardHeader className="p-0 pb-4 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">
-              Cost, Pricing & Inventory Control
-            </CardTitle>
-            <CardDescription>
-              Standard accounting cost price and sales price in INR
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0 pt-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormInput
-              label="Cost Price (₹)"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              value={formData.cost}
-              onKeyDown={(e) => {
-                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
-                  e.preventDefault();
-                }
-              }}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "" || parseFloat(val) >= 0) {
-                  setFormData({ ...formData, cost: val });
-                  if (errors.cost) setErrors({ ...errors, cost: "" });
-                }
-              }}
-              placeholder="18500"
-              error={errors.cost}
-            />
-
-            <FormInput
-              label="Selling Price (₹)"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-              value={formData.salesPrice}
-              onKeyDown={(e) => {
-                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
-                  e.preventDefault();
-                }
-              }}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "" || parseFloat(val) >= 0) {
-                  setFormData({ ...formData, salesPrice: val });
-                  if (errors.salesPrice) setErrors({ ...errors, salesPrice: "" });
-                }
-              }}
-              placeholder="32000"
-              error={errors.salesPrice}
-            />
-
-            <FormInput
-              label="Initial Stock Count"
-              type="number"
-              min="0"
-              step="1"
-              value={formData.stock}
-              onKeyDown={(e) => {
-                if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
-                  e.preventDefault();
-                }
-              }}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "" || parseInt(val, 10) >= 0) {
-                  setFormData({ ...formData, stock: val });
-                  if (errors.stock) setErrors({ ...errors, stock: "" });
-                }
-              }}
-              placeholder="0"
-              error={errors.stock}
-            />
-
-            <FormInput
-              label="Reorder Alert Threshold"
-              type="number"
-              min="0"
-              step="1"
-              value={formData.reorderPoint}
-              onKeyDown={(e) => {
-                if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
-                  e.preventDefault();
-                }
-              }}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (val === "" || parseInt(val, 10) >= 0) {
-                  setFormData({ ...formData, reorderPoint: val });
-                  if (errors.reorderPoint) setErrors({ ...errors, reorderPoint: "" });
-                }
-              }}
-              placeholder="10"
-              helperText="Triggers low-stock alert when remaining inventory reaches this."
-              error={errors.reorderPoint}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Form Actions */}
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <div className="flex items-center gap-2.5 self-end sm:self-center">
           <Link href="/products">
-            <Button type="button" variant="secondary" size="sm">
+            <Button type="button" variant="outline" size="sm" className="text-xs">
               Cancel
             </Button>
           </Link>
           <Button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={loading}
             size="sm"
-            className="bg-navy hover:bg-navy-hover text-white gap-1.5"
+            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
           >
-            <Save className="h-4 w-4" />
+            <Save className="h-3.5 w-3.5" />
             {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Product"}
           </Button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left 2 Columns: Core Product Information & Specifications */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Section 1: Overview & Identity */}
+            <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-navy/10 text-navy flex items-center justify-center">
+                    <Package className="h-3.5 w-3.5 text-navy" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      Product Overview & Identity
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Define the product name, catalog classification, and tracking SKU.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                <div>
+                  <FormInput
+                    label="Product Name"
+                    required
+                    value={formData.name}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value });
+                      if (errors.name) setErrors({ ...errors, name: "" });
+                    }}
+                    placeholder="e.g. Teak Wood 6-Seater Dining Table"
+                    error={errors.name}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormSelect
+                    label="Product Category"
+                    required
+                    value={formData.categoryId}
+                    onValueChange={(val) => {
+                      setFormData({ ...formData, categoryId: val });
+                      if (errors.categoryId) setErrors({ ...errors, categoryId: "" });
+                    }}
+                    options={categories.map((cat) => ({
+                      value: cat.id,
+                      label: cat.name,
+                    }))}
+                    error={errors.categoryId}
+                  />
+
+                  <FormSelect
+                    label="Product Type"
+                    required
+                    value={formData.type}
+                    onValueChange={(val) => setFormData({ ...formData, type: val as "GOODS" | "SERVICE" | "COMBO" })}
+                    options={[
+                      { value: "GOODS", label: "Goods (Physical Product)" },
+                      { value: "SERVICE", label: "Service (Assembly/Finishing)" },
+                      { value: "COMBO", label: "Combo (Goods + Installation)" },
+                    ]}
+                  />
+                </div>
+
+                <div>
+                  <FormInput
+                    label="SKU Code"
+                    value={formData.sku}
+                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                    placeholder="e.g. FUR-DIN-001"
+                    helperText="Unique identifier for barcode tracking and inventory reports."
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Section 2: Material & Specifications */}
+            <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-[#E3F3F3] text-[#167C80] flex items-center justify-center">
+                    <Layers className="h-3.5 w-3.5 text-[#167C80]" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      Material & Physical Specifications
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Provide dimensional and material details for furniture craftsmanship.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormInput
+                  label="Material / Finish"
+                  value={formData.material}
+                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                  placeholder="e.g. Solid Teak Wood + Natural Matte PU Finish"
+                />
+
+                <FormInput
+                  label="Dimensions (L x W x H)"
+                  value={formData.dimensions}
+                  onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
+                  placeholder="e.g. 180cm x 90cm x 75cm"
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Pricing & Inventory Control */}
+          <div className="space-y-6">
+            {/* Section 3: Pricing Structure */}
+            <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="p-5 bg-surface-subtle/50 border-b border-border/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                    <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      Cost & Selling Price
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Accounting valuation in INR
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-4">
+                <FormInput
+                  label="Cost Price (₹)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={formData.cost}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || parseFloat(val) >= 0) {
+                      setFormData({ ...formData, cost: val });
+                      if (errors.cost) setErrors({ ...errors, cost: "" });
+                    }
+                  }}
+                  placeholder="18500"
+                  error={errors.cost}
+                />
+
+                <FormInput
+                  label="Selling Price (₹)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={formData.salesPrice}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || parseFloat(val) >= 0) {
+                      setFormData({ ...formData, salesPrice: val });
+                      if (errors.salesPrice) setErrors({ ...errors, salesPrice: "" });
+                    }
+                  }}
+                  placeholder="32000"
+                  error={errors.salesPrice}
+                />
+
+                {/* Estimated Margin Pill */}
+                {formData.salesPrice && formData.cost && parseFloat(formData.salesPrice.toString()) > 0 && (
+                  <div className="p-3 rounded-xl bg-[#F8FAFC] border border-border flex items-center justify-between text-xs">
+                    <span className="text-muted-foreground font-medium">Estimated Margin:</span>
+                    <span className="font-bold text-[#167C80]">
+                      {(
+                        ((parseFloat(formData.salesPrice.toString()) - parseFloat(formData.cost.toString())) /
+                          parseFloat(formData.salesPrice.toString())) *
+                        100
+                      ).toFixed(1)}
+                      %
+                    </span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Section 4: Inventory Thresholds */}
+            <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="p-5 bg-surface-subtle/50 border-b border-border/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-7 w-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                    <Sliders className="h-3.5 w-3.5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      Inventory Control
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      Initial quantity and reorder thresholds
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-5 space-y-4">
+                <FormInput
+                  label="Initial Stock Count"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.stock}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || parseInt(val, 10) >= 0) {
+                      setFormData({ ...formData, stock: val });
+                      if (errors.stock) setErrors({ ...errors, stock: "" });
+                    }
+                  }}
+                  placeholder="0"
+                  error={errors.stock}
+                />
+
+                <FormInput
+                  label="Reorder Alert Point"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.reorderPoint}
+                  onKeyDown={(e) => {
+                    if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
+                      e.preventDefault();
+                    }
+                  }}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "" || parseInt(val, 10) >= 0) {
+                      setFormData({ ...formData, reorderPoint: val });
+                      if (errors.reorderPoint) setErrors({ ...errors, reorderPoint: "" });
+                    }
+                  }}
+                  placeholder="10"
+                  helperText="Alerts trigger when warehouse stock falls to this level."
+                  error={errors.reorderPoint}
+                />
+              </CardContent>
+            </Card>
+
+            {/* Bottom Actions for Mobile / Sidebar */}
+            <div className="flex items-center justify-end gap-3 pt-1">
+              <Link href="/products" className="w-full sm:w-auto">
+                <Button type="button" variant="outline" size="sm" className="w-full text-xs">
+                  Cancel
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={loading}
+                size="sm"
+                className="w-full sm:w-auto bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm"
+              >
+                <Save className="h-3.5 w-3.5" />
+                {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Product"}
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
     </div>

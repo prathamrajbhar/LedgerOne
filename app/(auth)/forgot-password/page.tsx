@@ -23,7 +23,7 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[28px] p-7 sm:p-8 space-y-5 backdrop-blur-sm">
+    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-6 sm:p-7 space-y-4 backdrop-blur-sm">
       {/* Header with Title and Logo Badge */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">

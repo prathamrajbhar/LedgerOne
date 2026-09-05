@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
-import { Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Loader2, PiggyBank, Calendar, BarChart3, Save } from "lucide-react";
 import { createBudgetAction } from "@/app/actions/budget.actions";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -129,64 +129,206 @@ export function BudgetForm({ users, analytics }: BudgetFormProps) {
   const totalCommitted = lines.reduce((sum, l) => sum + (parseFloat(l.committedAmount) || 0), 0);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl">
-      <div className="rounded-xl border border-border bg-white p-6 shadow-card space-y-4">
-        <h2 className="text-sm font-bold text-foreground">General Information</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormInput label="Budget Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. FY 2024-25 Operating Budget" />
-          <FormSelect label="Responsible Person" value={responsibleId} onValueChange={(val) => setResponsibleId(val)} options={users.map((u) => ({ value: u.id, label: u.name || u.email }))} />
-          <FormInput label="Start Date" type="date" required value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-          <FormInput label="End Date" type="date" required value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-white p-6 shadow-card space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-foreground">Budget Lines (Analytic Allocation)</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Commit target figures per analytic account.</p>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={handleAddLine} className="text-xs gap-1">
-            <Plus className="h-3.5 w-3.5" /> Add Line
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          {lines.map((line, idx) => (
-            <div key={idx} className="flex flex-col sm:flex-row items-end gap-3 p-3 bg-muted/40 rounded-lg border border-border/70">
-              <div className="w-full sm:flex-1">
-                <FormSelect label={`Analytic Account #${idx + 1}`} value={line.analyticAccountId} onValueChange={(val) => handleLineChange(idx, "analyticAccountId", val)} options={analytics.map((a) => ({ value: a.id, label: `${a.name} (${a.type})` }))} />
-              </div>
-              <div className="w-full sm:w-36">
-                <FormSelect label="Type" value={line.type} onValueChange={(val) => handleLineChange(idx, "type", val as AnalyticAccountType)} options={[{ value: "EXPENSES", label: "Expenses" }, { value: "INCOME", label: "Income" }]} />
-              </div>
-              <div className="w-full sm:w-44">
-                <FormInput label="Committed (₹)" type="number" step="0.01" min="0" required placeholder="0.00" value={line.committedAmount} onChange={(e) => handleLineChange(idx, "committedAmount", e.target.value)} />
-              </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => handleRemoveLine(idx)} className="text-muted-foreground hover:text-destructive h-9 px-2">
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-
-        <div className="pt-3 border-t border-border flex justify-between items-center text-sm">
-          <span className="font-semibold text-muted-foreground">Total Budget Committed:</span>
-          <span className="font-bold font-mono text-base text-navy">₹{totalCommitted.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between pt-2">
+    <div className="space-y-6">
+      {/* Top Breadcrumb / Navigation */}
+      <div className="flex items-center justify-between">
         <Link href="/budgets">
-          <Button type="button" variant="outline" size="sm" className="text-xs gap-1.5">
-            <ArrowLeft className="h-3.5 w-3.5" /> Cancel
+          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Budgets
           </Button>
         </Link>
-        <Button type="submit" disabled={submitting} size="sm" className="text-xs bg-navy hover:bg-navy-dark text-white gap-1.5">
-          {submitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          Create Draft Budget
-        </Button>
+        <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
+          New Budget Allocation
+        </span>
       </div>
-    </form>
+
+      {/* Hero Header Card */}
+      <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-start gap-4">
+          <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
+            <PiggyBank className="h-6 w-6 text-navy" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+                Create New Budget
+              </h1>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
+                Financial Planning
+              </span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Define target committed amounts for your revenue and expense analytic accounts.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5 self-end sm:self-center">
+          <Link href="/budgets">
+            <Button type="button" variant="outline" size="sm" className="text-xs">
+              Cancel
+            </Button>
+          </Link>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={submitting}
+            size="sm"
+            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
+          >
+            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Create Draft Budget
+          </Button>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Section 1: General Information */}
+        <div className="rounded-2xl border border-border bg-white shadow-card overflow-hidden">
+          <div className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-navy/10 text-navy flex items-center justify-center">
+              <Calendar className="h-3.5 w-3.5 text-navy" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-foreground">General Information</h2>
+              <p className="text-xs text-muted-foreground">Fiscal period, title, and responsible manager</p>
+            </div>
+          </div>
+          <div className="p-5 sm:p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormInput
+              label="Budget Name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. FY 2024-25 Operating Budget"
+            />
+            <FormSelect
+              label="Responsible Person"
+              value={responsibleId}
+              onValueChange={(val) => setResponsibleId(val)}
+              options={users.map((u) => ({ value: u.id, label: u.name || u.email }))}
+            />
+            <FormInput
+              label="Start Date"
+              type="date"
+              required
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+            <FormInput
+              label="End Date"
+              type="date"
+              required
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Section 2: Budget Lines */}
+        <div className="rounded-2xl border border-border bg-white shadow-card overflow-hidden">
+          <div className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-lg bg-[#E3F3F3] text-[#167C80] flex items-center justify-center">
+                <BarChart3 className="h-3.5 w-3.5 text-[#167C80]" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-foreground">Budget Lines (Analytic Allocation)</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Commit target figures per analytic account.</p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleAddLine}
+              className="text-xs gap-1.5 shadow-2xs hover:border-border-strong"
+            >
+              <Plus className="h-3.5 w-3.5" /> Add Line
+            </Button>
+          </div>
+
+          <div className="p-5 sm:p-6 space-y-3">
+            {lines.map((line, idx) => (
+              <div
+                key={idx}
+                className="flex flex-col sm:flex-row items-end gap-3 p-3.5 bg-surface-subtle/60 rounded-xl border border-border/70 hover:border-border-strong transition-all"
+              >
+                <div className="w-full sm:flex-1">
+                  <FormSelect
+                    label={`Analytic Account #${idx + 1}`}
+                    value={line.analyticAccountId}
+                    onValueChange={(val) => handleLineChange(idx, "analyticAccountId", val)}
+                    options={analytics.map((a) => ({
+                      value: a.id,
+                      label: `${a.name} (${a.type})`,
+                    }))}
+                  />
+                </div>
+                <div className="w-full sm:w-36">
+                  <FormSelect
+                    label="Type"
+                    value={line.type}
+                    onValueChange={(val) => handleLineChange(idx, "type", val as AnalyticAccountType)}
+                    options={[
+                      { value: "EXPENSES", label: "Expenses" },
+                      { value: "INCOME", label: "Income" },
+                    ]}
+                  />
+                </div>
+                <div className="w-full sm:w-44">
+                  <FormInput
+                    label="Committed (₹)"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    required
+                    placeholder="0.00"
+                    value={line.committedAmount}
+                    onChange={(e) => handleLineChange(idx, "committedAmount", e.target.value)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveLine(idx)}
+                  className="text-muted-foreground hover:text-destructive h-10 px-2.5 hover:bg-destructive/10 rounded-lg"
+                  aria-label="Remove line"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+
+            <div className="pt-4 border-t border-border flex justify-between items-center text-sm px-1">
+              <span className="font-semibold text-muted-foreground">Total Budget Committed:</span>
+              <span className="font-bold font-mono text-lg text-navy">
+                ₹{totalCommitted.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="flex items-center justify-end gap-3 pt-1">
+          <Link href="/budgets">
+            <Button type="button" variant="outline" size="sm" className="text-xs">
+              Cancel
+            </Button>
+          </Link>
+          <Button
+            type="submit"
+            disabled={submitting}
+            size="sm"
+            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
+          >
+            {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Create Draft Budget
+          </Button>
+        </div>
+      </form>
+    </div>
   );
 }

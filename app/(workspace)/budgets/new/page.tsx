@@ -17,11 +17,7 @@ export default async function NewBudgetPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
-      <PageHeader
-        title="Create New Budget"
-        description="Define target committed amounts for your revenue and expense analytic accounts."
-      />
+    <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <BudgetForm users={users} analytics={analytics} />
     </div>
   );
