@@ -21,6 +21,10 @@ import {
   Check,
   Mail,
   Send,
+  Building2,
+  Calendar,
+  FileCheck,
+  IndianRupee,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -720,7 +724,7 @@ export default function VendorBillsPage() {
             className="h-9 px-3.5 bg-teal hover:bg-teal/90 text-white text-xs font-semibold gap-1.5 shadow-2xs hover:shadow-xs transition-all"
           >
             <Plus className="h-4 w-4" />
-            + Add Vendor Bill
+            Add Vendor Bill
           </Button>
         </div>
       </div>
@@ -1183,159 +1187,180 @@ export default function VendorBillsPage() {
       {/* ADD VENDOR BILL MODAL */}
       {/* ========================================================================= */}
       <Dialog open={openCreateModal} onOpenChange={setOpenCreateModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
-          <DialogHeader>
-            <div className="flex items-center justify-between border-b border-border pb-3">
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0 rounded-2xl border border-border shadow-2xl bg-[#F8FAFC]">
+          {/* Modal Header */}
+          <div className="bg-white px-6 py-5 border-b border-border sticky top-0 z-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-teal-light text-teal flex items-center justify-center border border-teal/15 flex-shrink-0">
+                <Receipt className="h-5 w-5 text-teal" />
+              </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-navy">
-                  Add Vendor Bill
-                </DialogTitle>
+                <div className="flex items-center gap-2">
+                  <DialogTitle className="text-lg font-bold text-navy">
+                    Record Vendor Bill
+                  </DialogTitle>
+                  <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-teal-light text-teal border border-teal/20">
+                    Accounts Payable
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Record materials and furniture goods procurement received from vendor.
+                  Record materials and furniture goods procurement invoices received from registered suppliers.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold bg-navy/5 text-navy border border-navy/10">
-                Purchase Accounting
-              </span>
             </div>
-          </DialogHeader>
+          </div>
 
-          <div className="space-y-6 pt-3">
-            {/* Header Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Vendor */}
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Vendor <span className="text-destructive">*</span>
-                </label>
-                <select
-                  value={formVendor}
-                  onChange={(e) => setFormVendor(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Select a Vendor</option>
-                  {vendors.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
+          <div className="p-6 space-y-6">
+            {/* Section 1: Vendor & Document Identity */}
+            <div className="bg-white rounded-xl p-5 border border-border/80 shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 pb-2 border-b border-border/60 text-xs font-bold text-navy">
+                <Building2 className="h-4 w-4 text-teal" />
+                <span>Vendor & Procurement Reference</span>
               </div>
 
-              {/* Purchase Order */}
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Purchase Order (Optional)
-                </label>
-                <select
-                  value={formPurchaseOrder}
-                  onChange={(e) => setFormPurchaseOrder(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Direct Bill (No PO)</option>
-                  {purchaseOrders
-                    .filter((po) => !formVendor || po.vendorId === formVendor)
-                    .map((po) => (
-                      <option key={po.id} value={po.poNumber}>
-                        {po.poNumber}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Vendor Selector */}
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Vendor / Supplier <span className="text-destructive">*</span>
+                  </label>
+                  <select
+                    value={formVendor}
+                    onChange={(e) => setFormVendor(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
+                  >
+                    <option value="">Select Vendor...</option>
+                    {vendors.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name}
                       </option>
                     ))}
-                </select>
+                  </select>
+                </div>
+
+                {/* Purchase Order (Optional) */}
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Purchase Order (PO Link)
+                  </label>
+                  <select
+                    value={formPurchaseOrder}
+                    onChange={(e) => setFormPurchaseOrder(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
+                  >
+                    <option value="">Direct Bill (No PO)</option>
+                    {purchaseOrders
+                      .filter((po) => !formVendor || po.vendorId === formVendor)
+                      .map((po) => (
+                        <option key={po.id} value={po.poNumber}>
+                          {po.poNumber}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Vendor Bill Number */}
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Supplier Invoice / Bill #
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. VEND-INV-9821"
+                    value={formVendorBillNumber}
+                    onChange={(e) => setFormVendorBillNumber(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal placeholder:text-muted-foreground transition-all"
+                  />
+                </div>
               </div>
 
-              {/* Vendor Bill Number */}
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Vendor Bill Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. VEND-INV-9821"
-                  value={formVendorBillNumber}
-                  onChange={(e) => setFormVendorBillNumber(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                />
+              {/* Date & Payment Terms */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-1">
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Bill Date <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formBillDate}
+                    onChange={(e) => setFormBillDate(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Payment Due Date <span className="text-destructive">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formDueDate}
+                    onChange={(e) => setFormDueDate(e.target.value)}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-medium text-foreground block mb-1.5">
+                    Payment Terms
+                  </label>
+                  <select
+                    value={formPaymentTerms}
+                    onChange={(e) => {
+                      setFormPaymentTerms(e.target.value);
+                      const days = e.target.value === "NET_15" ? 15 : e.target.value === "NET_60" ? 60 : 30;
+                      const d = new Date(formBillDate);
+                      d.setDate(d.getDate() + days);
+                      setFormDueDate(d.toISOString().split("T")[0]);
+                    }}
+                    className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal focus:border-teal transition-all"
+                  >
+                    <option value="NET_15">Net 15 Days</option>
+                    <option value="NET_30">Net 30 Days (Standard)</option>
+                    <option value="NET_60">Net 60 Days</option>
+                    <option value="IMMEDIATE">Immediate / Due on Receipt</option>
+                  </select>
+                </div>
               </div>
             </div>
 
-            {/* Date & Terms Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Bill Date <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formBillDate}
-                  onChange={(e) => setFormBillDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Due Date <span className="text-destructive">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formDueDate}
-                  onChange={(e) => setFormDueDate(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-foreground block mb-1.5">
-                  Payment Terms
-                </label>
-                <select
-                  value={formPaymentTerms}
-                  onChange={(e) => {
-                    setFormPaymentTerms(e.target.value);
-                    const days = e.target.value === "NET_15" ? 15 : e.target.value === "NET_60" ? 60 : 30;
-                    const d = new Date(formBillDate);
-                    d.setDate(d.getDate() + days);
-                    setFormDueDate(d.toISOString().split("T")[0]);
-                  }}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="NET_15">Net 15 Days</option>
-                  <option value="NET_30">Net 30 Days (Standard)</option>
-                  <option value="NET_60">Net 60 Days</option>
-                  <option value="IMMEDIATE">Immediate / Due on Receipt</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Item Table */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-navy">
-                  Item Table (Product / Material)
-                </span>
+            {/* Section 2: Line Items Table */}
+            <div className="bg-white rounded-xl p-5 border border-border/80 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                <div className="flex items-center gap-2">
+                  <FileCheck className="h-4 w-4 text-teal" />
+                  <span className="text-xs font-bold text-navy">
+                    Itemized Procurement Lines
+                  </span>
+                  <span className="text-[11px] font-semibold text-muted-foreground bg-[#F1F5F9] px-2 py-0.5 rounded-full">
+                    {formLines.length} {formLines.length === 1 ? "Item" : "Items"}
+                  </span>
+                </div>
                 <Button
                   type="button"
                   onClick={handleAddLine}
                   variant="outline"
                   size="sm"
-                  className="h-7 text-[11px] gap-1 text-teal border-teal/30 hover:bg-teal/5"
+                  className="h-8 text-xs gap-1.5 text-teal border-teal/30 hover:bg-teal/5 font-semibold"
                 >
-                  <Plus className="w-3 h-3" />
-                  Add Item Row
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Line Item
                 </Button>
               </div>
 
-              <div className="border border-border rounded-xl overflow-hidden bg-white">
+              <div className="border border-border/80 rounded-xl overflow-hidden shadow-2xs">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px]">
+                  <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
                     <tr>
-                      <th className="py-2.5 px-3 w-[24%]">Product / Material</th>
-                      <th className="py-2.5 px-3 w-[22%]">Description</th>
-                      <th className="py-2.5 px-3 w-[8%] text-right">Qty</th>
-                      <th className="py-2.5 px-3 w-[8%] text-center">Unit</th>
-                      <th className="py-2.5 px-3 w-[12%] text-right">Unit Cost (₹)</th>
-                      <th className="py-2.5 px-3 w-[12%] text-left">Tax</th>
-                      <th className="py-2.5 px-3 w-[8%] text-right">Disc %</th>
-                      <th className="py-2.5 px-3 w-[10%] text-right">Amount</th>
-                      <th className="py-2.5 px-2 w-[4%] text-center"></th>
+                      <th className="py-3 px-3 w-[25%]">Product / Material</th>
+                      <th className="py-3 px-3 w-[21%]">Description / Specs</th>
+                      <th className="py-3 px-3 w-[8%] text-right">Qty</th>
+                      <th className="py-3 px-3 w-[7%] text-center">Unit</th>
+                      <th className="py-3 px-3 w-[13%] text-right">Unit Cost (₹)</th>
+                      <th className="py-3 px-3 w-[12%] text-left">Tax</th>
+                      <th className="py-3 px-3 w-[7%] text-right">Disc %</th>
+                      <th className="py-3 px-3 w-[11%] text-right">Amount (₹)</th>
+                      <th className="py-3 px-2 w-[4%] text-center"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
@@ -1347,15 +1372,15 @@ export default function VendorBillsPage() {
                       const lineSubtotal = Math.max(0, base - (base * disc) / 100);
 
                       return (
-                        <tr key={idx} className="hover:bg-surface-subtle/50">
+                        <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
                           {/* Product / Material */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <select
                               value={line.productId}
                               onChange={(e) =>
                                 handleLineChange(idx, "productId", e.target.value)
                               }
-                              className="w-full h-8 px-2 rounded-md border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-teal font-medium"
                             >
                               <option value="">Select item...</option>
                               {products.map((p) => (
@@ -1367,7 +1392,7 @@ export default function VendorBillsPage() {
                           </td>
 
                           {/* Description */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <input
                               type="text"
                               value={line.description}
@@ -1375,12 +1400,12 @@ export default function VendorBillsPage() {
                                 handleLineChange(idx, "description", e.target.value)
                               }
                               placeholder="Specifications / Grade..."
-                              className="w-full h-8 px-2 rounded-md border border-border bg-white text-xs placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-teal"
                             />
                           </td>
 
                           {/* Quantity */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <input
                               type="number"
                               min="1"
@@ -1388,19 +1413,19 @@ export default function VendorBillsPage() {
                               onChange={(e) =>
                                 handleLineChange(idx, "quantity", e.target.value)
                               }
-                              className="w-full h-8 px-2 text-right rounded-md border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2 text-right rounded-lg border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-teal font-medium"
                             />
                           </td>
 
                           {/* Unit */}
-                          <td className="p-2 text-center">
-                            <span className="text-[11px] text-muted-foreground font-medium">
+                          <td className="p-2.5 text-center">
+                            <span className="text-[11px] font-semibold text-muted-foreground bg-[#F1F5F9] px-2 py-1 rounded-md border border-border/50">
                               {line.unit || "pcs"}
                             </span>
                           </td>
 
                           {/* Unit Cost */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <input
                               type="number"
                               min="0"
@@ -1410,18 +1435,18 @@ export default function VendorBillsPage() {
                                 handleLineChange(idx, "unitCost", e.target.value)
                               }
                               placeholder="0.00"
-                              className="w-full h-8 px-2 text-right rounded-md border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2 text-right rounded-lg border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-teal font-medium"
                             />
                           </td>
 
                           {/* Tax */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <select
                               value={line.taxRateId}
                               onChange={(e) =>
                                 handleLineChange(idx, "taxRateId", e.target.value)
                               }
-                              className="w-full h-8 px-2 rounded-md border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2 rounded-lg border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-teal"
                             >
                               <option value="">No Tax (0%)</option>
                               {taxRates.map((t) => (
@@ -1433,7 +1458,7 @@ export default function VendorBillsPage() {
                           </td>
 
                           {/* Discount */}
-                          <td className="p-2">
+                          <td className="p-2.5">
                             <input
                               type="number"
                               min="0"
@@ -1442,24 +1467,24 @@ export default function VendorBillsPage() {
                               onChange={(e) =>
                                 handleLineChange(idx, "discountPercent", e.target.value)
                               }
-                              className="w-full h-8 px-2 text-right rounded-md border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-navy"
+                              className="w-full h-8.5 px-2 text-right rounded-lg border border-border bg-white text-xs focus:outline-hidden focus:ring-1 focus:ring-teal"
                             />
                           </td>
 
                           {/* Line Amount */}
-                          <td className="p-2 text-right font-medium text-foreground">
+                          <td className="p-2.5 text-right font-semibold text-navy">
                             ₹{lineSubtotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                           </td>
 
                           {/* Remove */}
-                          <td className="p-2 text-center">
+                          <td className="p-2.5 text-center">
                             <button
                               type="button"
                               onClick={() => handleRemoveLine(idx)}
-                              className="text-muted-foreground hover:text-destructive p-1 rounded transition-colors"
+                              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 p-1.5 rounded-lg transition-colors"
                               title="Delete Row"
                             >
-                              <Trash2 className="w-3.5 h-3.5" />
+                              <Trash2 className="w-4 h-4" />
                             </button>
                           </td>
                         </tr>
@@ -1470,18 +1495,23 @@ export default function VendorBillsPage() {
               </div>
             </div>
 
-            {/* Financial Summary */}
-            <div className="flex flex-col sm:flex-row justify-between gap-6 pt-2">
-              {/* Left guidance */}
-              <div className="w-full sm:w-1/2 p-3.5 rounded-xl bg-[#F8FAFC] border border-border space-y-1.5 text-xs text-muted-foreground">
-                <span className="font-semibold text-navy">Procurement & Accounts Payable</span>
-                <p>
-                  Posting this bill confirms receipt of materials and creates an outstanding payable obligation to the vendor in your ledger.
+            {/* Financial Summary & Breakdown */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+              {/* Left Informational Callout */}
+              <div className="md:col-span-6 p-4 rounded-xl bg-white border border-border/80 shadow-2xs space-y-2 text-xs">
+                <div className="flex items-center gap-2 text-navy font-bold">
+                  <div className="h-6 w-6 rounded-md bg-navy/5 text-navy flex items-center justify-center">
+                    <Receipt className="h-3.5 w-3.5" />
+                  </div>
+                  <span>Procurement & Double-Entry Ledger Impact</span>
+                </div>
+                <p className="text-muted-foreground text-[11px] leading-relaxed">
+                  Posting this vendor bill automatically credits <strong className="text-foreground">Accounts Payable (2000)</strong> and debits <strong className="text-foreground">Purchase Expenses / Inventory (5000)</strong>. Input tax credits for CGST and SGST will be scheduled in the tax ledger.
                 </p>
               </div>
 
-              {/* Totals Breakdown */}
-              <div className="w-full sm:w-80 p-4 rounded-xl bg-[#F8FAFC] border border-border space-y-2 text-xs">
+              {/* Right Summary Card */}
+              <div className="md:col-span-6 bg-white p-5 rounded-xl border border-border/80 shadow-2xs space-y-2.5 text-xs">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal:</span>
                   <span className="font-semibold text-foreground">
@@ -1489,22 +1519,22 @@ export default function VendorBillsPage() {
                   </span>
                 </div>
                 {formCalculations.totalDiscount > 0 && (
-                  <div className="flex justify-between text-emerald-600">
-                    <span>Discount:</span>
+                  <div className="flex justify-between text-emerald-600 font-medium">
+                    <span>Discount Deducted:</span>
                     <span>
                       -₹{formCalculations.totalDiscount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
                 )}
                 <div className="flex justify-between text-muted-foreground">
-                  <span>CGST:</span>
-                  <span>
+                  <span>CGST (Input Tax):</span>
+                  <span className="font-medium text-foreground">
                     ₹{formCalculations.cgst.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
-                  <span>SGST:</span>
-                  <span>
+                  <span>SGST (Input Tax):</span>
+                  <span className="font-medium text-foreground">
                     ₹{formCalculations.sgst.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
@@ -1515,57 +1545,57 @@ export default function VendorBillsPage() {
                     ₹{formCalculations.roundOff.toFixed(2)}
                   </span>
                 </div>
-                <div className="flex justify-between text-sm font-bold text-navy border-t border-border pt-2 mt-1">
-                  <span>Grand Total:</span>
-                  <span>
+                <div className="flex justify-between text-sm font-bold text-navy border-t border-border pt-3 mt-1">
+                  <span>Total Payable:</span>
+                  <span className="text-base text-navy font-extrabold">
                     ₹{formCalculations.grandTotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Action Buttons: Save Draft / Preview / Post Bill */}
-            <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-border">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setOpenCreateModal(false)}
-                disabled={submitting}
-                className="h-8.5 text-xs"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => handleSaveBill(true)}
-                disabled={submitting}
-                className="h-8.5 text-xs text-navy font-medium"
-              >
-                Save Draft
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => handleSaveBill(false)}
-                disabled={submitting}
-                className="h-8.5 text-xs bg-navy hover:bg-navy/90 text-white font-semibold gap-1.5"
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Posting Bill...
-                  </>
-                ) : (
-                  <>
-                    <Receipt className="w-3.5 h-3.5" />
-                    Post Bill
-                  </>
-                )}
-              </Button>
-            </div>
+          {/* Modal Footer Actions */}
+          <div className="bg-white px-6 py-4 border-t border-border sticky bottom-0 z-10 flex items-center justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setOpenCreateModal(false)}
+              disabled={submitting}
+              className="h-9 px-4 text-xs font-medium"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => handleSaveBill(true)}
+              disabled={submitting}
+              className="h-9 px-4 text-xs text-navy font-semibold hover:bg-slate-200/70"
+            >
+              Save as Draft
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleSaveBill(false)}
+              disabled={submitting}
+              className="h-9 px-5 text-xs bg-navy hover:bg-navy/90 text-white font-semibold gap-1.5 shadow-sm"
+            >
+              {submitting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Posting Bill...
+                </>
+              ) : (
+                <>
+                  <Receipt className="w-3.5 h-3.5" />
+                  Post Bill & Update AP
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
