@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import {
   getJournalsAction,
@@ -133,10 +134,13 @@ export default function JournalsPage() {
       j.code.toLowerCase().includes(search.toLowerCase())
   );
 
-  const accountOptions = accounts.map((acc) => ({
-    value: acc.id,
-    label: `${acc.code} - ${acc.name}`,
-  }));
+  const accountOptions = React.useMemo(() => {
+    return accounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.code} - ${acc.name}`,
+      subLabel: `Account #${acc.code}`,
+    }));
+  }, [accounts]);
 
   return (
     <div className="space-y-5">
@@ -181,14 +185,18 @@ export default function JournalsPage() {
                     { value: "CASH", label: "Cash Book" },
                   ]}
                 />
-                <FormSelect
-                  label="Default Offset Account"
-                  required
-                  value={defaultAccountId}
-                  onValueChange={setDefaultAccountId}
-                  options={accountOptions}
-                  placeholder="Select an account"
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground block">
+                    Default Offset Account <span className="text-destructive">*</span>
+                  </label>
+                  <SearchableSelect
+                    value={defaultAccountId}
+                    onChange={setDefaultAccountId}
+                    options={accountOptions}
+                    placeholder="Select an account"
+                    searchPlaceholder="Search account by code or name..."
+                  />
+                </div>
                 <div className="flex justify-end gap-2 pt-2">
                   <Button
                     type="button"
