@@ -1,7 +1,9 @@
-# Urban Furniture — Accounting System
+# LedgerOne — Accounting System
 ## End-to-End Workflow & Navigation Specification
 
-**Scope:** This document defines every screen in the system, who can access it, and the exact click-by-click navigation between screens. Every table below includes an **Actor** column so it is immediately clear *who* performs each action. No code or AI-driven features are included — this is a pure product/UX workflow specification for a production-ready, non-AI business accounting application.
+**Version:** 1.1 · **Related:** `PRD.md`, `architecture.md`, `USECASE.md`, `SCREENS.md`, `TECH_STACK.md`
+
+**Scope:** This document defines every screen in the system, who can access it, and the exact click-by-click navigation between screens. Every table below includes an **Actor** column so it is immediately clear *who* performs each action. No code is included. The accounting engine itself is fully deterministic and non-AI; the one exception is a scoped, FAQ-based Help Assistant chatbot (§2, §3.2, §4) that offers product guidance only and never touches financial data.
 
 ---
 
@@ -30,9 +32,9 @@
 
 | Actor | Who they are | Core Features |
 |---|---|---|
-| **Administrator** (Business Owner) | Owns the company account; the only role that can manage system users and company-wide settings | • Full access to all master data (create/edit/archive/delete)<br>• Create, confirm, and cancel all transactions (PO, SO, Bill, Invoice, Payments)<br>• Create and post manual Journal Entries<br>• Create, confirm, revise, and cancel Budgets<br>• View/print all financial reports<br>• Create and manage system Users (Admin & Accountant logins)<br>• Grant/revoke Contact Portal access<br>• Configure company settings (profile, tax rates, fiscal year) |
-| **Accountant** (Invoicing User) | Day-to-day bookkeeper; can self-register | • Create/edit/archive all master data (Contacts, Products, Chart of Accounts, Journals, Analytic Accounts, Tax Rates)<br>• Create and manage full Purchase cycle (PO → Bill → Payment)<br>• Create and manage full Sales cycle (SO → Invoice → Receipt)<br>• Create and post manual Journal Entries<br>• Create, confirm, and revise Budgets<br>• View/print all financial reports<br>• Grant Contact Portal access<br>• **Cannot** manage system Users or Company Settings; cannot permanently delete records (archive only) |
-| **Contact User** (Customer / Vendor Portal) | External party — a Customer, Vendor, or Both — invited by Admin/Accountant from the Contact record | • View own Sales Invoices (if Customer) in Paid / Partial / Not Paid status<br>• View own Vendor Bills (if Vendor) in Paid / Partial / Not Paid status<br>• Make a direct payment against an open invoice/bill<br>• View own payment history<br>• Update own profile/password<br>• **No** access to master data, other contacts' records, reports, or accounting screens |
+| **Administrator** (Business Owner) | Owns the company account; the only role that can manage system users and company-wide settings | • Full access to all master data (create/edit/archive/delete)<br>• Create, confirm, and cancel all transactions (PO, SO, Bill, Invoice, Payments)<br>• Create and post manual Journal Entries<br>• Create, confirm, revise, and cancel Budgets<br>• View/print all financial reports<br>• Reconcile Payment Gateway transactions against Receipts<br>• Create and manage system Users (Admin & Accountant logins)<br>• Grant/revoke Contact Portal access<br>• Configure company settings (profile, tax rates, fiscal year)<br>• Use the Help Assistant chatbot for product guidance |
+| **Accountant** (Invoicing User) | Day-to-day bookkeeper; can self-register | • Create/edit/archive all master data (Contacts, Products, Chart of Accounts, Journals, Analytic Accounts, Tax Rates)<br>• Create and manage full Purchase cycle (PO → Bill → Payment)<br>• Create and manage full Sales cycle (SO → Invoice → Receipt)<br>• Create and post manual Journal Entries<br>• Create, confirm, and revise Budgets<br>• View/print all financial reports<br>• Grant Contact Portal access<br>• Use the Help Assistant chatbot for product guidance<br>• **Cannot** manage system Users or Company Settings; cannot permanently delete records (archive only) |
+| **Contact User** (Customer / Vendor Portal) | External party — a Customer, Vendor, or Both — invited by Admin/Accountant from the Contact record | • View own Sales Invoices (if Customer) in Paid / Partial / Not Paid status, and pay them via the integrated Payment Gateway<br>• View own Vendor Bills (if Vendor) in Paid / Partial / Not Paid status — **view only, no payment action** (LedgerOne pays the vendor, not the reverse)<br>• View own payment history<br>• Update own profile/password<br>• Use the Help Assistant chatbot for product guidance<br>• **No** access to master data, other contacts' records, reports, or accounting screens |
 
 **How to read the tables below:** Every screen table includes an **Actor** column stating exactly who performs that row's action. Where a step is not performed by a person at all but happens automatically (e.g., a journal entry generated on confirming an invoice), the Actor is listed as **System (Automated)**.
 
@@ -60,6 +62,10 @@ These rules apply across every screen described in this document, so they are de
 | **Export** | All financial reports support Print (PDF). List views support Export to Excel/CSV. |
 | **Session** | User avatar (top-right of header) opens a dropdown with **My Profile** and **Logout**. Logout always returns to the Login Page. |
 | **Unauthorized access** | If a user's role does not permit a screen (e.g., Accountant tries a 🔒 Admin-only URL), the system shows an "Access Restricted" page with a link back to the Dashboard. |
+| **Toast (success) message** | Every completed action (Confirm, Post, Pay, Save, Archive, Revise) shows a brief, action-matched toast — e.g., "Invoice confirmed," "Payment recorded," "Budget revised" — then auto-dismisses. Never a generic "Success." |
+| **Inline validation message** | Form field errors (e.g., duplicate email, unbalanced entry) appear directly below the field the moment they're detected — never only in a separate summary or a toast. |
+| **Modal alert (blocking error)** | Critical or blocking conditions — an unbalanced Journal Entry, a failed Payment Gateway charge, a permission error — interrupt with a modal that must be acknowledged, rather than a passing toast. |
+| **Help Assistant widget** | A floating chat button, available on the App Dashboard and Portal Home (see §3.2, §4), opens a panel for FAQ-based product guidance. It is a persistent UI element, not a separate page, and never reads or displays financial data. |
 
 ---
 
@@ -100,6 +106,7 @@ These rules apply across every screen described in this document, so they are de
 | Purchase widget | Admin & Accountant | Same pattern as Sales widget, for **Purchase Order List View** |
 | Budget Reports widget | Admin & Accountant | Shows **Achieved / Budget / Committed** counts; **Report** button opens **Budget Report List View** |
 | Avatar (top-right) | Admin & Accountant | Dropdown → My Profile, Users (**Admin only**), Logout |
+| Help Assistant button | Admin & Accountant | Floating chat button → opens the Help Assistant panel for product-usage questions (see §2). Does not read financial data. |
 
 ---
 
@@ -174,31 +181,33 @@ These rules apply across every screen described in this document, so they are de
 ### 3.4 Sales Workflow
 
 **Flow chain (full cycle):**
-`[Admin/Accountant] Dashboard → Sales → Sales Order → Sales Order List View → [New] → Sales Order Form → [Confirm] → [Create Invoice] → Customer Invoice Form (fetched from SO) → [Confirm] → (System) auto Journal Entry created → [Pay] → Invoice Payment Modal → [Confirm] → (System) Invoice status updates to Paid/Partial`
+`[Admin/Accountant] Dashboard → Sales → Sales Order → Sales Order List View → [New] → Sales Order Form → [Confirm] → [Create Invoice] → Customer Invoice Form (fetched from SO) → [Confirm] → (System) Journal Entry #1 created → [Pay] → Invoice Payment Modal (manual) or Portal Payment Gateway (§4) → [Confirm/Webhook] → (System) Journal Entry #2 created, Invoice status updates to Paid/Partial`
 
 | Screen | Actor | Key Fields | Actions → Navigation |
 |---|---|---|---|
 | **Sales Order List View** | Admin & Accountant | SO No., Customer, Date, Status (All/Confirmed/Draft), Total | • **User** clicks **New** → **Sales Order Form** (blank)<br>• **User** clicks a row → **Sales Order Form** (filled)<br>• **User** clicks **Back** → App Dashboard |
 | **Sales Order Form View** | Admin & Accountant | SO No. (auto-sequence), Customer Name (many2one → Contact), SO Date, Lines: Product (many2one → Product), Budget Analytics (many2one → Analytic Account), Qty, Unit Price, Tax, Line Total (auto), Grand Total | • **User** clicks **Confirm** → status → Confirmed, order locked for editing<br>• **User** clicks **Create Invoice** → opens **Customer Invoice Form** pre-filled from this SO<br>• **User** clicks **Cancel** → status → Cancelled (confirmation modal first)<br>• **User** clicks **Back** → **Sales Order List View** |
 | **Customer Invoice List View** | Admin & Accountant | Invoice No., Customer, Date, Status, Total | • **User** clicks **New** → **Customer Invoice Form** (blank, no SO link)<br>• **User** clicks a row → **Customer Invoice Form** (filled)<br>• **User** clicks **Back** → App Dashboard |
-| **Customer Invoice Form View** | Admin & Accountant | Invoice No. (auto), Invoice Reference, Customer Name, Invoice Date, Due Date, Status (Paid/Partial/Not Paid — computed), Lines: Product, Chart of Account (defaults to Sales Income), Budget Analytics, Qty, Unit Price, Total; Footer: Paid via Cash, Paid via Bank, Amount Due | • **User** clicks **Confirm** → **System** validates debit=credit and auto-creates a **balanced Journal Entry** (visible in Journal Entries List, Sales Income A/c credited by default) → status locks<br>• **User** clicks **Pay** → opens **Invoice Payment Modal**<br>• **User** clicks **SO** button (visible only if created from an SO) → opens the source **Sales Order Form**<br>• **User** clicks **Budget** button → opens **Budget Report** filtered to this invoice's analytic line<br>• **User** clicks **Cancel** → status → Cancelled<br>• **User** clicks **Back** → **Customer Invoice List View** |
-| **Invoice Payment Modal** | Admin & Accountant | Payment Type = Receive (fixed), Partner (auto-filled), Amount (auto-filled from Amount Due, editable for partial payment), Payment Via (Bank default / Cash), Date (defaults today), Note | • **User** clicks **Confirm** → **System** records payment, updates Invoice's Paid/Partial/Not Paid status and Amount Due; a receipt record appears in **Receipt List View**; modal closes, returns to **Customer Invoice Form**<br>• **User** clicks gear icon → **Print** or **Send by Email** options<br>• **User** clicks **Cancel** → closes modal, no changes |
-| **Receipt List View** *(Sales-side payment ledger)* | Admin & Accountant | Date, Customer, Invoice Ref., Amount, Payment Via | • **User** clicks a row → opens read view of that payment (linked Invoice Payment record)<br>• **User** clicks **Back** → App Dashboard |
+| **Customer Invoice Form View** | Admin & Accountant | Invoice No. (auto), Invoice Reference, Customer Name, Invoice Date, Due Date, Status (Paid/Partial/Not Paid — computed), Lines: Product, Chart of Account (defaults to Sales Income), Budget Analytics, Qty, Unit Price, Total; Footer: Paid via Cash, Paid via Bank/Gateway, Amount Due | • **User** clicks **Confirm** → **System** validates debit=credit and auto-creates **Journal Entry #1** (Debit: Debtor, Credit: Sales Income — visible in Journal Entries List) → status locks; toast: "Invoice confirmed"<br>• **User** clicks **Pay** → opens **Invoice Payment Modal** (manual recording — a Customer paying via the Portal instead uses the Payment Gateway flow in §4)<br>• **User** clicks **SO** button (visible only if created from an SO) → opens the source **Sales Order Form**<br>• **User** clicks **Budget** button → opens **Budget Report** filtered to this invoice's analytic line<br>• **User** clicks **Cancel** → status → Cancelled<br>• **User** clicks **Back** → **Customer Invoice List View** |
+| **Invoice Payment Modal** *(manual — Admin/Accountant only)* | Admin & Accountant | Payment Type = Receive (fixed), Partner (auto-filled), Amount (auto-filled from Amount Due, editable for partial payment), Payment Via (Bank default / Cash), Date (defaults today), Note | • **User** clicks **Confirm** → **System** records the payment, auto-creates **Journal Entry #2** (Debit: Cash/Bank, Credit: Debtor), updates Invoice's Paid/Partial/Not Paid status and Amount Due; a receipt record appears in **Receipt List View**; modal closes, toast: "Payment recorded"<br>• **User** clicks gear icon → **Print** or **Send by Email** options<br>• **User** clicks **Cancel** → closes modal, no changes |
+| **Receipt List View** *(Sales-side payment ledger)* | Admin & Accountant | Date, Customer, Invoice Ref., Amount, Payment Via (Cash/Bank/Gateway), Gateway Reference *(if applicable)* | • **User** clicks a row → opens read view of that payment (linked Invoice Payment record, including the Payment Gateway transaction reference for reconciliation if it was a Portal payment)<br>• **User** clicks **Back** → App Dashboard |
 
 ---
 
 ### 3.5 Purchase Workflow
 
 **Flow chain (full cycle):**
-`[Admin/Accountant] Dashboard → Purchase → Purchase Order → PO List View → [New] → PO Form → [Confirm] → [Create Bill] → Vendor Bill Form (fetched from PO) → [Confirm] → (System) auto Journal Entry created → [Pay] → Bill Payment Modal → [Confirm] → (System) Bill status updates`
+`[Admin/Accountant] Dashboard → Purchase → Purchase Order → PO List View → [New] → PO Form → [Confirm] → [Create Bill] → Vendor Bill Form (fetched from PO) → [Confirm] → (System) Journal Entry #1 created → [Pay] → Bill Payment Modal → [Confirm] → (System) Journal Entry #2 created, Bill status updates`
+
+This entire cycle is Admin/Accountant only — vendor payments are always manual and internal; there is no Portal or gateway path here (LedgerOne pays the vendor, the vendor never pays LedgerOne).
 
 | Screen | Actor | Key Fields | Actions → Navigation |
 |---|---|---|---|
 | **Purchase Order List View** | Admin & Accountant | PO No., Vendor, Date, Status (All/Confirmed/Draft), Total | • **User** clicks **New** → **Purchase Order Form** (blank)<br>• **User** clicks a row → **Purchase Order Form** (filled)<br>• **User** clicks **Back** → App Dashboard |
 | **Purchase Order Form View** | Admin & Accountant | PO No. (auto-sequence), Vendor Name (many2one → Contact), PO Date, Lines: Product, Budget Analytics, Qty, Unit Price, Line Total (Qty × Price), Grand Total | • **User** clicks **Confirm** → status → Confirmed; if line amount exceeds remaining budget for that analytic, **System** shows a **non-blocking warning** ("Exceeds Approved Budget") — **User** may proceed or revise the budget first<br>• **User** clicks **Create Bill** → opens **Vendor Bill Form** pre-filled from this PO<br>• **User** clicks **Cancel** → status → Cancelled<br>• **User** clicks **Back** → **Purchase Order List View** |
 | **Vendor Bill List View** | Admin & Accountant | Bill No., Vendor, Date, Status, Total | • **User** clicks **New** → **Vendor Bill Form** (blank, no PO link)<br>• **User** clicks a row → **Vendor Bill Form** (filled)<br>• **User** clicks **Back** → App Dashboard |
-| **Vendor Bill Form View** | Admin & Accountant | Bill No. (auto), Bill Reference (free text), Vendor Name, Bill Date, Due Date, Status (Paid/Partial/Not Paid — computed), Lines: Product, Chart of Account (defaults to Purchase Expense), Budget Analytics, Qty, Unit Price, Total; Footer: Paid via Cash, Paid via Bank, Amount Due | • **User** clicks **Confirm** → **System** validates debit=credit and auto-creates a **balanced Journal Entry** (Purchase Expense A/c debited, Creditor A/c credited by default) → status locks<br>• **User** clicks **Pay** → opens **Bill Payment Modal**<br>• **User** clicks **PO** button (visible only if created from a PO) → opens source **Purchase Order Form**<br>• **User** clicks **Budget** button → opens **Budget Report** filtered to this bill's analytic line<br>• **User** clicks **Cancel** → status → Cancelled<br>• **User** clicks **Back** → **Vendor Bill List View** |
-| **Bill Payment Modal** | Admin & Accountant | Payment Type = Send (fixed), Partner (auto-filled), Amount (auto-filled from Amount Due, editable), Payment Via (Bank default / Cash), Date (defaults today), Note | • **User** clicks **Confirm** → **System** records payment, updates Bill's Paid/Partial/Not Paid status and Amount Due; a payment record appears in **Payment List View**; returns to **Vendor Bill Form**<br>• **User** clicks gear icon → **Print** or **Send by Email**<br>• **User** clicks **Cancel** → closes modal, no changes |
+| **Vendor Bill Form View** | Admin & Accountant | Bill No. (auto), Bill Reference (free text), Vendor Name, Bill Date, Due Date, Status (Paid/Partial/Not Paid — computed), Lines: Product, Chart of Account (defaults to Purchase Expense), Budget Analytics, Qty, Unit Price, Total; Footer: Paid via Cash, Paid via Bank, Amount Due | • **User** clicks **Confirm** → **System** validates debit=credit and auto-creates **Journal Entry #1** (Debit: Purchase Expense, Credit: Creditor) → status locks; toast: "Bill confirmed"<br>• **User** clicks **Pay** → opens **Bill Payment Modal**<br>• **User** clicks **PO** button (visible only if created from a PO) → opens source **Purchase Order Form**<br>• **User** clicks **Budget** button → opens **Budget Report** filtered to this bill's analytic line<br>• **User** clicks **Cancel** → status → Cancelled<br>• **User** clicks **Back** → **Vendor Bill List View** |
+| **Bill Payment Modal** | Admin & Accountant | Payment Type = Send (fixed), Partner (auto-filled), Amount (auto-filled from Amount Due, editable), Payment Via (Bank default / Cash), Date (defaults today), Note | • **User** clicks **Confirm** → **System** records the payment, auto-creates **Journal Entry #2** (Debit: Creditor, Credit: Cash/Bank), updates Bill's Paid/Partial/Not Paid status and Amount Due; a payment record appears in **Payment List View**; returns to **Vendor Bill Form**; toast: "Payment recorded"<br>• **User** clicks gear icon → **Print** or **Send by Email**<br>• **User** clicks **Cancel** → closes modal, no changes |
 | **Payment List View** *(Purchase-side payment ledger)* | Admin & Accountant | Date, Vendor, Bill Ref., Amount, Payment Via | • **User** clicks a row → opens read view of that payment<br>• **User** clicks **Back** → App Dashboard |
 
 ---
@@ -207,7 +216,7 @@ These rules apply across every screen described in this document, so they are de
 
 **Flow chain:**
 `[Admin/Accountant] Dashboard → Account → Journal Entries → Journal Entries List View → [New] → Journal Entry Form → [Post] → List View`
-`(System) Confirming a Bill/Invoice also drops a new entry directly into this List View`
+`(System) Two automatic entries land here per fully paid document: one at Bill/Invoice confirmation, and a second when its payment is recorded (manual or Payment Gateway)`
 
 | Screen | Actor | Key Fields | Actions → Navigation |
 |---|---|---|---|
@@ -257,17 +266,22 @@ These rules apply across every screen described in this document, so they are de
 
 **Used by:** Contact User only. Contact Users authenticate through the same **Login Page** (§3.1) using credentials provisioned via the **Invite to Portal** action performed earlier by an **Admin or Accountant** on their Contact record. Upon successful login, **System** detects the Contact role and routes them to **Portal Home** instead of the App Dashboard. The tabs a Contact sees depend on their Contact **Type** (set by Admin/Accountant on the Contact record): Customer → My Invoices tab; Vendor → My Bills tab; Both → both tabs appear.
 
+**Payment scoping (important):** Only **Sales Invoices** can be paid from the Portal, and only by a **Customer**, via the integrated Payment Gateway. **Vendor Bills are always view-only** in the Portal — LedgerOne pays its vendors, so a Vendor's "My Bills" screen has no Pay action at all, just status tracking.
+
 **Flow chain:**
-`[Contact User] Login Page → Portal Home → My Invoices (or My Bills) → Document Detail → [Pay Now] → Make Payment Modal → [Confirm] → (System) Document Detail status updated → Payment History`
+`[Contact User] Login Page → Portal Home → My Invoices → Invoice Detail → [Pay Now] → Payment Gateway Checkout → "Payment Processing" → (Payment Gateway webhook, System) → Invoice Detail shows Paid + toast → Payment History`
+`[Contact User] Login Page → Portal Home → My Bills → Bill Detail (read-only, no Pay action)`
 
 | Screen | Actor | Key Fields / Content | Actions → Navigation |
 |---|---|---|---|
-| **Portal Home** | Contact User | Summary tiles: Total Outstanding, Recently Paid, Overdue count | • **Contact User** clicks **My Invoices** tile/tab → **My Invoices List** (Customers only)<br>• **Contact User** clicks **My Bills** tile/tab → **My Bills List** (Vendors only)<br>• **Contact User** opens avatar dropdown → **My Profile**, **Payment History**, **Logout** |
-| **My Invoices List** | Contact User | Invoice No., Date, Due Date, Amount, Status (Paid/Partial/Not Paid) with filter chips | • **Contact User** clicks a row → **Document Detail (Invoice)**<br>• **Contact User** clicks **Back** → **Portal Home** |
-| **My Bills List** | Contact User | Bill No., Date, Due Date, Amount, Status (Paid/Partial/Not Paid) with filter chips | • **Contact User** clicks a row → **Document Detail (Bill)**<br>• **Contact User** clicks **Back** → **Portal Home** |
-| **Document Detail** (read-only Invoice/Bill view) | Contact User | Document No., Date, Due Date, Line items (Product, Qty, Price, Total), Amount Due, Status | • **Contact User** clicks **Pay Now** (enabled only if Amount Due > 0) → **Make Payment Modal**<br>• **Contact User** clicks **Download PDF** → downloads the invoice/bill<br>• **Contact User** clicks **Back** → source list |
-| **Make Payment Modal** | Contact User | Amount (defaults to Amount Due, editable for partial payment), Payment Method (Bank/Card/Cash reference), Note | • **Contact User** clicks **Confirm** → **System** submits payment, updates Amount Due and Status on the Document Detail screen; entry added to **Payment History**<br>• **Contact User** clicks **Cancel** → closes modal, no changes |
-| **Payment History List** *(production add-on)* | Contact User | Date, Document Ref., Amount Paid, Method | • **Contact User** clicks a row → re-opens the related **Document Detail**<br>• **Contact User** clicks **Back** → **Portal Home** |
+| **Portal Home** | Contact User | Summary tiles: Total Outstanding, Recently Paid, Overdue count | • **Contact User** clicks **My Invoices** tile/tab → **My Invoices List** (Customers only)<br>• **Contact User** clicks **My Bills** tile/tab → **My Bills List** (Vendors only)<br>• **Contact User** opens avatar dropdown → **My Profile**, **Payment History**, **Logout**<br>• **Contact User** clicks the **Help Assistant** button → opens the chat panel (product guidance only) |
+| **My Invoices List** | Contact User (Customer) | Invoice No., Date, Due Date, Amount, Status (Paid/Partial/Not Paid) with filter chips | • **Contact User** clicks a row → **Invoice Detail**<br>• **Contact User** clicks **Back** → **Portal Home** |
+| **My Bills List** | Contact User (Vendor) | Bill No., Date, Due Date, Amount, Status (Paid/Partial/Not Paid) with filter chips | • **Contact User** clicks a row → **Bill Detail** (read-only)<br>• **Contact User** clicks **Back** → **Portal Home** |
+| **Invoice Detail** (read + pay) | Contact User (Customer) | Invoice No., Date, Due Date, Line items (Product, Qty, Price, Total), Amount Due, Status | • **Contact User** clicks **Pay Now** (enabled only if Amount Due > 0) → **System** creates a Payment Gateway order → opens **Payment Gateway Checkout**<br>• **Contact User** clicks **Download PDF** → downloads the invoice<br>• **Contact User** clicks **Back** → **My Invoices List** |
+| **Bill Detail** (read-only) | Contact User (Vendor) | Bill No., Date, Due Date, Line items, Amount Due, Status | • **No Pay action is shown** — this screen only reports whether LedgerOne has paid the vendor<br>• **Contact User** clicks **Download PDF** → downloads the bill<br>• **Contact User** clicks **Back** → **My Bills List** |
+| **Payment Gateway Checkout** *(hosted by the gateway, e.g. Razorpay)* | Contact User (Customer) | Card / UPI / Netbanking entry, exact Amount Due (or a valid partial amount) | • **Contact User** completes payment on the gateway's hosted screen → redirected back to **Invoice Detail**, which shows **"Payment Processing"** — not yet "Paid" — until confirmation arrives<br>• **Contact User** abandons/fails checkout → redirected back to **Invoice Detail** unchanged, toast: "Payment not completed" |
+| **(System) Payment Gateway Webhook** | System | Signed server-to-server notification from the gateway | • **System** verifies the signature, checks for a duplicate transaction ID, then confirms the payment: records the payment, creates Journal Entry #2, updates Invoice status/Amount Due → **Invoice Detail** now shows **Paid/Partial** with a toast (visible next time the Contact views or refreshes the page); a confirmation email is sent<br>• On failure, the transaction is marked Failed and the Invoice is left exactly as it was |
+| **Payment History List** *(production add-on)* | Contact User | Date, Document Ref., Amount Paid, Method, Gateway Reference *(for gateway payments)*, Status | • **Contact User** clicks a row → re-opens the related **Invoice Detail**<br>• **Contact User** clicks **Back** → **Portal Home** |
 | **My Profile** *(production add-on)* | Contact User | Name, Email, Phone, Change Password | • **Contact User** clicks **Save** → **System** updates record, returns to **Portal Home** |
 
 ---
@@ -322,6 +336,8 @@ These rules apply across every screen described in this document, so they are de
 | 43 | Balance Sheet Report | Admin |
 | 44 | Company Settings Page 🔒 | Admin only |
 
+*The Help Assistant is a persistent floating widget on the App Dashboard, not a separate numbered page (see §2, §3.2).*
+
 ### Accountant (Invoicing User) — full page list
 Same as Administrator **except**: no access to *Create User Page*, *User Management List*, or *Company Settings Page* (rows 4, 5, 44 above do not apply). All other 41 pages are identical, plus the **Sign Up Page** (used to self-register as an Accountant — Admin never needs this page since Admin accounts are only created via Create User).
 
@@ -344,10 +360,13 @@ Same as Administrator **except**: no access to *Create User Page*, *User Managem
 | 4 | Portal Home | Contact User |
 | 5 | My Invoices List *(if Customer)* | Contact User |
 | 6 | My Bills List *(if Vendor)* | Contact User |
-| 7 | Document Detail (Invoice/Bill) | Contact User |
-| 8 | Make Payment Modal | Contact User |
-| 9 | Payment History List | Contact User |
-| 10 | My Profile | Contact User |
+| 7 | Invoice Detail — read + Pay Now *(Customer only)* | Contact User |
+| 8 | Bill Detail — read-only, no payment action *(Vendor only)* | Contact User |
+| 9 | Payment Gateway Checkout *(hosted by the gateway)* | Contact User |
+| 10 | Payment History List | Contact User |
+| 11 | My Profile | Contact User |
+
+*The Help Assistant is a persistent floating widget on Portal Home, not a separate numbered page (see §2, §4).*
 
 ---
 
@@ -368,8 +387,14 @@ Same as Administrator **except**: no access to *Create User Page*, *User Managem
 **Purchase Order** *(action by Admin/Accountant, warning shown by System)*: Confirming a PO whose line amount exceeds the remaining approved budget for its Analytic Account shows a non-blocking warning; the user can still proceed or revise the budget.
 
 **Vendor Bill / Customer Invoice** *(action by Admin/Accountant; computation by System)*:
-- Status (Paid / Partial / Not Paid) is a computed field: `Amount Due = Total − (Paid via Cash + Paid via Bank)`.
-- Confirming either document auto-creates a balanced Journal Entry (default account: Purchase Expense for Bills, Sales Income for Invoices).
+- Status (Paid / Partial / Not Paid) is a computed field: `Amount Due = Total − (Paid via Cash + Paid via Bank/Gateway)`.
+- Confirming either document auto-creates **Journal Entry #1**, a balanced entry using the default account (Purchase Expense for Bills, Sales Income for Invoices).
+- Recording a payment against either — manually or via the Payment Gateway — auto-creates a **second, separate** balanced Journal Entry (Debit: Cash/Bank, Credit: Debtor for an Invoice; Debit: Creditor, Credit: Cash/Bank for a Bill). This is the entry that actually moves the Cash/Bank balance shown on the Balance Sheet — without it, that balance would never change.
+
+**Payment Gateway** *(Contact-initiated; verified by System)*:
+- Only Sales Invoices can be paid this way — Vendor Bills never have a Pay action in the Portal.
+- A payment is marked Paid only after the gateway's webhook signature is verified server-side. A client-side redirect back to the app is shown as "Payment Processing," never as confirmation on its own.
+- Duplicate webhook deliveries for the same gateway transaction are ignored (idempotency check) so a payment is never recorded twice.
 
 **Budget lifecycle** *(actions by Admin/Accountant; computation by System)*: Draft → Confirm → (optionally) Revised → Cancelled.
 - **Confirm:** locks the committed amounts and reveals Achieved Amount/%.
@@ -382,4 +407,8 @@ Same as Administrator **except**: no access to *Create User Page*, *User Managem
 - Profit & Loss: Income = total of accounts typed Income; Expenses = total of accounts typed Expense + Other Expense; Net Income = Income − Expenses.
 - Balance Sheet: Assets = accounts typed Asset (Bank, Cash, Debtors); Liabilities = accounts typed Liability + Capital (Creditors, Capital).
 
-**Payments** *(action by Admin/Accountant for Bills/Invoices, or by Contact User via Portal)*: A payment always references its source document (Bill or Invoice), updates that document's Amount Due and status, and is recorded in the corresponding Payment/Receipt ledger.
+**Payments** *(action by Admin/Accountant for Bills/Invoices, or by Contact User via the Payment Gateway for Invoices only)*: A payment always references its source document, updates that document's Amount Due and status, is recorded in the corresponding Payment/Receipt ledger, and generates Journal Entry #2 (see above).
+
+**Feedback & Messaging** *(System-enforced UI convention, see §2)*: every action ends in exactly one of — a toast (success), an inline message (field-level validation), or a modal (blocking/critical error). No action is ever silent.
+
+**Help Assistant** *(System, read-only)*: answers product-usage questions from a fixed FAQ knowledge base only. It cannot read, compute, or display any financial data, and redirects account-specific questions ("how much do I owe") to the relevant screen instead of guessing.

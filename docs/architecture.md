@@ -1,6 +1,6 @@
-# Architecture — Urban Furniture Accounting System
+# Architecture — LedgerOne Accounting System
 
-**Version:** 1.0 · **Related:** `prd.md`, `TECH_STACK.md`, `Urban_Furniture_Accounting_System_Workflow.md`
+**Version:** 1.1 · **Related:** `PRD.md`, `TECH_STACK.md`, `WORKFLOW.md`, `USECASE.md`, `SCREENS.md`
 
 ---
 
@@ -46,6 +46,19 @@ This is intentional, not a shortcut: at this scale (one company, three roles, mo
                 │    Resend      │
                 │ (email)        │
                 └───────────────┘
+
+        Separate, isolated integrations (never share the transaction above):
+
+                ┌─────────────────────────────┐        ┌────────────────────┐
+                │   Payment Gateway (Razorpay)   │◄─────►│  Public Webhook Route │
+                │   Checkout (Portal only)       │       │  (signature-verified,  │
+                └─────────────────────────────┘        │  no user session)      │
+                                                          └────────────────────┘
+
+                ┌─────────────────────────────┐
+                │  Help Assistant (LLM API)      │  ← read-only FAQ knowledge base only,
+                │  Dashboard + Portal widget      │    never touches PostgreSQL
+                └─────────────────────────────┘
 ```
 
 ---
@@ -57,7 +70,7 @@ This is intentional, not a shortcut: at this scale (one company, three roles, mo
 | **Presentation** (Next.js routes, Server/Client Components) | Renders UI, collects input, calls services | Does not contain business rules or direct DB queries |
 | **Application/Service** | Owns all business logic — validation, calculations, orchestration, transactions | Does not render UI |
 | **Data Access** (Prisma) | Reads/writes PostgreSQL | Does not contain business rules |
-| **External Integrations** (S3, Resend, Auth.js) | File storage, email delivery, authentication | Not called directly from the Presentation layer — always through a service |
+| **External Integrations** (S3, Resend, Auth.js, Payment Gateway, LLM API) | File storage, email delivery, authentication, online payment collection, product-help answers | Not called directly from the Presentation layer — always through a service. The Payment Gateway's webhook is the one deliberate exception to "no layer skipped": it is a public route that calls straight into `PaymentService` after signature verification, since the gateway has no user session to route through |
 
 **Rule:** routes and components call services; services call Prisma. No layer is ever skipped.
 
@@ -69,15 +82,17 @@ This is intentional, not a shortcut: at this scale (one company, three roles, mo
 |---|---|---|
 | **Auth** | Login, sign-up, password reset, session/role checks, portal invitations | User (internal), Contact login |
 | **Master Data** | Contacts, Products, Chart of Accounts, Journals, Analytic Accounts, Tax Rates | Contact, Product, Account, Journal, AnalyticAccount, TaxRate |
-| **Purchase** | Purchase Order → Vendor Bill → Payment | PurchaseOrder, VendorBill, BillPayment |
-| **Sales** | Sales Order → Customer Invoice → Receipt | SalesOrder, CustomerInvoice, InvoicePayment |
-| **Accounting** | Manual + auto Journal Entries, balance enforcement | JournalEntry, JournalEntryLine |
+| **Purchase** | Purchase Order → Vendor Bill → Payment (manual only — LedgerOne pays the vendor) | PurchaseOrder, VendorBill, BillPayment |
+| **Sales** | Sales Order → Customer Invoice → Receipt (manual or gateway) | SalesOrder, CustomerInvoice, InvoicePayment |
+| **Payments** | Payment Gateway order creation, webhook verification, idempotent payment recording | PaymentGatewayTransaction |
+| **Accounting** | Manual + auto Journal Entries, balance enforcement, the payment-triggered second entry | JournalEntry, JournalEntryLine |
 | **Budgeting** | Budget lifecycle, achievement computation | Budget, BudgetLine |
 | **Reporting** | Balance Sheet, P&L, Budget Report | (read-only, derived from Accounting + Budgeting) |
-| **Portal** | Contact-scoped invoice/bill viewing and payment | Reuses Sales/Purchase entities, scoped by Contact |
+| **Portal** | Contact-scoped invoice/bill viewing and payment | Reuses Sales/Purchase/Payments entities, scoped by Contact |
+| **Support Assistant** | FAQ-based product-help chat (Workspace + Portal) | None persisted (session-only) — reads a static knowledge base, never Prisma |
 | **Settings** | Company profile, numbering, fiscal year | CompanySettings |
 
-Each module = one service (e.g., `SalesOrderService`, `BudgetService`) that owns its validation and transaction logic. Modules interact only through service calls, never by reaching into another module's data directly (e.g., Budgeting reads Sales/Purchase data through their services, not raw queries).
+Each module = one service (e.g., `SalesOrderService`, `BudgetService`, `PaymentService`) that owns its validation and transaction logic. Modules interact only through service calls, never by reaching into another module's data directly (e.g., Budgeting reads Sales/Purchase data through their services, not raw queries). The **Support Assistant is intentionally the most isolated module** — it has no dependency on, and no access to, any other module's data or services, so it can never become a path to financial data disclosure.
 
 ---
 
@@ -89,21 +104,46 @@ Each module = one service (e.g., `SalesOrderService`, `BudgetService`) that owns
 3. Service opens a single `prisma.$transaction`:
    - Validates the invoice is still Draft.
    - Computes line totals.
-   - Creates a balanced `JournalEntry` (Debit: Debtor, Credit: Sales Income).
+   - Creates a balanced `JournalEntry` #1 (Debit: Debtor, Credit: Sales Income).
    - Updates invoice status to Confirmed.
 4. Transaction commits — either all writes succeed or none do.
-5. Updated invoice returned to the UI; Journal Entries list reflects the new entry immediately.
+5. Updated invoice returned to the UI; Journal Entries list reflects the new entry immediately. **Cash/Bank is not yet affected** — that happens only when a payment is recorded (§5.2/§5.3).
 
-### 5.2 Contact Portal Payment
-1. Contact User clicks **Pay Now** on Document Detail (Portal).
-2. `PaymentService.recordPayment(invoiceId, amount)` runs, first re-verifying the invoice's `contactId` matches the logged-in session's contact — request is rejected otherwise.
-3. Payment recorded, Invoice's Amount Due/Status recomputed in the same transaction.
-4. `EmailService` (via Resend) sends a payment confirmation — called synchronously after the transaction commits.
+### 5.2 Record a Manual Payment (Admin/Accountant — Bill or Invoice)
+1. User clicks **Pay** on a Vendor Bill or Customer Invoice, fills the Payment modal, clicks **Confirm**.
+2. `PaymentService.recordManualPayment(documentId, amount, method)` opens a single `prisma.$transaction`:
+   - Creates the Payment/Receipt record.
+   - Creates a balanced `JournalEntry` #2 — (Debit: Creditor, Credit: Cash/Bank) for a Bill, or (Debit: Cash/Bank, Credit: Debtor) for an Invoice.
+   - Recomputes Amount Due and Paid/Partial/Not Paid status.
+3. Transaction commits; UI shows a toast ("Payment recorded") and the updated status.
 
-### 5.3 Confirm a Budget
+### 5.3 Contact Portal Payment (Payment Gateway)
+This always runs in two separate requests — initiation and webhook confirmation — because the gateway, not the browser, is the source of truth for success.
+
+**Phase A — Initiate (Contact User, in-session):**
+1. Contact clicks **Pay Now** on an Invoice's Document Detail (Portal). Not available on Vendor Bills.
+2. `PaymentService.createGatewayOrder(invoiceId, amount)` first re-verifies the invoice's `contactId` matches the logged-in session's contact — rejected otherwise.
+3. A `PaymentGatewayTransaction` row is created with status `Initiated`, and a gateway order is requested from Razorpay.
+4. Browser opens the gateway checkout with the returned order ID. The UI shows a **"Payment Processing"** state — it does **not** mark anything Paid yet.
+
+**Phase B — Confirm (Payment Gateway → public webhook, no user session):**
+5. Razorpay sends a webhook to a dedicated public route once the payment settles.
+6. The route verifies the webhook signature against the gateway secret; invalid signatures are rejected with no further processing.
+7. `PaymentService.confirmGatewayPayment(gatewayTransactionId, status)` checks for an existing processed transaction with this ID (idempotency) before proceeding.
+8. On first successful confirmation, the same `prisma.$transaction` as §5.2 runs: create Invoice Payment, create `JournalEntry` #2 (Debit: Cash/Bank, Credit: Debtor), recompute status, mark the `PaymentGatewayTransaction` `Success`.
+9. `EmailService` (via Resend) sends a payment confirmation. If the Contact is still on the Portal page, a lightweight poll/refresh picks up the new status and shows a success toast; otherwise they see it next time they open the Invoice.
+10. On failure/timeout, the transaction is marked `Failed`; the Invoice is left exactly as it was — never partially updated.
+
+### 5.4 Confirm a Budget
 1. User clicks **Confirm** on the Budget Form.
 2. `BudgetService.confirm(budgetId)` locks committed amounts and, for each budget line, calls `BudgetService.computeAchieved(analyticAccountId, period)`, which sums matching Sales Invoice / Vendor Bill lines via `SalesOrderService`/`PurchaseOrderService` read methods.
 3. Achieved Amount, Achieved %, and Amount to Achieve are persisted and returned.
+
+### 5.5 Ask the Help Assistant
+1. User (any role) opens the chat widget and types a question.
+2. `SupportAssistantService.ask(question)` sends the question plus a fixed product-FAQ knowledge base to the LLM API — **no database call is made**.
+3. Response streamed back to the widget. If the question looks account-specific ("how much do I owe"), the service returns a fixed redirect message pointing to the relevant screen instead of guessing.
+4. Nothing is persisted; the conversation lives only in client-side component state for the duration of the session.
 
 ---
 
@@ -111,15 +151,17 @@ Each module = one service (e.g., `SalesOrderService`, `BudgetService`) that owns
 
 - **One PostgreSQL database, one schema** — no sharding, no per-tenant database (single company in scope).
 - All monetary columns use `Decimal`, never floating point.
-- Full entity list and relationships: see `prd.md` §9. Core transactional spine:
+- Full entity list and relationships: see `PRD.md` §9. Core transactional spine:
 
 ```
 Contact ──< PurchaseOrder ──< VendorBill ──< BillPayment
-Contact ──< SalesOrder ──< CustomerInvoice ──< InvoicePayment
+Contact ──< SalesOrder ──< CustomerInvoice ──< InvoicePayment ── PaymentGatewayTransaction
 Account ──< JournalEntryLine >── JournalEntry ── Journal
 AnalyticAccount ──< (Sales/Purchase lines, BudgetLine)
 Budget ──< BudgetLine
 ```
+
+Each `VendorBill`/`CustomerInvoice` confirmation and each `BillPayment`/`InvoicePayment` produces its own `JournalEntry` — two entries per fully paid document, never one (see §5.1–5.3).
 
 - Foreign keys enforced at the database level (not just application-level checks).
 - Indexes on all foreign keys plus `status`, `date`, and `contactId` (the last one is also a security boundary — see §7).
@@ -135,7 +177,9 @@ Budget ──< BudgetLine
 | Contact data isolation | Every Portal-facing query includes `WHERE contactId = session.contactId`; this is treated as a security control, not just a filter |
 | Input validation | Zod schemas at every service entry point — reject before any DB write |
 | Transport | HTTPS only; secure, HTTP-only session cookies |
-| Secrets | Environment variables per environment, never committed to source |
+| Secrets | Environment variables per environment, never committed to source. Payment Gateway keys and the LLM API key are environment secrets only — never stored in the database or surfaced in any Company Settings UI field |
+| Webhook authenticity | The Payment Gateway webhook route has no user session by design; it is instead secured by verifying the gateway's cryptographic signature on every request. Unsigned or invalid requests are rejected before touching `PaymentService` |
+| Webhook idempotency | Each webhook is matched against its gateway transaction ID before processing, so a retried/duplicate delivery can never create a second Payment record |
 
 ---
 
@@ -145,6 +189,7 @@ Budget ──< BudgetLine
 - Single managed PostgreSQL instance (Neon/Supabase) with connection pooling for serverless connections.
 - Three environments: **Development** (local/preview), **Staging**, **Production** — same codebase, separate databases.
 - No caching layer, message queue, or container orchestration — deliberately out of scope (see §10).
+- One route is deliberately public/unauthenticated by design: the Payment Gateway webhook (`/api/webhooks/payment`) — protected by signature verification instead of a session, since the gateway cannot hold one (see §7).
 
 ---
 
@@ -168,6 +213,7 @@ To keep the system production-grade *without* over-engineering it for its actual
 - **No CQRS or event sourcing** — standard CRUD with an audit-safe status model (Draft/Confirmed/Cancelled) is enough for this domain.
 - **No container orchestration (Kubernetes, etc.)** — serverless hosting (Vercel) covers the scaling need without operational overhead.
 - **No multi-region/active-active setup** — a single-region managed database is appropriate for a single-company system.
+- **No "chat with your financial data" system** — the Help Assistant is a static-FAQ chatbot only; it does not do retrieval over live transactions, does not call Prisma, and does not generate financial answers. This keeps the deterministic accounting core (§1) genuinely deterministic.
 
 These are documented as conscious decisions so they can be revisited explicitly if the business genuinely outgrows them — not defaults chosen by omission.
 
@@ -180,12 +226,17 @@ app/
   (auth)/            → login, sign-up, forgot/reset password
   (workspace)/        → Admin & Accountant screens (dashboard, masters, transactions, reports)
   (portal)/            → Contact portal screens
+  api/
+    webhooks/
+      payment/         → public, signature-verified Payment Gateway webhook route
 lib/
-  services/            → one file per domain service (salesOrder, vendorBill, budget, ...)
+  services/            → one file per domain service (salesOrder, vendorBill, budget, payment, ...)
   validation/          → Zod schemas, one per entity
   auth/                → Auth.js config, session helpers
   email/               → Resend client + templates
   pdf/                 → @react-pdf/renderer templates
+  payments/            → Payment Gateway client, order creation, webhook signature verification
+  chatbot/             → Help Assistant: LLM client + static FAQ knowledge base
 prisma/
   schema.prisma        → single source of truth for the data model
 ```

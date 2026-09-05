@@ -1,14 +1,14 @@
 # Product Requirements Document (PRD)
-## Urban Furniture — Accounting System
+## LedgerOne — Accounting System
 
 | Field | Detail |
 |---|---|
-| **Product Name** | Urban Furniture Accounting System |
+| **Product Name** | LedgerOne |
 | **Document Type** | Product Requirements Document (PRD) |
-| **Version** | 1.0 |
+| **Version** | 1.1 |
 | **Status** | Draft — for review |
-| **Related Documents** | `Urban_Furniture_Accounting_System_Workflow.md` (screen-by-screen navigation spec) |
-| **Feature Constraints** | No AI-driven features. No code/implementation details — this document defines *what* the product must do, not *how* it is built. |
+| **Related Documents** | `WORKFLOW.md` (screen-by-screen navigation spec), `USECASE.md` (use case specification), `architecture.md`, `TECH_STACK.md`, `SCREENS.md` |
+| **Feature Constraints** | The core accounting/financial engine (calculations, journal entries, reports) contains no AI-driven logic — it is fully deterministic. The one explicit exception is a scoped, FAQ-based Help Assistant chatbot (see §7.17) that answers product usage questions only and never touches financial data. No code/implementation details — this document defines *what* the product must do, not *how* it is built. |
 
 ---
 
@@ -35,15 +35,15 @@
 
 ## 1. Executive Summary
 
-Urban Furniture needs a single, purpose-built accounting system that replaces fragmented spreadsheets and manual ledgers with a structured, auditable workflow covering master data, purchases, sales, payments, budgeting, and financial reporting. The system will be used internally by the business owner and accountant to run day-to-day bookkeeping, and externally by customers and vendors through a lightweight self-service portal for viewing and settling their own invoices/bills.
+LedgerOne is a purpose-built accounting system for small businesses (e.g., a furniture retailer) that replaces fragmented spreadsheets and manual ledgers with a structured, auditable workflow covering master data, purchases, sales, payments, budgeting, and financial reporting. It is used internally by a business owner and accountant to run day-to-day bookkeeping, and externally by that business's own customers and vendors through a lightweight self-service portal for viewing and settling invoices/bills — including paying online via an integrated payment gateway.
 
-The product is a traditional, deterministic business application — every number on every report is produced by explicit, auditable calculation rules (double-entry bookkeeping, account-type aggregation), not by any predictive or generative logic.
+The core product is a traditional, deterministic business application — every number on every report is produced by explicit, auditable calculation rules (double-entry bookkeeping, account-type aggregation), not by any predictive or generative logic. The one bounded exception is an optional Help Assistant chatbot for product guidance (§7.17), which is fully isolated from the accounting engine.
 
 ---
 
 ## 2. Problem Statement
 
-Urban Furniture currently manages its books through disconnected, manual processes. This creates the following pain points:
+Small businesses adopting LedgerOne typically come from disconnected, manual bookkeeping processes. This creates the following pain points:
 
 | Pain Point | Impact |
 |---|---|
@@ -91,24 +91,27 @@ Urban Furniture currently manages its books through disconnected, manual process
 ### 5.1 In Scope (MVP + near-term)
 - User authentication, self-registration (Accountant), and Admin-managed internal user provisioning
 - Master data: Contacts, Products, Chart of Accounts, Journals, Analytic Accounts, Tax Rates
-- Purchase cycle: Purchase Order → Vendor Bill → Bill Payment
-- Sales cycle: Sales Order → Customer Invoice → Invoice Payment/Receipt
-- Manual and auto-generated Journal Entries with balance enforcement
+- Purchase cycle: Purchase Order → Vendor Bill → Bill Payment (manual, internally recorded)
+- Sales cycle: Sales Order → Customer Invoice → Invoice Payment/Receipt (manual or via Payment Gateway)
+- Manual and auto-generated Journal Entries with balance enforcement, including the second entry generated when a payment is recorded (§10, rule 10)
 - Budgeting with Draft/Confirm/Revise/Cancel lifecycle and actuals tracking via Analytic Accounts
 - Financial reports: Balance Sheet, Profit & Loss, Budget Report
-- Customer/Vendor self-service portal: view own invoices/bills, make payments, view payment history
+- Payment Gateway integration for customer self-service invoice payments (Portal only — see §7.16)
+- Customer/Vendor self-service portal: view own invoices/bills, pay Invoices online (Customers), view payment history
+- Scoped Help Assistant chatbot for product-usage guidance, available in the Workspace and Portal (see §7.17)
 - Company-level configuration (Admin only)
 
 ### 5.2 Explicitly Out of Scope (this release)
-- Any AI/ML-driven feature (auto-categorization, predictive insights, chat assistants, OCR-based data entry)
+- Any AI/ML-driven feature within the core accounting engine (auto-categorization, predictive insights, OCR-based data entry, automated financial analysis) — the only exception is the scoped Help Assistant chatbot in §7.17, which never accesses financial data
 - Multi-company / multi-entity consolidation
 - Multi-currency accounting
 - Inventory/warehouse stock management (Products are catalog/pricing records only — no stock quantities or stock movement)
 - Payroll and HR
 - Bank feed integration / automated bank reconciliation
+- Outbound vendor payouts via a gateway/disbursement API (vendor payments remain a manual, internally recorded Bank/Cash entry)
 - Recurring/subscription invoicing
 - Approval-chain workflows (e.g., multi-level PO approval)
-- Third-party integrations (payment gateways beyond a manual "record payment" step, accounting-standard exports like Tally/QuickBooks)
+- Third-party integrations beyond the Payment Gateway and email/PDF delivery (e.g., accounting-standard exports like Tally/QuickBooks)
 
 ## 6. Roles & Permissions Matrix
 
@@ -129,8 +132,10 @@ Urban Furniture currently manages its books through disconnected, manual process
 | Budgets (create/confirm/revise/cancel) | Full | Full | No access |
 | Financial Reports (Balance Sheet, P&L, Budget Report) | Full (view + print) | Full (view + print) | No access |
 | Invite Contact to Portal | Yes | Yes | N/A |
-| Own Invoices/Bills (portal) | N/A | N/A | View + Pay (own records only) |
+| Own Sales Invoices (portal) | N/A | N/A | View + Pay via Payment Gateway (Customer only, own records only) |
+| Own Vendor Bills (portal) | N/A | N/A | View only — no payment action (Vendor only; LedgerOne pays the vendor, not the reverse) |
 | Own Payment History (portal) | N/A | N/A | View own only |
+| Help Assistant Chatbot | Full (product guidance) | Full (product guidance) | Full (product guidance) |
 
 *"Full" = Create, Read, Update, Archive unless otherwise noted. Hard delete (permanent removal) is reserved for Administrator only, and only on records with no linked transactions.*
 
@@ -211,7 +216,7 @@ Each requirement includes a priority: **P0** = required for MVP launch, **P1** =
 | FR-9.3 | Convert a confirmed Purchase Order into a Vendor Bill | Admin, Accountant | P0 | New Bill pre-fills Vendor, Product, Quantity, and Price from the PO; the Bill retains a link back to its source PO |
 | FR-9.4 | Create a Vendor Bill independent of a PO | Admin, Accountant | P0 | Same fields as a PO-sourced bill, entered manually |
 | FR-9.5 | Confirm a Vendor Bill | Admin, Accountant | P0 | Auto-generates a balanced Journal Entry (Debit: Purchase Expense — or the selected account, Credit: Creditor) and posts it to the Journal Entries list |
-| FR-9.6 | Record a payment against a Vendor Bill | Admin, Accountant | P0 | Payment Amount defaults to Amount Due (editable for partial payment); Payment Via defaults to Bank (switchable to Cash); Bill's status (Paid/Partial/Not Paid) and Amount Due recompute immediately |
+| FR-9.6 | Record a payment against a Vendor Bill | Admin, Accountant | P0 | Payment Amount defaults to Amount Due (editable for partial payment); Payment Via defaults to Bank (switchable to Cash); Bill's status (Paid/Partial/Not Paid) and Amount Due recompute immediately; System auto-generates a second balanced Journal Entry (Debit: Creditor, Credit: Cash/Bank) so the Balance Sheet's Cash/Bank balance reflects the outgoing payment |
 | FR-9.7 | View all Purchase Orders, Vendor Bills, and Payments in dedicated, filterable list views | Admin, Accountant | P0 | Lists support status filtering (All/Confirmed/Draft) and search |
 | FR-9.8 | Cancel a Purchase Order or Vendor Bill | Admin, Accountant | P0 | Cancelled documents are excluded from budget-achievement and financial-report calculations |
 
@@ -224,7 +229,7 @@ Each requirement includes a priority: **P0** = required for MVP launch, **P1** =
 | FR-10.3 | Convert a confirmed Sales Order into a Customer Invoice | Admin, Accountant | P0 | New Invoice pre-fills Customer, Product, Quantity, and Price from the SO; the Invoice retains a link back to its source SO |
 | FR-10.4 | Create a Customer Invoice independent of an SO | Admin, Accountant | P0 | Same fields as an SO-sourced invoice, entered manually |
 | FR-10.5 | Confirm a Customer Invoice | Admin, Accountant | P0 | Auto-generates a balanced Journal Entry (Debit: Debtor, Credit: Sales Income — or the selected account) and posts it to the Journal Entries list |
-| FR-10.6 | Record a payment/receipt against a Customer Invoice | Admin, Accountant | P0 | Payment Amount defaults to Amount Due (editable for partial payment); Payment Via defaults to Bank (switchable to Cash); Invoice's status (Paid/Partial/Not Paid) and Amount Due recompute immediately |
+| FR-10.6 | Record a payment/receipt against a Customer Invoice — manually (Admin/Accountant) or via Payment Gateway (Contact, §7.16) | Admin, Accountant, Contact | P0 | Payment Amount defaults to Amount Due (editable for partial payment, manual entry only); Payment Via defaults to Bank (switchable to Cash) for manual entries, or is set to the gateway method automatically; Invoice's status (Paid/Partial/Not Paid) and Amount Due recompute immediately; System auto-generates a second balanced Journal Entry (Debit: Cash/Bank, Credit: Debtor) so the Balance Sheet's Cash/Bank balance reflects the incoming payment |
 | FR-10.7 | View all Sales Orders, Customer Invoices, and Receipts in dedicated, filterable list views | Admin, Accountant | P0 | Lists support status filtering and search |
 | FR-10.8 | Cancel a Sales Order or Customer Invoice | Admin, Accountant | P0 | Cancelled documents are excluded from budget-achievement and financial-report calculations |
 
@@ -271,9 +276,34 @@ Each requirement includes a priority: **P0** = required for MVP launch, **P1** =
 | FR-15.1 | Contact logs in and lands on a Portal Home showing outstanding balance summary | Contact User | P0 | Tabs shown depend on Contact Type: Customer → My Invoices; Vendor → My Bills; Both → both |
 | FR-15.2 | View own Invoices/Bills with Paid/Partial/Not Paid status filters | Contact User | P0 | Only records belonging to the logged-in contact are visible — no access to any other contact's data |
 | FR-15.3 | View a read-only detail of an Invoice/Bill, including line items and Amount Due | Contact User | P0 | Includes a Download PDF option |
-| FR-15.4 | Make a payment (full or partial) against an open Invoice/Bill | Contact User | P0 | Amount Due and status update immediately on confirmation; entry recorded in Payment History |
-| FR-15.5 | View own payment history | Contact User | P1 | Chronological list of all payments made, each linking back to its source document |
+| FR-15.4 | Pay an open Sales Invoice (full or partial) via the integrated Payment Gateway | Contact User (Customer only) | P0 | Only available on Invoices, never on Vendor Bills; Amount Due and status update only after gateway confirmation (§7.16); entry recorded in Payment History |
+| FR-15.5 | View own payment history | Contact User | P1 | Chronological list of all payments made, each showing amount, method, gateway reference (if applicable), and linking back to its source document |
 | FR-15.6 | Manage own profile and password | Contact User | P1 | Standard profile edit/password-change flow |
+
+### 7.16 Payment Gateway (Customer Self-Service Payments)
+
+Applies only to inbound Customer Invoice payments initiated from the Portal. Vendor Bills are never paid through the gateway — LedgerOne pays vendors manually (§7.9, FR-9.6).
+
+| ID | Requirement | Actor | Priority | Acceptance Criteria |
+|---|---|---|---|---|
+| FR-16.1 | Contact initiates a gateway payment from an open Sales Invoice | Contact User | P0 | System creates a gateway order for the exact Amount Due (or a valid partial amount) and opens the gateway's checkout |
+| FR-16.2 | System confirms payment success only via a verified webhook from the gateway, never from the client-side redirect alone | System | P0 | A payment is marked Successful only after the gateway's webhook signature is validated server-side; a client redirect without a matching webhook shows "Payment Processing," not "Paid" |
+| FR-16.3 | Every gateway payment attempt is stored with its gateway reference, method, amount, and status, linked to its source Invoice | System | P0 | Retrievable from: the Invoice's payment section, the Contact's Payment History (FR-15.5), and the Admin/Accountant Receipt list (FR-10.7), for reconciliation |
+| FR-16.4 | A confirmed gateway payment triggers the same downstream accounting as a manually recorded payment | System | P0 | Invoice status/Amount Due recompute and the second Journal Entry (FR-10.6) is created identically regardless of payment channel |
+| FR-16.5 | Failed or abandoned gateway payments are recorded but do not affect the Invoice | System | P0 | Invoice remains Not Paid/Partial at its prior state; the failed attempt is visible in Payment History with a Failed status |
+| FR-16.6 | Duplicate webhook deliveries for the same gateway transaction are not double-processed | System | P0 | Idempotency check on the gateway transaction reference before creating a new Payment record |
+
+### 7.17 Help Assistant Chatbot
+
+A scoped, FAQ-based assistant for product usage guidance. It never reads, computes, or modifies financial data — it is fully isolated from the accounting engine described elsewhere in this document.
+
+| ID | Requirement | Actor | Priority | Acceptance Criteria |
+|---|---|---|---|---|
+| FR-17.1 | A persistent chat entry point is available on the App Dashboard (Admin/Accountant) and Portal Home (Contact) | All | P1 | Opens a chat panel without leaving the current screen |
+| FR-17.2 | The chatbot answers "how do I…" and "what does…mean" product questions from a maintained knowledge base | All | P1 | Answers are limited to product usage/navigation topics (e.g., "how do I revise a budget," "what does Partial status mean") |
+| FR-17.3 | The chatbot never accesses a user's financial records, and states this limitation if asked an account-specific question | All | P1 | E.g., asked "how much do I owe," it directs the user to My Invoices rather than attempting to answer |
+| FR-17.4 | The chatbot offers a human-support escalation path when it cannot help | All | P1 | Provides a support email/contact link |
+| FR-17.5 | Chat conversations are session-only and not persisted after the session ends | System | P1 | No chat-history entity in the MVP data model (§9) |
 
 ## 8. Non-Functional Requirements
 
@@ -290,6 +320,8 @@ Each requirement includes a priority: **P0** = required for MVP launch, **P1** =
 | **Backup & Recovery** | Financial data is backed up on a regular schedule with a defined recovery point objective, given its business-critical nature |
 | **Compliance** | Chart of Accounts structure and reporting align with standard double-entry bookkeeping and Balance Sheet/P&L presentation conventions |
 | **Localization (baseline)** | Currency symbol and date format are configurable at the company level (see FR-14.1), even though multi-currency accounting itself is out of scope |
+| **Feedback & Messaging** | Every user action produces a clear, consistent response: inline messages for form validation errors, toast confirmations for successful actions (e.g., "Invoice confirmed," "Payment recorded"), and modal alerts for blocking/critical errors (e.g., unbalanced journal entry, payment failure). No action is ever silent, and no raw technical error is shown to the user |
+| **Third-Party Integration Resilience** | Payment Gateway or Help Assistant outages degrade gracefully without blocking core bookkeeping: a gateway outage shows a clear "try again" message and leaves the Invoice unaffected; a chatbot outage shows a "temporarily unavailable" state instead of failing silently |
 
 ## 9. Data Model Overview
 
@@ -309,10 +341,13 @@ High-level entities and their key relationships (conceptual — not a technical 
 | **Bill Payment** | Belongs to one Vendor Bill |
 | **Sales Order** | Belongs to one Customer (Contact); has many lines; may generate one Customer Invoice |
 | **Customer Invoice** | Belongs to one Customer (Contact); optionally sourced from one Sales Order; has many lines; generates one Journal Entry on confirmation; has many Payments/Receipts |
-| **Invoice Payment (Receipt)** | Belongs to one Customer Invoice |
-| **Journal Entry** | Belongs to one Journal; has many lines (Account, Partner, Debit, Credit); may be system-generated (from a Bill/Invoice) or manual |
+| **Invoice Payment (Receipt)** | Belongs to one Customer Invoice; sourced either from a manual entry (Admin/Accountant) or a confirmed Payment Gateway Transaction (Portal) |
+| **Payment Gateway Transaction** | Belongs to one Customer Invoice; stores gateway provider, order/transaction reference, method, amount, status (Initiated/Success/Failed), and webhook confirmation timestamp; on Success, produces one Invoice Payment |
+| **Journal Entry** | Belongs to one Journal; has many lines (Account, Partner, Debit, Credit); generated automatically at two points — Bill/Invoice confirmation, and payment recording (manual or gateway) — or created manually |
 | **Budget** | Has many lines (Analytic Account, Type, Committed Amount); may be linked to a prior/next revision of itself |
-| **Company Settings** | Single record per company; referenced by document numbering and report headers |
+| **Company Settings** | Single record per company; referenced by document numbering and report headers. Payment Gateway and chatbot API credentials are **environment-level secrets, not stored on this record or exposed in any UI field** |
+
+*No persistent entity is required for the MVP Help Assistant chatbot — conversations are session-only (FR-17.5).*
 
 ## 10. Key Business Rules
 
@@ -327,6 +362,9 @@ High-level entities and their key relationships (conceptual — not a technical 
 7. Budget Achieved Amount is computed only after a Budget is Confirmed, by summing transactions sharing the same Analytic Account within the budget period.
 8. Revising a Budget never overwrites history — it creates a new, linked record.
 9. Balance Sheet and Profit & Loss figures are always derived live from posted Journal Entries and Chart of Account types — never manually entered.
+10. Recording a payment — whether entered manually by Admin/Accountant or confirmed via the Payment Gateway — always auto-generates a **second** balanced Journal Entry that moves the amount between the Debtor/Creditor account and Cash/Bank. This is separate from, and in addition to, the entry created at Bill/Invoice confirmation; without it, Cash/Bank balances on the Balance Sheet would never reflect actual money movement.
+11. A Payment Gateway transaction only updates an Invoice's status after its webhook signature is verified server-side. A client-side redirect claiming success is never, by itself, sufficient to mark an Invoice Paid.
+12. Vendor Bills are never payable by the Vendor through the Portal. Only Sales Invoices can be paid by a Customer — LedgerOne pays vendors, not the reverse.
 
 ## 11. Assumptions & Constraints
 
@@ -336,12 +374,16 @@ High-level entities and their key relationships (conceptual — not a technical 
 - Email delivery (for password resets and portal invitations) is available as a system capability but is not itself a product feature to be designed here.
 - Users have basic familiarity with standard business software (forms, lists, buttons) — no specialized accounting training is assumed, but basic accounting vocabulary (debit/credit, invoice/bill) is used as-is.
 - One fiscal year is defined by the Company Settings' Fiscal Year Start Month; all reports operate within that structure.
+- The Payment Gateway is scoped to inbound Customer Invoice payments only; outbound Vendor Bill payments remain a manual, internally recorded process.
+- The Help Assistant chatbot answers product-usage questions from a maintained FAQ/knowledge base only — it is not a source of financial or accounting advice, and does not read any user's transactional data.
 
 ## 12. Dependencies
 
 - A reliable email delivery mechanism for account invitations, password resets, and (optionally) payment receipts.
 - A PDF generation capability for printable reports, invoices, and bills.
 - Secure credential storage and session management for three distinct login roles across an internal workspace and an external portal.
+- A Payment Gateway account (e.g., Razorpay) with API keys and a configured webhook endpoint.
+- An LLM API provider (e.g., Anthropic or OpenAI) for the Help Assistant chatbot.
 
 ## 13. Risks & Mitigations
 
@@ -351,13 +393,16 @@ High-level entities and their key relationships (conceptual — not a technical 
 | Contact Portal exposes one customer's data to another due to access-control error | Serious privacy/trust breach | Enforce contact-scoped data access at every query, not just in the UI; treat this as a P0 security requirement (see §8) |
 | Budget achievement figures feel "wrong" if Analytic Accounts aren't consistently tagged on transaction lines | Business owner loses confidence in budgeting | Make Analytic Account a required field on Sales Order/Invoice/Purchase Order/Bill lines whenever budget tracking is in use; provide the drill-down (FR-12.4) to build trust in the number |
 | Users confirm documents prematurely and need to correct them | Data-entry friction | Provide Cancel/Reset-to-Draft paths (§7.9, §7.10, §7.11) so mistakes are recoverable without corrupting history |
+| Payment Gateway webhook is delayed or lost, leaving a successful payment looking unpaid | Customer confusion, possible duplicate payment attempts | Show a "Payment Processing" interim state instead of "Failed"; provide a "Check Payment Status" action that re-queries the gateway directly |
+| Duplicate webhook delivery records the same payment twice | Overstated cash, incorrect Amount Due | Idempotency check on the gateway transaction reference before creating a Payment record (FR-16.6) |
+| Chatbot gives an incorrect or out-of-scope answer (e.g., financial advice) | User confusion, potential liability | Restrict its knowledge base strictly to product usage FAQ; explicit disclaimer; always offer human-support escalation (FR-17.4) |
 
 ## 14. Release Plan / Milestones
 
 | Phase | Contents |
 |---|---|
-| **MVP (Phase 1)** | All P0 requirements: authentication core flows, all master data, full Purchase and Sales cycles, manual + auto Journal Entries with balance enforcement, Budget lifecycle, Balance Sheet, P&L, Budget Report, core Contact Portal (view + pay) |
-| **Phase 2 (Production Hardening)** | All P1 requirements: User Management list, Admin/Accountant profile management, Tax Rates, list/report export, budget drill-down, Company Settings, Contact Portal payment history & profile |
+| **MVP (Phase 1)** | All P0 requirements: authentication core flows, all master data, full Purchase and Sales cycles, manual + auto Journal Entries with balance enforcement (including the payment-triggered second entry), Budget lifecycle, Balance Sheet, P&L, Budget Report, core Contact Portal (view + pay via Payment Gateway) |
+| **Phase 2 (Production Hardening)** | All P1 requirements: User Management list, Admin/Accountant profile management, Tax Rates, list/report export, budget drill-down, Company Settings, Contact Portal payment history & profile, Help Assistant chatbot |
 | **Phase 3 (Future)** | Items listed in §15, prioritized based on user feedback after Phase 1–2 adoption |
 
 ## 15. Out of Scope / Future Enhancements
@@ -366,11 +411,12 @@ High-level entities and their key relationships (conceptual — not a technical 
 - Inventory/stock quantity management and warehouse operations
 - Payroll and HR modules
 - Bank feed integration and automated reconciliation
+- Outbound vendor payouts via a gateway/disbursement API
 - Recurring/subscription billing
 - Multi-level approval workflows for high-value transactions
 - Role customization beyond the three defined roles (e.g., custom permission sets)
 - Integrations with third-party accounting/ERP tools
-- Any AI-assisted or predictive feature of any kind
+- Any AI-assisted or predictive feature within the accounting engine itself; a Phase 2+ evolution of the chatbot to answer *scoped, read-only* account-specific questions (e.g., "what's my balance") using the same secure, contact-isolated services as the Portal is a possible future enhancement, not part of this release
 
 ## 16. Appendix
 
@@ -380,4 +426,7 @@ High-level entities and their key relationships (conceptual — not a technical 
   - **CoA** — Chart of Accounts
   - **P&L** — Profit & Loss
   - **Analytic Account** — a tag used to group income/expense across transactions for budget and project tracking
-- **Reference Materials:** Original wireframe set (Excalidraw) and the companion `Urban_Furniture_Accounting_System_Workflow.md` navigation specification, which contains the full screen-by-screen flow underlying every requirement in this document.
+  - **Payment Gateway** — a third-party service (e.g., Razorpay) that processes an online payment (card/UPI/netbanking) on LedgerOne's behalf
+  - **Webhook** — a server-to-server notification the Payment Gateway sends to confirm a payment's final status; the source of truth for marking an Invoice Paid
+  - **Help Assistant** — the scoped, FAQ-based chatbot that answers product usage questions (§7.17)
+- **Reference Materials:** Original wireframe set (Excalidraw) and the companion `WORKFLOW.md` navigation specification, which contains the full screen-by-screen flow underlying every requirement in this document.

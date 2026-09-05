@@ -1,4 +1,6 @@
-# Urban Furniture -- Accounting System
+# LedgerOne — Accounting System
+
+**Version:** 1.1 · **Related:** `PRD.md`, `WORKFLOW.md`, `architecture.md`, `SCREENS.md`, `TECH_STACK.md`
 
 ## Use Case Specification
 
@@ -8,6 +10,8 @@
 2.  **Accountant / User**
 3.  **Customer / Vendor**
 4.  **System**
+5.  **Payment Gateway** (external — Razorpay; involved only in UC-36/UC-37)
+6.  **Help Assistant** (system component — FAQ chatbot; involved only in UC-38)
 
 ------------------------------------------------------------------------
 
@@ -266,7 +270,11 @@ updated.
 Payment Type is Send. 5. Partner is populated from the Vendor Bill. 6.
 Amount is populated from the outstanding amount. 7. Select Cash or Bank.
 8. Select/enter Date. 9. Add Note if required. 10. Confirm/Post payment.
-11. System updates the Bill status and outstanding amount.
+11. System updates the Bill status and outstanding amount. 12. System
+creates the associated Journal Entry (see UC-25).
+
+**Note:** Always manual and internal — there is no Vendor-facing payment
+screen. LedgerOne pays the vendor; the vendor never pays LedgerOne.
 
 ------------------------------------------------------------------------
 
@@ -330,11 +338,11 @@ is updated.
 
 ------------------------------------------------------------------------
 
-## UC-22: Receive Customer Payment
+## UC-22: Receive Customer Payment (Manual, Internal)
 
-**Actor:** Administrator / Accountant / Customer
+**Actor:** Administrator / Accountant
 
-**Purpose:** Record money received from a customer.
+**Purpose:** Record money received from a customer through an internal, manual entry (e.g., cash handed over, a bank transfer confirmed outside the system). For a Customer paying themselves through the Portal, see UC-36.
 
 **Flow:** 1. Open Customer Invoice. 2. Select Pay. 3. Payment form
 opens. 4. Payment Type is Receive. 5. Partner is populated from the
@@ -541,11 +549,12 @@ permitted records.
 
 **Customer Flow:** 1. Customer logs into the portal. 2. System
 identifies the customer. 3. Customer views own invoices. 4. Customer
-views payment status. 5. Customer can pay own outstanding amount where
-enabled.
+views payment status. 5. Customer can pay an open invoice via the
+Payment Gateway (see UC-36).
 
 **Vendor Flow:** 1. Vendor logs into the portal where enabled. 2. Vendor
-views own permitted bills/payment information.
+views own permitted bills/payment information. 3. No payment action is
+available to the Vendor — LedgerOne pays the vendor, not the reverse.
 
 **Restriction:** - Customer/Vendor cannot access another contact's
 records. - Customer/Vendor cannot access internal accounting screens. -
@@ -587,6 +596,75 @@ Reports - Other list-based records as configured
 
 ------------------------------------------------------------------------
 
+## UC-36: Pay Invoice via Payment Gateway (Customer Self-Service)
+
+**Actor:** Customer / Payment Gateway / System
+
+**Purpose:** Let a Customer settle their own outstanding Sales Invoice
+online, without any Administrator/Accountant involvement.
+
+**Flow:** 1. Customer opens an Invoice in the Portal. 2. Customer
+selects Pay Now (only available on Invoices, never on Vendor Bills).
+3. System creates a Payment Gateway order for the outstanding amount
+(or a valid partial amount). 4. System opens the gateway's hosted
+Checkout. 5. Customer completes payment (card/UPI/netbanking) on the
+gateway's screen. 6. Customer is redirected back to the Invoice, which
+shows a "Payment Processing" state — not yet Paid. 7. See UC-37 for how
+the payment is actually confirmed.
+
+**Alternative Flow:** - Customer abandons or fails Checkout → redirected
+back to the Invoice unchanged; no payment is recorded.
+
+**Restriction:** - Never available to a Vendor. - The amount sent to the
+gateway can never exceed the Invoice's outstanding amount.
+
+------------------------------------------------------------------------
+
+## UC-37: Confirm Payment via Gateway Webhook
+
+**Actor:** System / Payment Gateway
+
+**Purpose:** Establish, from a trustworthy server-to-server source, that
+a gateway payment actually succeeded — never from the customer's browser
+alone.
+
+**Flow:** 1. Payment Gateway sends a webhook notification once the
+payment settles. 2. System verifies the webhook's cryptographic
+signature; invalid signatures are rejected immediately. 3. System checks
+whether this gateway transaction ID has already been processed
+(idempotency); duplicates are ignored. 4. On a first-time success,
+System records the Invoice Payment, creates the associated Journal Entry
+(see UC-25), and recomputes the Invoice's status and outstanding amount.
+5. System sends a payment confirmation email. 6. On failure, System
+marks the transaction Failed and leaves the Invoice unchanged.
+
+**Rule:**
+
+`An Invoice is marked Paid only after a verified webhook confirms success — a browser redirect is never sufficient on its own.`
+
+------------------------------------------------------------------------
+
+## UC-38: Ask the Help Assistant
+
+**Actor:** Administrator / Accountant / Customer / Vendor
+
+**Purpose:** Get quick guidance on how to use the product, without
+leaving the current screen or contacting human support.
+
+**Flow:** 1. User opens the Help Assistant chat widget (available on the
+Dashboard and Portal Home). 2. User types a product-usage question
+(e.g., "how do I revise a budget," "what does Partial mean"). 3. System
+answers using a fixed, maintained FAQ knowledge base. 4. If the question
+is account-specific (e.g., "how much do I owe"), System responds with a
+redirect to the relevant screen instead of attempting to answer. 5. If
+System cannot help, it offers a human-support contact link.
+
+**Restriction:** - The Help Assistant never reads, computes, or displays
+any financial or transactional data. - Conversations are session-only
+and are not saved once the session ends.
+
+------------------------------------------------------------------------
+
 # Use Case Relationships
 
 ## Sales
@@ -600,9 +678,11 @@ UC-20 Create Customer Invoice
         ↓
 UC-21 Confirm Customer Invoice
         ↓
-UC-25 Automatic Journal Entry
+UC-25 Automatic Journal Entry #1 (Debtors Dr / Sales Income Cr)
         ↓
-UC-22 Receive Customer Payment
+UC-22 Receive Customer Payment (manual)  ── or ──  UC-36 Pay via Gateway → UC-37 Webhook Confirms
+        ↓
+UC-25 Automatic Journal Entry #2 (Cash/Bank Dr / Debtors Cr)
         ↓
 UC-26 Update Accounting Records
 ```
@@ -618,9 +698,11 @@ UC-15 Create Vendor Bill
         ↓
 UC-16 Confirm Vendor Bill
         ↓
-UC-25 Automatic Journal Entry
+UC-25 Automatic Journal Entry #1 (Purchase Expense Dr / Creditors Cr)
         ↓
-UC-17 Pay Vendor Bill
+UC-17 Pay Vendor Bill (always manual/internal)
+        ↓
+UC-25 Automatic Journal Entry #2 (Creditors Dr / Cash/Bank Cr)
         ↓
 UC-26 Update Accounting Records
 ```
@@ -657,4 +739,25 @@ UC-27 Balance Sheet
 UC-28 Profit & Loss
         ↓
 UC-29 Budget Report
+```
+
+## Payment Gateway
+
+``` text
+UC-36 Pay Invoice via Payment Gateway (Customer)
+        ↓
+UC-37 Confirm Payment via Gateway Webhook (System)
+        ↓
+UC-25 Automatic Journal Entry #2
+        ↓
+UC-26 Update Accounting Records
+```
+
+## Help Assistant
+
+``` text
+UC-38 Ask the Help Assistant (any Actor)
+        ↓
+   Product-FAQ answer  ──or──  redirect to relevant screen  ──or──  human-support link
+        (no path ever reaches Accounting, Sales, or Purchase use cases)
 ```

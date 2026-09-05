@@ -1,7 +1,7 @@
 # Screens — UI Specification
-## Urban Furniture Accounting System
+## LedgerOne Accounting System
 
-**Version:** 1.0 · **Related:** `prd.md`, `architecture.md`, `Urban_Furniture_Accounting_System_Workflow.md`
+**Version:** 1.1 · **Related:** `PRD.md`, `architecture.md`, `WORKFLOW.md`, `USECASE.md`, `TECH_STACK.md`
 
 No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: light theme, clean, minimal, one accent color.
 
@@ -58,9 +58,26 @@ No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: li
 | Kanban Card | `surface` + `border`, image + 2–3 lines, click opens record |
 | Empty State | Short line + one primary action |
 | Loading State | Skeleton matching real layout, not a spinner |
-| Confirmation Toast | Action-matched text ("Invoice confirmed") |
 
-## 6. Screen Templates
+## 6. Notifications & Messaging
+
+Every user action resolves into exactly one of these three — never a silent success, never a raw technical error:
+
+| Type | Used For | Behavior |
+|---|---|---|
+| **Toast** | Confirmation of a completed action | Brief, action-matched text ("Invoice confirmed," "Payment recorded," "Budget revised"), `success` token accent, auto-dismisses after a few seconds, non-blocking |
+| **Inline message** | Form field validation | Appears directly below the offending field the moment it's detected (e.g., duplicate email, unbalanced entry); `destructive` token; never only in a toast or a separate summary |
+| **Modal alert** | Blocking/critical errors | Interrupts and requires acknowledgment — unbalanced Journal Entry, failed Payment Gateway charge, permission error; never dismissible by accident |
+
+**Special case — Payment Processing:** a gateway payment is neither a success nor a failure the instant Checkout closes (§7, template F). This state gets its own persistent inline banner ("Payment Processing — we'll update this once confirmed"), not a toast, since it can outlive the current page view.
+
+## 7. Persistent Widgets
+
+| Widget | Appears On | Behavior |
+|---|---|---|
+| **Help Assistant** | App Dashboard (Admin/Accountant), Portal Home (Contact) | Floating button, bottom-right, opens a chat panel over the current screen. FAQ-only — answers product-usage questions from a fixed knowledge base and never displays financial data. Styled with the same tokens as the rest of the app (no separate visual identity). |
+
+## 8. Screen Templates
 
 | Template | Structure | Used For |
 |---|---|---|
@@ -73,7 +90,9 @@ No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: li
 | G — Report | Period selector + Print + data table | Balance Sheet, P&L, Budget Report drill-ins |
 | H — Portal | Mobile-first single column | All Contact Portal screens |
 
-## 7. Screen Inventory
+**Note on Payment Gateway Checkout:** the hosted checkout screen (Razorpay) is rendered by the provider, not built from these templates or tokens — we pass our accent color to it where the provider's theming API allows, but otherwise it is outside our design system by necessity.
+
+## 9. Screen Inventory
 
 | Screen | Template | Notes |
 |---|---|---|
@@ -84,7 +103,7 @@ No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: li
 | Create User Page | A | Admin only |
 | User Management List | C | Admin only |
 | My Profile (Admin/Accountant) | E | Single-section form |
-| App Dashboard | B | Sales/Purchase/Budget widgets |
+| App Dashboard | B | Sales/Purchase/Budget widgets + Help Assistant button |
 | Contact List View | C | List/Kanban toggle |
 | Contact Kanban View | D | Image + name/email/phone |
 | Contact Form View | E | Includes "Invite to Portal" |
@@ -103,16 +122,16 @@ No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: li
 | Sales Order List View | C | Status filter chips |
 | Sales Order Form View | E | Line items with computed totals |
 | Customer Invoice List View | C | Status filter chips |
-| Customer Invoice Form View | E | Links to source SO and Budget |
-| Invoice Payment Modal | F | Amount editable for partial payment |
-| Receipt List View | C | Read-only ledger |
+| Customer Invoice Form View | E | Links to source SO and Budget; two Journal Entries over its lifecycle (confirm + payment) |
+| Invoice Payment Modal | F | Manual entry only (Admin/Accountant); amount editable for partial payment |
+| Receipt List View | C | Read-only ledger; shows gateway reference when applicable |
 | Purchase Order List View | C | Status filter chips |
 | Purchase Order Form View | E | Budget-exceeded warning uses `warning` token |
 | Vendor Bill List View | C | Status filter chips |
-| Vendor Bill Form View | E | Links to source PO and Budget |
-| Bill Payment Modal | F | Amount editable for partial payment |
+| Vendor Bill Form View | E | Links to source PO and Budget; two Journal Entries over its lifecycle (confirm + payment) |
+| Bill Payment Modal | F | Always manual — no Vendor-facing equivalent exists |
 | Payment List View | C | Read-only ledger |
-| Journal Entries List View | C | Manual + system-generated rows |
+| Journal Entries List View | C | Manual + system-generated rows (two per fully paid document) |
 | Journal Entry Form View | E | Debit/Credit must balance before Post |
 | Analytical Budget List View | C | — |
 | Budget Form View (Original) | E | Stage: Draft → Confirm → Revised → Cancelled |
@@ -121,31 +140,34 @@ No fixed colors (hex/RGB) defined anywhere — semantic tokens only. Default: li
 | Budget Report Kanban View | D | — |
 | Profit & Loss Report | G | Year selector + Print |
 | Balance Sheet Report | G | Year selector + Print |
-| Company Settings Page | E | Admin only |
-| Portal Home | H | Tabs conditional on Contact Type |
-| My Invoices List | H | Filter chips by status |
-| My Bills List | H | Filter chips by status |
-| Document Detail (Portal) | H | Read-only line items + Pay Now |
-| Make Payment Modal (Portal) | F/H | Full-width on mobile |
-| Payment History List (Portal) | H | — |
+| Company Settings Page | E | Admin only; never includes Payment Gateway or Help Assistant API keys (env secrets only) |
+| Portal Home | H | Tabs conditional on Contact Type + Help Assistant button |
+| My Invoices List | H | Filter chips by status; Customer only |
+| My Bills List | H | Filter chips by status; Vendor only, no payment affordance anywhere on this path |
+| Invoice Detail (Portal) | H | Read-only line items + **Pay Now** (Customer only) |
+| Bill Detail (Portal) | H | Read-only line items — **no Pay action** (Vendor only) |
+| Payment Gateway Checkout (Portal) | — *(provider-hosted, see note above)* | Opens on Pay Now; returns to Invoice Detail in a "Payment Processing" state |
+| Payment History List (Portal) | H | Shows gateway reference for online payments |
 | My Profile (Portal) | H | — |
 
-## 8. Responsive
+## 10. Responsive
 
 - Workspace: desktop/tablet-first (≥768px); wide tables scroll horizontally
 - Portal: mobile-first, single column, large tap targets
 
-## 9. Accessibility
+## 11. Accessibility
 
 - WCAG AA contrast regardless of chosen accent
 - Status never color-only
 - Icon-only controls have accessible names
 - Visible keyboard focus on all interactive elements
 - Reduced-motion respected; motion functional only
+- Toasts are announced to screen readers (ARIA live region), not just visually shown
 
-## 10. Avoid
+## 12. Avoid
 
 - Hardcoded hex/RGB colors
 - Decorative gradients, heavy shadows, non-functional icons
 - ALL-CAPS labels, arrow-suffixed buttons
 - Dark mode assumption — light is baseline
+- Marking a payment "Paid" anywhere in the UI before the gateway webhook actually confirms it
