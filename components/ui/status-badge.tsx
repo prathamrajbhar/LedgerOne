@@ -1,81 +1,32 @@
-import * as React from "react";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, AlertTriangle, XCircle, Clock, FileText } from "lucide-react";
-import { cn } from "@/lib/utils";
 
-export interface StatusBadgeProps {
+interface StatusBadgeProps {
   status: string;
-  className?: string;
-  showIcon?: boolean;
 }
 
-export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {
-  const normalized = status ? status.toUpperCase().replace(/\s+/g, "_") : "";
+const statusStyles: Record<string, string> = {
+  DRAFT: "bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200",
+  CONFIRMED: "bg-blue-100 text-blue-800 border-blue-300 hover:bg-blue-200",
+  CANCELLED: "bg-red-100 text-red-800 border-red-300 hover:bg-red-200",
+  NOT_PAID: "bg-amber-100 text-amber-800 border-amber-300 hover:bg-amber-200",
+  PARTIAL: "bg-orange-100 text-orange-800 border-orange-300 hover:bg-orange-200",
+  PAID: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200",
+  POSTED: "bg-emerald-100 text-emerald-800 border-emerald-300 hover:bg-emerald-200",
+  REVISED: "bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200",
+};
 
-  let variant: "success" | "warning" | "destructive" | "default" | "secondary" | "muted" = "muted";
-  let icon: React.ReactNode = null;
-  const label = status ? status.replace(/_/g, " ") : "";
-
-  switch (normalized) {
-    case "PAID":
-    case "RECEIVED":
-    case "IN_STOCK":
-    case "COMPLETED":
-      variant = "success";
-      icon = <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-success" />;
-      break;
-
-    case "PENDING":
-    case "NOT_PAID":
-    case "LOW_STOCK":
-    case "DUE":
-      variant = "warning";
-      icon = <AlertTriangle className="w-3.5 h-3.5 mr-1 text-warning" />;
-      break;
-
-    case "OVERDUE":
-    case "CANCELLED":
-    case "OUT_OF_STOCK":
-    case "FAILED":
-      variant = "destructive";
-      icon = <XCircle className="w-3.5 h-3.5 mr-1 text-destructive" />;
-      break;
-
-    case "CONFIRMED":
-    case "ACTIVE":
-      variant = "default";
-      icon = <CheckCircle2 className="w-3.5 h-3.5 mr-1 text-navy" />;
-      break;
-
-    case "PARTIAL":
-    case "PARTIALLY_PAID":
-      variant = "secondary";
-      icon = <Clock className="w-3.5 h-3.5 mr-1 text-teal" />;
-      break;
-
-    case "DRAFT":
-    default:
-      variant = "muted";
-      icon = <FileText className="w-3.5 h-3.5 mr-1 text-muted-foreground" />;
-      break;
-  }
-
-  const formattedLabel = label
-    .toLowerCase()
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
+export function StatusBadge({ status }: StatusBadgeProps) {
+  const normalized = status ? status.toUpperCase() : "DRAFT";
+  const customClass =
+    statusStyles[normalized] ||
+    "bg-gray-100 text-gray-800 border-gray-300 hover:bg-gray-200";
 
   return (
     <Badge
-      variant={variant}
-      className={cn(
-        "font-medium py-0.5 px-2.5 text-xs inline-flex items-center",
-        className
-      )}
+      variant="outline"
+      className={`font-semibold tracking-wide capitalize px-2.5 py-0.5 text-xs transition-colors ${customClass}`}
     >
-      {showIcon && icon}
-      <span>{formattedLabel}</span>
+      {status ? status.toLowerCase().replace("_", " ") : "Draft"}
     </Badge>
   );
 }

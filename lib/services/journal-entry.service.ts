@@ -190,14 +190,77 @@ export class JournalEntryService {
   }
 
   /**
-   * Reset entry to draft (for corrections)
+   * List journal entries with filters
    */
-  async resetToDraft(entryId: string) {
-    // TODO: Add validation that entry is not in a closed period
-    return prisma.journalEntry.update({
-      where: { id: entryId },
-      data: { status: JournalEntryStatus.DRAFT },
+  async list(params: {
+    journalId?: string;
+    status?: JournalEntryStatus;
+    startDate?: Date;
+    endDate?: Date;
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const page = params.page || 1;
+    const limit = params.limit || 20;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.journalId) where.journalId = params.journalId;
+    if (params.status) where.status = params.status;
+    if (params.startDate || params.endDate) {
+      where.accountingDate = {};
+      if (params.startDate) where.accountingDate.gte = params.startDate;
+      if (params.endDate) where.accountingDate.lte = params.endDate;
+    }
+
+    const [data, total] = await Promise.all([
+      prisma.journalEntry.findMany({
+        where,
+        include: {
+          journal: { select: { id: true, name: true, type: true } },
+          createdBy: { select: { id: true, name: true } },
+          lines: {
+            include: {
+              account: { select: { id: true, name: true, type: true } },
+            },
+          },
+        },
+        orderBy: { accountingDate: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.journalEntry.count({ where }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit) || 1,
+    };
+  }
+
+  async findById(id: string) {
+    const entry = await prisma.journalEntry.findUnique({
+      where: { id },
+      include: {
+        journal: true,
+        createdBy: { select: { id: true, name: true, email: true } },
+        lines: {
+          include: {
+            account: true,
+            partner: true,
+          },
+        },
+      },
     });
+
+    if (!entry) {
+      throw new NotFoundError("Journal entry not found");
+    }
+
+    return entry;
   }
 
   // Private helpers

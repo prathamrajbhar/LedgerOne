@@ -1,43 +1,18 @@
-import * as React from "react";
+import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function LoadingSpinner({
-  className,
-  size = "md",
-}: {
+interface LoadingSpinnerProps {
   className?: string;
-  size?: "sm" | "md" | "lg";
-}) {
-  const sizeClasses = {
-    sm: "h-4 w-4 border-2",
-    md: "h-8 w-8 border-2",
-    lg: "h-12 w-12 border-3",
-  };
-
-  return (
-    <div className="flex items-center justify-center p-4">
-      <div
-        className={cn(
-          "animate-spin rounded-full border-solid border-navy/20 border-t-navy",
-          sizeClasses[size],
-          className
-        )}
-      />
-    </div>
-  );
+  size?: number;
 }
 
-export function Skeleton({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+export function LoadingSpinner({ className, size = 32 }: LoadingSpinnerProps) {
   return (
-    <div
-      className={cn(
-        "animate-pulse rounded-md bg-muted-foreground/10",
-        className
-      )}
-      {...props}
-    />
+    <div className="flex items-center justify-center">
+      <Loader2
+        style={{ width: size, height: size }}
+        className={cn("animate-spin text-primary", className)}
+      />
+    </div>
   );
 }
