@@ -314,6 +314,8 @@ model VendorBill {
   total             Decimal       @db.Decimal(15, 2)
   amountPaid        Decimal       @default(0) @db.Decimal(15, 2)
   amountDue         Decimal       @db.Decimal(15, 2)
+  lastReminderSentAt DateTime?
+  reminderCount     Int           @default(0)
   createdById       String
   createdBy         User          @relation(fields: [createdById], references: [id])
   createdAt         DateTime      @default(now())
@@ -323,6 +325,7 @@ model VendorBill {
   lines             VendorBillLine[]
   payments          BillPayment[]
   journalEntries    JournalEntry[]
+  emailLogs         BillEmailLog[]
 
   @@index([vendorId])
   @@index([purchaseOrderId])
@@ -330,6 +333,7 @@ model VendorBill {
   @@index([paymentStatus])
   @@index([billDate])
   @@index([dueDate])
+  @@index([lastReminderSentAt])
   @@map("vendor_bills")
 }
 
@@ -443,6 +447,8 @@ model CustomerInvoice {
   total             Decimal       @db.Decimal(15, 2)
   amountPaid        Decimal       @default(0) @db.Decimal(15, 2)
   amountDue         Decimal       @db.Decimal(15, 2)
+  lastReminderSentAt DateTime?
+  reminderCount     Int           @default(0)
   createdById       String
   createdBy         User          @relation(fields: [createdById], references: [id])
   createdAt         DateTime      @default(now())
@@ -453,6 +459,7 @@ model CustomerInvoice {
   payments          InvoicePayment[]
   gatewayTransactions PaymentGatewayTransaction[]
   journalEntries    JournalEntry[]
+  emailLogs         InvoiceEmailLog[]
 
   @@index([customerId])
   @@index([salesOrderId])
@@ -460,6 +467,7 @@ model CustomerInvoice {
   @@index([paymentStatus])
   @@index([invoiceDate])
   @@index([dueDate])
+  @@index([lastReminderSentAt])
   @@map("customer_invoices")
 }
 
@@ -712,3 +720,57 @@ model CompanySettings {
   @@index([creditorsAccountId])
   @@map("company_settings")
 }
+
+// ============================================================================
+// EMAIL NOTIFICATION & REMINDER AUDIT LOGS
+// ============================================================================
+
+enum EmailReminderType {
+  DUE_SOON
+  OVERDUE
+  MANUAL
+}
+
+enum EmailDeliveryStatus {
+  SENT
+  FAILED
+}
+
+model BillEmailLog {
+  id              String              @id @default(cuid())
+  vendorBillId    String
+  vendorBill      VendorBill          @relation(fields: [vendorBillId], references: [id], onDelete: Cascade)
+  recipientEmail  String
+  recipientName   String?
+  emailType       EmailReminderType   @default(MANUAL)
+  subject         String
+  status          EmailDeliveryStatus @default(SENT)
+  errorMessage    String?
+  sentAt          DateTime            @default(now())
+
+  @@index([vendorBillId])
+  @@index([recipientEmail])
+  @@index([sentAt])
+  @@index([emailType])
+  @@map("bill_email_logs")
+}
+
+model InvoiceEmailLog {
+  id              String              @id @default(cuid())
+  invoiceId       String
+  invoice         CustomerInvoice     @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recipientEmail  String
+  recipientName   String?
+  emailType       EmailReminderType   @default(MANUAL)
+  subject         String
+  status          EmailDeliveryStatus @default(SENT)
+  errorMessage    String?
+  sentAt          DateTime            @default(now())
+
+  @@index([invoiceId])
+  @@index([recipientEmail])
+  @@index([sentAt])
+  @@index([emailType])
+  @@map("invoice_email_logs")
+}
+

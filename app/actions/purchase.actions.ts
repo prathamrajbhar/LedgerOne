@@ -198,6 +198,11 @@ export async function getVendorBillsAction() {
             paymentDate: "desc",
           },
         },
+        emailLogs: {
+          orderBy: {
+            sentAt: "desc",
+          },
+        },
       },
       orderBy: { billDate: "desc" },
     });

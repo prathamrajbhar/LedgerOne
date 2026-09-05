@@ -20,11 +20,10 @@ import {
   Printer,
   Ban,
   BookOpen,
-  Calendar,
-  Building2,
   Check,
-  Building,
-  Package,
+  Mail,
+  Send,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -43,6 +42,11 @@ import {
   getPurchaseOrdersAction,
   getAnalyticAccountsAction,
 } from "@/app/actions/purchase.actions";
+import {
+  sendBillReminderAction,
+  dispatchBatchDueBillAlertsAction,
+  getBillEmailLogsAction,
+} from "@/app/actions/bill-reminder.actions";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
 import { getTaxRatesAction } from "@/app/actions/tax-rate.actions";
@@ -79,6 +83,17 @@ interface BillPaymentItem {
   note?: string | null;
 }
 
+interface BillEmailLogItem {
+  id: string;
+  recipientEmail: string;
+  recipientName?: string | null;
+  emailType: string;
+  subject: string;
+  status: string;
+  errorMessage?: string | null;
+  sentAt: string | Date;
+}
+
 interface VendorBillWithRelations {
   id: string;
   billNumber: string;
@@ -96,8 +111,11 @@ interface VendorBillWithRelations {
   total: Prisma.Decimal | number;
   amountPaid: Prisma.Decimal | number;
   amountDue: Prisma.Decimal | number;
+  lastReminderSentAt?: Date | string | null;
+  reminderCount?: number;
   lines: BillLineItem[];
   payments?: BillPaymentItem[];
+  emailLogs?: BillEmailLogItem[];
 }
 
 interface FormBillLineRow {
@@ -148,6 +166,10 @@ export default function VendorBillsPage() {
   const [confirmingBillId, setConfirmingBillId] = React.useState<string | null>(null);
   const [cancellingBillId, setCancellingBillId] = React.useState<string | null>(null);
   const [downloadingId, setDownloadingId] = React.useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = React.useState<string | null>(null);
+  const [runningBatchAlerts, setRunningBatchAlerts] = React.useState(false);
+  const [modalEmailLogs, setModalEmailLogs] = React.useState<BillEmailLogItem[]>([]);
+  const [loadingLogs, setLoadingLogs] = React.useState(false);
 
   // Add Vendor Bill Form State
   const [formVendor, setFormVendor] = React.useState("");
@@ -523,6 +545,67 @@ export default function VendorBillsPage() {
     }
   };
 
+  // Open Details Modal and fetch fresh email logs
+  const handleOpenDetails = async (bill: VendorBillWithRelations) => {
+    setSelectedBillForView(bill);
+    setOpenDetailsModal(true);
+    setLoadingLogs(true);
+    try {
+      const logsRes = await getBillEmailLogsAction(bill.id);
+      if (logsRes.success && logsRes.data) {
+        setModalEmailLogs(logsRes.data as BillEmailLogItem[]);
+      } else {
+        setModalEmailLogs(bill.emailLogs || []);
+      }
+    } catch {
+      setModalEmailLogs(bill.emailLogs || []);
+    } finally {
+      setLoadingLogs(false);
+    }
+  };
+
+  // Send single on-demand payment reminder email
+  const handleSendReminder = async (billId: string) => {
+    setSendingReminderId(billId);
+    try {
+      const res = await sendBillReminderAction(billId);
+      if (res.success) {
+        toast.success(res.message || "Reminder email sent successfully");
+        await fetchData();
+        if (selectedBillForView?.id === billId) {
+          const freshLogs = await getBillEmailLogsAction(billId);
+          if (freshLogs.success && freshLogs.data) {
+            setModalEmailLogs(freshLogs.data as BillEmailLogItem[]);
+          }
+        }
+      } else {
+        toast.error(res.error || "Failed to send reminder email");
+      }
+    } catch {
+      toast.error("Error dispatching payment reminder email");
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
+
+  // Run batch due & overdue alerts scan
+  const handleRunBatchAlerts = async () => {
+    setRunningBatchAlerts(true);
+    try {
+      const res = await dispatchBatchDueBillAlertsAction();
+      if (res.success) {
+        toast.success(res.message);
+        await fetchData();
+      } else {
+        toast.error(res.error || "Batch reminder execution failed");
+      }
+    } catch {
+      toast.error("Error running batch reminder alerts");
+    } finally {
+      setRunningBatchAlerts(false);
+    }
+  };
+
   // Compute real dashboard summary metrics
   const summaryMetrics = React.useMemo(() => {
     let totalCount = 0;
@@ -650,7 +733,28 @@ export default function VendorBillsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRunBatchAlerts}
+            disabled={runningBatchAlerts}
+            className="h-9 px-3 text-xs font-medium border-border hover:bg-navy/5 text-navy gap-1.5 shadow-2xs"
+            title="Scan all bills and send due soon (<=3 days) or overdue reminders"
+          >
+            {runningBatchAlerts ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-navy" />
+                Scanning & Sending...
+              </>
+            ) : (
+              <>
+                <Send className="h-3.5 w-3.5 text-navy" />
+                Send Due/Overdue Alerts
+              </>
+            )}
+          </Button>
+
           <Button
             onClick={() => setOpenCreateModal(true)}
             className="h-9 px-3.5 bg-teal hover:bg-teal/90 text-white text-xs font-semibold gap-1.5 shadow-2xs hover:shadow-xs transition-all"
@@ -902,10 +1006,7 @@ export default function VendorBillsPage() {
                     <tr
                       key={bill.id}
                       className="hover:bg-[#F8FAFC]/90 transition-colors group cursor-pointer"
-                      onClick={() => {
-                        setSelectedBillForView(bill);
-                        setOpenDetailsModal(true);
-                      }}
+                      onClick={() => handleOpenDetails(bill)}
                     >
                       {/* Bill # */}
                       <td className="py-3.5 px-4 font-bold text-navy">
@@ -980,10 +1081,7 @@ export default function VendorBillsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => {
-                              setSelectedBillForView(bill);
-                              setOpenDetailsModal(true);
-                            }}
+                            onClick={() => handleOpenDetails(bill)}
                             className="h-7 w-7 p-0 text-muted-foreground hover:text-navy hover:bg-navy/5"
                             title="View Bill Details"
                           >
@@ -1022,6 +1120,31 @@ export default function VendorBillsPage() {
                             >
                               <DollarSign className="w-3 h-3" />
                               Pay
+                            </Button>
+                          )}
+
+                          {/* Send Reminder Email */}
+                          {isConfirmed && hasDue && bill.vendor?.email && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={sendingReminderId === bill.id}
+                              onClick={() => handleSendReminder(bill.id)}
+                              className="h-7 px-2 text-[11px] font-medium text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1"
+                              title={
+                                bill.lastReminderSentAt
+                                  ? `Last reminder sent: ${new Date(bill.lastReminderSentAt).toLocaleString("en-IN")}. Click to resend.`
+                                  : "Send payment alert email to vendor"
+                              }
+                            >
+                              {sendingReminderId === bill.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  <Mail className="w-3 h-3" />
+                                  {bill.lastReminderSentAt ? "Reminded" : "Remind"}
+                                </>
+                              )}
                             </Button>
                           )}
 
@@ -1492,6 +1615,27 @@ export default function VendorBillsPage() {
                     Print
                   </Button>
 
+                  {/* Send Reminder Email */}
+                  {selectedBillForView.status === DocumentStatus.CONFIRMED &&
+                    Number(selectedBillForView.amountDue) > 0 &&
+                    selectedBillForView.vendor?.email && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={sendingReminderId === selectedBillForView.id}
+                        onClick={() => handleSendReminder(selectedBillForView.id)}
+                        className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 gap-1.5 font-medium shadow-2xs"
+                      >
+                        {sendingReminderId === selectedBillForView.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Mail className="w-3.5 h-3.5 text-amber-600" />
+                        )}
+                        Send Reminder
+                      </Button>
+                    )}
+
                   {/* Record Payment */}
                   {selectedBillForView.status === DocumentStatus.CONFIRMED &&
                     Number(selectedBillForView.amountDue) > 0 && (
@@ -1754,6 +1898,95 @@ export default function VendorBillsPage() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* ================================================================= */}
+              {/* EMAIL REMINDER AUDIT LOG SECTION */}
+              {/* ================================================================= */}
+              <div className="p-4 rounded-xl bg-[#F8FAFC] border border-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-navy" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
+                      Email Reminder & Audit History
+                    </h3>
+                  </div>
+                  {modalEmailLogs.length > 0 && (
+                    <span className="text-[11px] font-medium text-muted-foreground">
+                      {modalEmailLogs.length} reminder{modalEmailLogs.length === 1 ? "" : "s"} recorded
+                    </span>
+                  )}
+                </div>
+
+                {loadingLogs ? (
+                  <div className="py-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin text-navy" />
+                    Loading email communication logs...
+                  </div>
+                ) : modalEmailLogs.length > 0 ? (
+                  <div className="border border-border rounded-xl overflow-hidden bg-white">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px]">
+                        <tr>
+                          <th className="py-2.5 px-3">Date & Time Sent</th>
+                          <th className="py-2.5 px-3">Recipient</th>
+                          <th className="py-2.5 px-3">Type</th>
+                          <th className="py-2.5 px-3">Subject</th>
+                          <th className="py-2.5 px-3 text-right">Delivery Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {modalEmailLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-[#F8FAFC]/50">
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-foreground font-medium">
+                              {new Date(log.sentAt).toLocaleString("en-IN", {
+                                day: "2-digit",
+                                month: "short",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
+                            </td>
+                            <td className="py-2.5 px-3 text-muted-foreground">
+                              {log.recipientEmail}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <span
+                                className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                  log.emailType === "OVERDUE"
+                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                    : log.emailType === "DUE_SOON"
+                                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                    : "bg-blue-50 text-blue-700 border border-blue-200"
+                                }`}
+                              >
+                                {log.emailType.replace("_", " ")}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-muted-foreground max-w-[220px] truncate" title={log.subject}>
+                              {log.subject}
+                            </td>
+                            <td className="py-2.5 px-3 text-right">
+                              <span
+                                className={`inline-flex items-center gap-1 font-semibold text-[11px] ${
+                                  log.status === "SENT" ? "text-emerald-600" : "text-destructive"
+                                }`}
+                              >
+                                <span className={`w-1.5 h-1.5 rounded-full ${log.status === "SENT" ? "bg-emerald-600" : "bg-destructive"}`} />
+                                {log.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-white border border-dashed border-border text-center text-xs text-muted-foreground">
+                    No reminder emails have been dispatched for this bill yet.
+                  </div>
+                )}
               </div>
             </div>
           )}
