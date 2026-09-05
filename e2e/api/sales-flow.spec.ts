@@ -50,6 +50,8 @@ test.describe("Sales & Payment E2E API Flow", () => {
       salesOrderId: "so-1",
       customerId: "cust-1",
       createdById: "user-1",
+      reminderCount: 0,
+      lastReminderSentAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       customer: {
