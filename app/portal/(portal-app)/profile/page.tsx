@@ -1,9 +1,7 @@
 import { requirePortalAuth } from "@/lib/auth/portal-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PrismaClient } from "@prisma/client";
 import { User, Mail, Phone, MapPin, Building } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PortalProfilePage() {
   const portalSession = await requirePortalAuth();

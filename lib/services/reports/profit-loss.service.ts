@@ -1,7 +1,8 @@
-import { PrismaClient, JournalEntryStatus, AccountType, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { JournalEntryStatus, AccountType, Prisma } from "@prisma/client";
 import { ValidationError } from "../../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface AccountBalanceSummary {
   accountId: string;

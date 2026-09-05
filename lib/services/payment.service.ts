@@ -1,16 +1,17 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Payment Service
  * Handles payment gateway integration and payment recording
  * Supports both manual payments (Admin/Accountant) and gateway payments (Contact Portal)
  */
 
-import { PrismaClient, PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus, JournalEntrySource } from "@prisma/client";
+import { PaymentMethod, InvoicePaymentSource, PaymentGatewayStatus, JournalEntrySource } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, PaymentGatewayError, UnauthorizedError, NotFoundError } from "../utils/errors";
 import { journalEntryService } from "./journal-entry.service";
 import { emailService } from "../email/client";
 
-const prisma = new PrismaClient();
+
 
 export interface RecordManualPaymentInput {
   documentId: string; // VendorBill or CustomerInvoice ID

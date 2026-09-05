@@ -1,7 +1,8 @@
-import { PrismaClient, JournalType, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { JournalType, Prisma } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateJournalInput {
   code: string;

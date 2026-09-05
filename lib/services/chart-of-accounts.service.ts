@@ -1,7 +1,8 @@
-import { PrismaClient, AccountType, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { AccountType, Prisma } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateAccountInput {
   code: string;

@@ -2,10 +2,9 @@ import Link from "next/link";
 import { requireCustomerAccess } from "@/lib/auth/portal-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PrismaClient, PaymentStatus } from "@prisma/client";
+import { PaymentStatus } from "@prisma/client";
 import { FileText, CreditCard } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PortalInvoicesPage() {
   const portalSession = await requireCustomerAccess();

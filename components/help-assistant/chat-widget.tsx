@@ -112,7 +112,7 @@ export function HelpAssistantWidget() {
             <div className="p-3 rounded-xl bg-white border border-border text-xs text-foreground space-y-1">
               <div className="flex items-center gap-1.5 font-semibold text-navy">
                 <Sparkles className="h-3.5 w-3.5 text-teal" />
-                <span>Hello, Rohan!</span>
+                <span>Hello there!</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
                 I&apos;m your LedgerOne accounting assistant. Ask me anything about managing your furniture business, invoices, payments, or reports.

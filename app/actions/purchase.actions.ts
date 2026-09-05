@@ -1,10 +1,9 @@
 "use server";
 
-import { PrismaClient, DocumentStatus } from "@prisma/client";
+import { DocumentStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import { purchaseOrderService } from "@/lib/services/purchase-order.service";
 import { vendorBillService } from "@/lib/services/vendor-bill.service";
-
-const prisma = new PrismaClient();
 
 export interface CreatePurchaseOrderInput {
   vendorId: string;

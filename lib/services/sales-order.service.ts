@@ -1,12 +1,13 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Sales Order Service
  * Handles creation, updating, confirmation, cancellation, and querying of sales orders
  */
 
-import { PrismaClient, DocumentStatus, Prisma } from "@prisma/client";
+import { DocumentStatus, Prisma } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface SalesOrderLineInput {
   productId: string;

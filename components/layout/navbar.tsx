@@ -27,29 +27,101 @@ import { UserRole } from "@prisma/client";
 
 interface NavbarProps {
   onMenuClick?: () => void;
-  userRole: UserRole;
-  userName: string;
-  userEmail: string;
+  userRole?: UserRole;
+  userName?: string;
+  userEmail?: string;
 }
 
-export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarProps) {
+function getAccountingPeriods() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const formatDate = (d: Date) => `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
+
+  // Current Month
+  const startCur = new Date(currentYear, currentMonth, 1);
+  const endCur = new Date(currentYear, currentMonth + 1, 0);
+  const currentMonthName = now.toLocaleDateString("en-US", { month: "long" });
+  const currentMonthLabel = `${currentMonthName} ${currentYear} (Current)`;
+  const currentMonthRange = `${formatDate(startCur)} - ${formatDate(endCur)}`;
+
+  // Previous Month
+  const startPrev = new Date(currentYear, currentMonth - 1, 1);
+  const endPrev = new Date(currentYear, currentMonth, 0);
+  const prevMonthName = startPrev.toLocaleDateString("en-US", { month: "long" });
+  const prevMonthLabel = `${prevMonthName} ${startPrev.getFullYear()}`;
+  const prevMonthRange = `${formatDate(startPrev)} - ${formatDate(endPrev)}`;
+
+  // Fiscal Quarter & Year (Apr-Mar)
+  const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+  const fyEndYear = fyStartYear + 1;
+  const fyLabel = `FY ${fyStartYear}-${String(fyEndYear).slice(-2)}`;
+
+  let qNum = 1;
+  let qStartMonth = 3;
+  let qEndMonth = 5;
+  if (currentMonth >= 6 && currentMonth <= 8) {
+    qNum = 2;
+    qStartMonth = 6;
+    qEndMonth = 8;
+  } else if (currentMonth >= 9 && currentMonth <= 11) {
+    qNum = 3;
+    qStartMonth = 9;
+    qEndMonth = 11;
+  } else if (currentMonth <= 2) {
+    qNum = 4;
+    qStartMonth = 0;
+    qEndMonth = 2;
+  }
+  const startQ = new Date(qNum === 4 ? fyEndYear : fyStartYear, qStartMonth, 1);
+  const endQ = new Date(qNum === 4 ? fyEndYear : fyStartYear, qEndMonth + 1, 0);
+  const quarterLabel = `Q${qNum} ${fyLabel}`;
+  const quarterRange = `${formatDate(startQ)} - ${formatDate(endQ)}`;
+
+  // Full Fiscal Year
+  const startFY = new Date(fyStartYear, 3, 1);
+  const endFY = new Date(fyEndYear, 3, 0);
+  const fullFYLabel = `Full Fiscal Year ${fyLabel}`;
+  const fullFYRange = `${formatDate(startFY)} - ${formatDate(endFY)}`;
+
+  return [
+    { label: currentMonthLabel, range: currentMonthRange },
+    { label: prevMonthLabel, range: prevMonthRange },
+    { label: quarterLabel, range: quarterRange },
+    { label: fullFYLabel, range: fullFYRange },
+  ];
+}
+
+export function Navbar({
+  onMenuClick,
+  userRole = UserRole.ADMINISTRATOR,
+  userName = "Administrator",
+  userEmail = "admin@ledgerone.in",
+}: NavbarProps) {
+  const periods = React.useMemo(() => getAccountingPeriods(), []);
   const [searchOpen, setSearchOpen] = React.useState(false);
-  const [selectedPeriod, setSelectedPeriod] = React.useState("01 Nov 2024 - 30 Nov 2024");
+  const [selectedPeriod, setSelectedPeriod] = React.useState(periods[0].range);
+
+  const displayName = userName || "Administrator";
+  const displayEmail = userEmail || "admin@ledgerone.in";
+  const roleDisplay = userRole === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
+
+  // Compute initials safely
+  const initials = displayName.includes(" ")
+    ? displayName
+        .split(" ")
+        .map((n) => n[0])
+        .filter(Boolean)
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    : displayName.slice(0, 2).toUpperCase() || "AD";
 
   const handleLogout = async () => {
     await signOut({ callbackUrl: "/login" });
   };
-
-  // Get user initials
-  const initials = userName
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  // Get role display name
-  const roleDisplay = userRole === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
 
   return (
     <>
@@ -99,18 +171,15 @@ export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarPro
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Accounting Period</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSelectedPeriod("01 Nov 2024 - 30 Nov 2024")}>
-                November 2024 (Current)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedPeriod("01 Oct 2024 - 31 Oct 2024")}>
-                October 2024
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedPeriod("01 Jul 2024 - 30 Sep 2024")}>
-                Q2 FY 2024-25
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setSelectedPeriod("01 Apr 2024 - 31 Mar 2025")}>
-                Full Fiscal Year FY 2024-25
-              </DropdownMenuItem>
+              {periods.map((p) => (
+                <DropdownMenuItem
+                  key={p.label}
+                  onClick={() => setSelectedPeriod(p.range)}
+                  className={selectedPeriod === p.range ? "font-semibold text-navy bg-surface-subtle" : ""}
+                >
+                  {p.label}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -132,7 +201,7 @@ export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarPro
                 </div>
                 <div className="hidden sm:flex flex-col">
                   <span className="text-xs font-semibold text-foreground leading-tight">
-                    {userName}
+                    {displayName}
                   </span>
                   <span className="text-[10px] text-muted-foreground font-normal">
                     {roleDisplay}
@@ -144,8 +213,8 @@ export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarPro
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-0.5">
-                  <p className="text-xs font-semibold text-foreground">{userName}</p>
-                  <p className="text-[11px] text-muted-foreground">{userEmail}</p>
+                  <p className="text-xs font-semibold text-foreground">{displayName}</p>
+                  <p className="text-[11px] text-muted-foreground">{displayEmail}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

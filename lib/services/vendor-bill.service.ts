@@ -1,7 +1,8 @@
-import { PrismaClient, DocumentStatus, PaymentStatus, Prisma } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { DocumentStatus, PaymentStatus, Prisma } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateVendorBillLineInput {
   productId: string;

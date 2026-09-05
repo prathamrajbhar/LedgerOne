@@ -3,10 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireCustomerAccess } from "@/lib/auth/portal-session";
 import { paymentService } from "@/lib/services/payment.service";
-import { PrismaClient, PaymentMethod } from "@prisma/client";
+import { PaymentMethod } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface PortalPaymentResult {
   success: boolean;

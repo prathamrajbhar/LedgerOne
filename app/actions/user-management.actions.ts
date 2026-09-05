@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { authService } from "@/lib/services/auth.service";
 import { requireRole } from "@/lib/auth/session";
-import { PrismaClient, UserRole } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { UserRole } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export interface UserManagementResult<T = unknown> {
   success: boolean;

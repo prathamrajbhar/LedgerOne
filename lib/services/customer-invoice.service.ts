@@ -1,14 +1,15 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Customer Invoice Service
  * Handles customer invoice creation (from SO or standalone), confirmation (Journal Entry #1),
  * cancellation, payment status tracking, and querying.
  */
 
-import { PrismaClient, DocumentStatus, PaymentStatus, Prisma, JournalEntrySource, JournalType, AccountType } from "@prisma/client";
+import { DocumentStatus, PaymentStatus, Prisma, JournalEntrySource, JournalType, AccountType } from "@prisma/client";
 import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 import { journalEntryService } from "./journal-entry.service";
 
-const prisma = new PrismaClient();
+
 
 export interface CustomerInvoiceLineInput {
   productId: string;

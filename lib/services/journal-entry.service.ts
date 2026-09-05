@@ -1,13 +1,14 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Journal Entry Service
  * Handles manual and auto-generated journal entries with balance enforcement
  */
 
-import { PrismaClient, JournalEntryStatus, JournalEntrySource, Prisma } from "@prisma/client";
+import { JournalEntryStatus, JournalEntrySource, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { UnbalancedEntryError, ValidationError, NotFoundError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateJournalEntryInput {
   journalId: string;

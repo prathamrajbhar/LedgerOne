@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { razorpayClient } from "@/lib/payments/razorpay-client";
 import { paymentService } from "@/lib/services/payment.service";
-import { PrismaClient, PaymentGatewayStatus } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { PaymentGatewayStatus } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {

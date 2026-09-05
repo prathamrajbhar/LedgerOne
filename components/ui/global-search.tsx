@@ -15,8 +15,8 @@ const searchableItems = [
   { id: "4", title: "Teak Wood Dining Table (6-Seater)", category: "Products", href: "/products", icon: Package },
   { id: "5", title: "Ergonomic Office Chair - Executive", category: "Products", href: "/products", icon: Package },
   { id: "6", title: "King Size Velvet Fabric Bed", category: "Products", href: "/products", icon: Package },
-  { id: "7", title: "INV-2024-1087 (₹1,25,000.00)", category: "Invoices", href: "/invoices", icon: FileText },
-  { id: "8", title: "BILL-2024-056 (₹48,500.00)", category: "Purchases", href: "/purchases", icon: FileText },
+  { id: "7", title: "INV-1087 (₹1,25,000.00)", category: "Invoices", href: "/invoices", icon: FileText },
+  { id: "8", title: "BILL-056 (₹48,500.00)", category: "Purchases", href: "/purchases", icon: FileText },
   { id: "9", title: "Chart of Accounts - 1010 Bank", category: "Accounts", href: "/accounts", icon: FileText },
 ];
 

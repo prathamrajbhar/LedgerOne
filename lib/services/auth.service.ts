@@ -1,14 +1,15 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Auth Service
  * Handles user authentication, session management, and portal invitations
  */
 
-import { PrismaClient, UserRole } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 import { hash, compare } from "bcryptjs";
 import { ValidationError, UnauthorizedError, ConflictError } from "../utils/errors";
 import { emailService } from "../email/client";
 
-const prisma = new PrismaClient();
+
 
 export interface SignUpInput {
   loginId: string;

@@ -4,9 +4,6 @@ import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
@@ -16,6 +13,7 @@ export default function LoginPage() {
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -53,96 +51,139 @@ export default function LoginPage() {
   };
 
   return (
-    <Card className="bg-white shadow-dropdown border border-border rounded-2xl overflow-hidden">
-      <CardHeader className="p-6 pb-4 border-b border-border bg-[#F9FAFB]/50">
-        <CardTitle className="text-xl font-bold text-foreground">
-          Sign In to LedgerOne
-        </CardTitle>
-        <CardDescription className="text-xs text-muted-foreground mt-1">
-          Access your company general ledger and business workspace.
-        </CardDescription>
-      </CardHeader>
-
-      <CardContent className="p-6 space-y-4">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">
-              Login ID or Email
-            </label>
-            <div className="relative">
-              <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="e.g. rohan.mehta"
-                value={loginId}
-                onChange={(e) => setLoginId(e.target.value)}
-                className="pl-9 text-xs"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-foreground">
-                Password
-              </label>
-              <Link
-                href="/forgot-password"
-                className="text-xs text-teal hover:text-teal-hover font-medium hover:underline"
-              >
-                Forgot password?
-              </Link>
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-9 pr-9 text-xs"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 pt-1">
-            <input
-              type="checkbox"
-              id="remember"
-              defaultChecked
-              className="h-4 w-4 rounded border-border text-navy focus:ring-navy cursor-pointer"
-            />
-            <label htmlFor="remember" className="text-xs text-muted-foreground cursor-pointer">
-              Remember my workspace login
-            </label>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-navy hover:bg-navy-hover text-white font-semibold py-2.5 shadow-sm text-xs gap-1.5"
-          >
-            {loading ? "Signing in..." : "Sign In to Workspace"}
-            {!loading && <ArrowRight className="h-3.5 w-3.5" />}
-          </Button>
-        </form>
-
-        <div className="pt-3 border-t border-border text-center text-xs text-muted-foreground">
-          Don&apos;t have an accountant account?{" "}
-          <Link href="/sign-up" className="font-semibold text-navy hover:underline">
-            Register Company
-          </Link>
+    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[28px] p-7 sm:p-8 space-y-5 backdrop-blur-sm">
+      {/* Header with Title and Logo Badge */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+            Welcome Back 👋
+          </h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Sign in to your LedgerOne workspace and continue managing your business with ease.
+          </p>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* LedgerOne ERP Badge */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-border/50 w-14 h-14 flex-shrink-0 shadow-2xs">
+          <div className="grid grid-cols-2 gap-0.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
+          </div>
+          <span className="text-[8px] font-bold text-[#193552] mt-1 tracking-tight leading-none">
+            LedgerOne
+          </span>
+          <span className="text-[6px] text-muted-foreground font-semibold tracking-wider uppercase">
+            ERP
+          </span>
+        </div>
+      </div>
+
+      {/* Login Form */}
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        {/* Login ID or Email Field */}
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground block">
+            Login ID or Email
+          </label>
+          <div className="relative">
+            <User className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="admin001"
+              value={loginId}
+              onChange={(e) => setLoginId(e.target.value)}
+              className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Password Field */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-semibold text-foreground block">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-xs text-[#1F73B7] hover:underline font-medium"
+            >
+              Forgot password?
+            </Link>
+          </div>
+          <div className="relative">
+            <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type={showPassword ? "text" : "password"}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none font-mono"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3.5 top-3.5 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Remember Me Checkbox */}
+        <div className="flex items-center gap-2 pt-0.5">
+          <input
+            type="checkbox"
+            id="remember"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            className="h-4 w-4 rounded border-border text-[#193552] accent-[#193552] cursor-pointer"
+          />
+          <label
+            htmlFor="remember"
+            className="text-xs text-muted-foreground cursor-pointer select-none"
+          >
+            Remember my workspace login
+          </label>
+        </div>
+
+        {/* Sign In Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+        >
+          {loading ? "Signing in..." : "Sign In to Workspace"}
+          {!loading && <ArrowRight className="h-3.5 w-3.5" />}
+        </button>
+      </form>
+
+      {/* OR Divider */}
+      <div className="relative my-3">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/70" />
+        </div>
+        <div className="relative flex justify-center text-[10px] uppercase">
+          <span className="bg-[#FAFBFE] px-3 text-muted-foreground font-semibold tracking-wider">
+            OR
+          </span>
+        </div>
+      </div>
+
+      {/* Register Footer Link */}
+      <div className="text-center text-xs text-muted-foreground pt-0.5">
+        Don&apos;t have an accountant account?{" "}
+        <Link
+          href="/sign-up"
+          className="font-semibold text-[#1F73B7] hover:underline"
+        >
+          Register Company
+        </Link>
+      </div>
+    </div>
   );
 }

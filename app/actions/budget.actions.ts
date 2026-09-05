@@ -5,9 +5,7 @@ import { budgetService, BudgetLineInput } from "@/lib/services/budget.service";
 import { requireAuth } from "@/lib/auth/session";
 import { Decimal } from "@prisma/client/runtime/library";
 import { BudgetStatus, AnalyticAccountType } from "@prisma/client";
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface BudgetActionResult<T = unknown> {
   success: boolean;

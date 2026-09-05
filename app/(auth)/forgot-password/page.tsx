@@ -3,11 +3,8 @@
 import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Mail, ArrowLeft, AlertCircle } from "lucide-react";
+import { Mail, ArrowRight, AlertCircle, ArrowLeft } from "lucide-react";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -19,7 +16,6 @@ export default function ForgotPasswordPage() {
       return;
     }
 
-    // BLOCKED: Password reset functionality requires database schema changes
     toast.error(
       "Password reset is not yet available. Please contact your administrator for password assistance.",
       { duration: 5000 }
@@ -27,68 +23,101 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <Card className="bg-white shadow-dropdown border border-border rounded-2xl overflow-hidden">
-      <CardHeader className="p-6 pb-4 border-b border-border bg-[#F9FAFB]/50">
-        <CardTitle className="text-xl font-bold text-foreground">
-          Reset Password
-        </CardTitle>
-        <CardDescription className="text-xs text-muted-foreground mt-1">
-          Enter your registered email address and we&apos;ll send a recovery link.
-        </CardDescription>
-      </CardHeader>
+    <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[28px] p-7 sm:p-8 space-y-5 backdrop-blur-sm">
+      {/* Header with Title and Logo Badge */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+            Reset Password 🔐
+          </h2>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Enter your registered email address and we&apos;ll send recovery instructions.
+          </p>
+        </div>
 
-      <CardContent className="p-6 space-y-4">
-        {/* Feature not available notice */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-amber-900">
-                Feature Not Available
-              </h3>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                Password reset functionality requires database schema updates and is not yet available.
-                Please contact your system administrator for password assistance.
-              </p>
-            </div>
+        {/* LedgerOne ERP Badge */}
+        <div className="flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-border/50 w-14 h-14 flex-shrink-0 shadow-2xs">
+          <div className="grid grid-cols-2 gap-0.5">
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#193552]" />
+            <span className="w-2.5 h-2.5 rounded-xs bg-[#167C80]" />
+          </div>
+          <span className="text-[8px] font-bold text-[#193552] mt-1 tracking-tight leading-none">
+            LedgerOne
+          </span>
+          <span className="text-[6px] text-muted-foreground font-semibold tracking-wider uppercase">
+            ERP
+          </span>
+        </div>
+      </div>
+
+      {/* Feature notice */}
+      <div className="bg-amber-50/80 border border-amber-200/80 rounded-2xl p-3.5 space-y-1">
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <h3 className="text-xs font-semibold text-amber-900">
+              Admin Password Assistance
+            </h3>
+            <p className="text-[11px] text-amber-800 leading-relaxed">
+              Automated password reset requires security token configuration. Please contact your system administrator or IT team for password updates.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-foreground block">
+            Registered Email Address
+          </label>
+          <div className="relative">
+            <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+            <input
+              type="email"
+              placeholder="name@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full h-11 pl-10 pr-3.5 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs text-foreground placeholder:text-muted-foreground transition-all outline-none"
+              required
+            />
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">
-              Email Address
-            </label>
-            <div className="relative">
-              <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="email"
-                placeholder="rohan@furniturecrafts.in"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="pl-9 text-xs"
-                required
-                disabled
-              />
-            </div>
-          </div>
+        <button
+          type="submit"
+          className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer"
+        >
+          Send Reset Link
+          <ArrowRight className="h-3.5 w-3.5" />
+        </button>
+      </form>
 
-          <Button
-            type="submit"
-            disabled
-            className="w-full bg-navy hover:bg-navy-hover text-white font-semibold py-2.5 shadow-sm text-xs gap-1.5 opacity-50 cursor-not-allowed"
-          >
-            Send Reset Link (Unavailable)
-          </Button>
+      {/* OR Divider */}
+      <div className="relative my-3">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t border-border/70" />
+        </div>
+        <div className="relative flex justify-center text-[10px] uppercase">
+          <span className="bg-[#FAFBFE] px-3 text-muted-foreground font-semibold tracking-wider">
+            OR
+          </span>
+        </div>
+      </div>
 
-          <div className="pt-2 text-center">
-            <Link href="/login" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-navy">
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Sign In
-            </Link>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      {/* Back to Sign In Link */}
+      <div className="text-center text-xs text-muted-foreground pt-0.5">
+        Remember your password?{" "}
+        <Link
+          href="/login"
+          className="font-semibold text-[#1F73B7] hover:underline inline-flex items-center gap-1"
+        >
+          <ArrowLeft className="h-3 w-3 inline" />
+          Back to Sign In
+        </Link>
+      </div>
+    </div>
   );
 }

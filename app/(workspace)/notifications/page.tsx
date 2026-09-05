@@ -12,8 +12,8 @@ export default function NotificationsPage() {
   const notifications = [
     {
       id: "1",
-      title: "Invoice Overdue: INV-2024-1085",
-      description: "Prestige Executive Suites invoice for ₹2,15,000 was due on 23 Nov 2024.",
+      title: "Invoice Overdue: INV-1085",
+      description: "Prestige Executive Suites invoice for ₹2,15,000 has passed the agreed net-30 due date.",
       time: "2 hours ago",
       type: "ALERT",
       link: "/invoices",
@@ -29,7 +29,7 @@ export default function NotificationsPage() {
     {
       id: "3",
       title: "Supplier Payment Due in 2 Days",
-      description: "WoodMart Timber Supplies bill for ₹48,500 due on 22 Nov 2024.",
+      description: "WoodMart Timber Supplies bill for ₹48,500 due in 2 business days.",
       time: "1 day ago",
       type: "PAYMENT",
       link: "/purchases",

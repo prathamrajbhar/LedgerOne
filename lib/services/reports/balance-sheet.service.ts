@@ -1,6 +1,7 @@
-import { PrismaClient, AccountType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { AccountType } from "@prisma/client";
 
-const prisma = new PrismaClient();
+
 
 export interface BalanceSheetParams {
   asOfDate?: Date;

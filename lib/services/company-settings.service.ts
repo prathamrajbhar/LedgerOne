@@ -1,7 +1,8 @@
-import { PrismaClient, AccountType } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+import { AccountType } from "@prisma/client";
 import { ValidationError, NotFoundError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface UpdateCompanySettingsInput {
   companyName?: string;

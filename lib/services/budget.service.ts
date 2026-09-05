@@ -1,13 +1,14 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Budget Service
  * Manages budget lifecycle and achievement computation
  */
 
-import { PrismaClient, BudgetStatus, AnalyticAccountType, Prisma } from "@prisma/client";
+import { BudgetStatus, AnalyticAccountType, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, NotFoundError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateBudgetInput {
   name: string;

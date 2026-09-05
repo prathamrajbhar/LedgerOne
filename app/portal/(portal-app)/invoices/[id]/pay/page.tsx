@@ -1,10 +1,9 @@
 import * as React from "react";
 import { notFound, redirect } from "next/navigation";
 import { requireCustomerAccess } from "@/lib/auth/portal-session";
-import { PrismaClient, PaymentStatus } from "@prisma/client";
+import { PaymentStatus } from "@prisma/client";
 import { PortalPayClient } from "./portal-pay-client";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PortalInvoicePayPage({
   params,

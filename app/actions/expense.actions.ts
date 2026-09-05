@@ -1,8 +1,7 @@
 "use server";
 
-import { PrismaClient, JournalEntrySource } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { JournalEntrySource } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 
 export interface ExpenseRecord {
   id: string;

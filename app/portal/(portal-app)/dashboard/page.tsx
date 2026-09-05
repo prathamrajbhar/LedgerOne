@@ -1,10 +1,9 @@
 import { auth } from "@/lib/auth/auth.config";
 import { redirect } from "next/navigation";
-import { PrismaClient, ContactType, PaymentStatus } from "@prisma/client";
+import { ContactType, PaymentStatus } from "@prisma/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Receipt, DollarSign, Clock } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 async function getCustomerDashboardData(contactId: string) {
   // Get invoices for this customer

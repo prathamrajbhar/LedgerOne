@@ -1,10 +1,9 @@
 "use server";
 
 import { paymentService, RecordManualPaymentInput } from "@/lib/services/payment.service";
-import { PrismaClient, PaymentMethod } from "@prisma/client";
+import { PaymentMethod } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface PaymentRecord {
   id: string;

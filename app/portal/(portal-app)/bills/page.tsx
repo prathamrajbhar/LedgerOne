@@ -1,9 +1,8 @@
 import { requireVendorAccess } from "@/lib/auth/portal-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PrismaClient, PaymentStatus } from "@prisma/client";
+import { PaymentStatus } from "@prisma/client";
 import { Receipt } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PortalBillsPage() {
   const portalSession = await requireVendorAccess();

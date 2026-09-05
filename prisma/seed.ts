@@ -319,26 +319,32 @@ async function main() {
   const hashedContactPassword = await hash("Contact123!", 12);
 
   const adminUser = await prisma.user.upsert({
-    where: { email: "admin@elegantfurniture.com" },
-    update: {},
+    where: { loginId: "admin001" },
+    update: {
+      name: "Administrator",
+      email: "admin@ledgerone.in",
+    },
     create: {
       loginId: "admin001",
-      email: "admin@elegantfurniture.com",
+      email: "admin@ledgerone.in",
       password: hashedAdminPassword,
-      name: "William Cooper",
+      name: "Administrator",
       role: UserRole.ADMINISTRATOR,
       isActive: true,
     },
   });
 
   const accountantUser = await prisma.user.upsert({
-    where: { email: "accountant@elegantfurniture.com" },
-    update: {},
+    where: { loginId: "acct001" },
+    update: {
+      name: "Accountant",
+      email: "accountant@ledgerone.in",
+    },
     create: {
       loginId: "acct001",
-      email: "accountant@elegantfurniture.com",
+      email: "accountant@ledgerone.in",
       password: hashedAccountantPassword,
-      name: "Jessica Martinez",
+      name: "Accountant",
       role: UserRole.ACCOUNTANT,
       isActive: true,
     },

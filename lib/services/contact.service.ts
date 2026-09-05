@@ -1,12 +1,13 @@
+import { prisma } from "@/lib/prisma";
 /**
  * Contact Service
  * Manages customer and vendor contact information
  */
 
-import { PrismaClient, ContactType, Prisma } from "@prisma/client";
+import { ContactType, Prisma } from "@prisma/client";
 import { ConflictError, NotFoundError } from "../utils/errors";
 
-const prisma = new PrismaClient();
+
 
 export interface CreateContactInput {
   name: string;

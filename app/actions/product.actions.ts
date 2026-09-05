@@ -1,11 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { PrismaClient } from "@prisma/client";
 import { productService, CreateProductInput, UpdateProductInput, ListProductsParams } from "@/lib/services/product.service";
 import { ValidationError, NotFoundError, ConflictError } from "@/lib/utils/errors";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export interface ProductActionResult<T = unknown> {
   success: boolean;

@@ -1,9 +1,8 @@
 import { requirePortalAuth } from "@/lib/auth/portal-session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PrismaClient, ContactType } from "@prisma/client";
+import { ContactType } from "@prisma/client";
 import { CreditCard, ArrowDownRight, ArrowUpRight } from "lucide-react";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PortalPaymentsPage() {
   const portalSession = await requirePortalAuth();
