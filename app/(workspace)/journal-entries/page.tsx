@@ -121,9 +121,12 @@ export default function JournalEntriesPage() {
     },
   ]);
 
-  // Fetch data on mount
+  // Fetch data on mount and when filters change
   React.useEffect(() => {
     loadEntries();
+  }, [statusFilter, sourceFilter]);
+
+  React.useEffect(() => {
     loadJournals();
     loadAccounts();
     loadContacts();
@@ -132,7 +135,10 @@ export default function JournalEntriesPage() {
   const loadEntries = async () => {
     setLoading(true);
     try {
-      const result = await getJournalEntriesAction({});
+      const result = await getJournalEntriesAction({
+        status: statusFilter || undefined,
+        source: sourceFilter || undefined,
+      });
       if (result.success && result.data) {
         setEntries(result.data.entries as unknown as JournalEntryItem[]);
       } else {
@@ -344,14 +350,10 @@ export default function JournalEntriesPage() {
     }
   };
 
-  // Filter entries
+  // Filter entries by search only (status/source filtering done server-side)
   const filtered = entries.filter((entry) => {
-    const matchesSearch =
-      search === "" ||
-      entry.entryNumber.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === "" || entry.status === statusFilter;
-    const matchesSource = sourceFilter === "" || entry.source === sourceFilter;
-    return matchesSearch && matchesStatus && matchesSource;
+    if (search === "") return true;
+    return entry.entryNumber.toLowerCase().includes(search.toLowerCase());
   });
 
   const journalOptions = journals.map((j) => ({

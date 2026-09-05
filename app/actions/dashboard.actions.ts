@@ -199,15 +199,25 @@ export async function getDashboardKPIsAction(
 /**
  * Get monthly overview data for revenue vs expenses chart
  */
-export async function getMonthlyOverviewAction(months: number = 6): Promise<MonthlyOverviewData[]> {
+export async function getMonthlyOverviewAction(
+  period: "6" | "12" | "ytd" | number = 6
+): Promise<MonthlyOverviewData[]> {
   const result: MonthlyOverviewData[] = [];
   const today = new Date();
 
   try {
-    for (let i = months - 1; i >= 0; i--) {
+    let monthsCount = typeof period === "number" ? period : period === "12" ? 12 : 6;
+    if (period === "ytd") {
+      // Indian FY starts in April (month index 3)
+      const fyStartMonth = 3;
+      const curMonth = today.getMonth();
+      monthsCount = curMonth >= fyStartMonth ? curMonth - fyStartMonth + 1 : (12 - fyStartMonth) + curMonth + 1;
+    }
+
+    for (let i = monthsCount - 1; i >= 0; i--) {
       const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-      const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
 
       const monthName = monthDate.toLocaleDateString("en-US", { month: "short" });
 
@@ -244,9 +254,9 @@ export async function getMonthlyOverviewAction(months: number = 6): Promise<Mont
     return result;
   } catch (error) {
     console.error("Error fetching monthly overview:", error);
-    // Return empty 6-month array so chart renders cleanly without crashing
     const fallback: MonthlyOverviewData[] = [];
-    for (let i = months - 1; i >= 0; i--) {
+    const count = typeof period === "number" ? period : 6;
+    for (let i = count - 1; i >= 0; i--) {
       const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
       fallback.push({
         month: monthDate.toLocaleDateString("en-US", { month: "short" }),
@@ -267,8 +277,8 @@ export async function getExpenseBreakdownAction(
   endDate: Date
 ): Promise<ExpenseBreakdownItem[]> {
   try {
-    // 1. Try to get confirmed bills in requested date range
-    let bills = await prisma.vendorBill.findMany({
+    // 1. Get confirmed bills in requested date range
+    const bills = await prisma.vendorBill.findMany({
       where: {
         status: DocumentStatus.CONFIRMED,
         billDate: { gte: startDate, lte: endDate },
@@ -281,30 +291,15 @@ export async function getExpenseBreakdownAction(
           },
         },
       },
+      take: 500, // Limit to prevent performance issues
     });
 
-    // If no bills found in the selected range, fetch all confirmed bills so dashboard shows real business expenses
-    if (bills.length === 0) {
-      bills = await prisma.vendorBill.findMany({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-        },
-        include: {
-          lines: {
-            include: {
-              analyticAccount: true,
-              product: true,
-            },
-          },
-        },
-      });
-    }
-
-    // 2. Also check manual posted expense entries in journal
+    // 2. Also check manual posted expense entries in journal within the date range
     const manualExpenseEntries = await prisma.journalEntry.findMany({
       where: {
         source: "MANUAL",
         status: JournalEntryStatus.POSTED,
+        accountingDate: { gte: startDate, lte: endDate },
       },
       include: {
         lines: {
@@ -314,6 +309,7 @@ export async function getExpenseBreakdownAction(
           },
         },
       },
+      take: 500, // Limit to prevent performance issues
     });
 
     // Group by analytic account or category name

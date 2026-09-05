@@ -1,10 +1,27 @@
 import * as React from "react";
 import { generateBalanceSheetAction } from "@/app/actions/accounting.actions";
+import { resolveAccountingPeriod } from "@/lib/constants/accounting-periods";
 import { BalanceSheetClient } from "./balance-sheet-client";
 import type { BalanceSheetReport } from "@/lib/services/reports/balance-sheet.service";
 
-export default async function BalanceSheetPage() {
-  const result = await generateBalanceSheetAction({});
+interface BalanceSheetPageProps {
+  searchParams?: {
+    period?: string;
+    from?: string;
+    to?: string;
+  };
+}
+
+export default async function BalanceSheetPage({ searchParams }: BalanceSheetPageProps) {
+  const periodInfo = resolveAccountingPeriod(
+    searchParams?.period,
+    searchParams?.from,
+    searchParams?.to
+  );
+
+  const result = await generateBalanceSheetAction({
+    asOfDate: periodInfo.endDate,
+  });
 
   if (!result.success || !result.data) {
     return (

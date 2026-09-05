@@ -25,74 +25,15 @@ import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { UserRole } from "@prisma/client";
 
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { getAccountingPeriods, resolveAccountingPeriod, type AccountingPeriodOption } from "@/lib/constants/accounting-periods";
+
 interface NavbarProps {
   onMenuClick?: () => void;
   userRole?: UserRole;
   userName?: string;
   userEmail?: string;
   userAvatar?: string | null;
-}
-
-function getAccountingPeriods() {
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const formatDate = (d: Date) => `${pad(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()}`;
-
-  // Current Month
-  const startCur = new Date(currentYear, currentMonth, 1);
-  const endCur = new Date(currentYear, currentMonth + 1, 0);
-  const currentMonthName = now.toLocaleDateString("en-US", { month: "long" });
-  const currentMonthLabel = `${currentMonthName} ${currentYear} (Current)`;
-  const currentMonthRange = `${formatDate(startCur)} - ${formatDate(endCur)}`;
-
-  // Previous Month
-  const startPrev = new Date(currentYear, currentMonth - 1, 1);
-  const endPrev = new Date(currentYear, currentMonth, 0);
-  const prevMonthName = startPrev.toLocaleDateString("en-US", { month: "long" });
-  const prevMonthLabel = `${prevMonthName} ${startPrev.getFullYear()}`;
-  const prevMonthRange = `${formatDate(startPrev)} - ${formatDate(endPrev)}`;
-
-  // Fiscal Quarter & Year (Apr-Mar)
-  const fyStartYear = currentMonth >= 3 ? currentYear : currentYear - 1;
-  const fyEndYear = fyStartYear + 1;
-  const fyLabel = `FY ${fyStartYear}-${String(fyEndYear).slice(-2)}`;
-
-  let qNum = 1;
-  let qStartMonth = 3;
-  let qEndMonth = 5;
-  if (currentMonth >= 6 && currentMonth <= 8) {
-    qNum = 2;
-    qStartMonth = 6;
-    qEndMonth = 8;
-  } else if (currentMonth >= 9 && currentMonth <= 11) {
-    qNum = 3;
-    qStartMonth = 9;
-    qEndMonth = 11;
-  } else if (currentMonth <= 2) {
-    qNum = 4;
-    qStartMonth = 0;
-    qEndMonth = 2;
-  }
-  const startQ = new Date(qNum === 4 ? fyEndYear : fyStartYear, qStartMonth, 1);
-  const endQ = new Date(qNum === 4 ? fyEndYear : fyStartYear, qEndMonth + 1, 0);
-  const quarterLabel = `Q${qNum} ${fyLabel}`;
-  const quarterRange = `${formatDate(startQ)} - ${formatDate(endQ)}`;
-
-  // Full Fiscal Year
-  const startFY = new Date(fyStartYear, 3, 1);
-  const endFY = new Date(fyEndYear, 3, 0);
-  const fullFYLabel = `Full Fiscal Year ${fyLabel}`;
-  const fullFYRange = `${formatDate(startFY)} - ${formatDate(endFY)}`;
-
-  return [
-    { label: currentMonthLabel, range: currentMonthRange },
-    { label: prevMonthLabel, range: prevMonthRange },
-    { label: quarterLabel, range: quarterRange },
-    { label: fullFYLabel, range: fullFYRange },
-  ];
 }
 
 export function Navbar({
@@ -102,9 +43,30 @@ export function Navbar({
   userEmail,
   userAvatar,
 }: NavbarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const periods = React.useMemo(() => getAccountingPeriods(), []);
   const [searchOpen, setSearchOpen] = React.useState(false);
-  const [selectedPeriod, setSelectedPeriod] = React.useState(periods[0].range);
+
+  // Sync selected period with URL search params (or default to current month)
+  const currentPeriodKey = searchParams.get("period");
+  const currentFrom = searchParams.get("from");
+  const currentTo = searchParams.get("to");
+
+  const resolved = React.useMemo(
+    () => resolveAccountingPeriod(currentPeriodKey, currentFrom, currentTo),
+    [currentPeriodKey, currentFrom, currentTo]
+  );
+
+  const handleSelectPeriod = (option: AccountingPeriodOption) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("period", option.key);
+    params.set("from", option.startDate);
+    params.set("to", option.endDate);
+    router.push(`${pathname}?${params.toString()}`);
+  };
 
   const displayName = userName || "User";
   const displayEmail = userEmail || "user@ledgerone.in";
@@ -164,24 +126,31 @@ export function Navbar({
           {/* Financial Period Selector Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="hidden md:flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-surface-subtle hover:border-border-strong transition-colors">
+              <button
+                type="button"
+                className="hidden md:flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-surface-subtle hover:border-border-strong transition-colors"
+                title={`Accounting Period: ${resolved.label}`}
+              >
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                <span>{selectedPeriod}</span>
+                <span>{resolved.range}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground ml-1" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Accounting Period</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {periods.map((p) => (
-                <DropdownMenuItem
-                  key={p.label}
-                  onClick={() => setSelectedPeriod(p.range)}
-                  className={selectedPeriod === p.range ? "font-semibold text-navy bg-surface-subtle" : ""}
-                >
-                  {p.label}
-                </DropdownMenuItem>
-              ))}
+              {periods.map((p) => {
+                const isSelected = resolved.activeOption.key === p.key;
+                return (
+                  <DropdownMenuItem
+                    key={p.key}
+                    onClick={() => handleSelectPeriod(p)}
+                    className={`cursor-pointer ${isSelected ? "font-semibold text-navy bg-surface-subtle" : ""}`}
+                  >
+                    {p.label}
+                  </DropdownMenuItem>
+                );
+              })}
             </DropdownMenuContent>
           </DropdownMenu>
 

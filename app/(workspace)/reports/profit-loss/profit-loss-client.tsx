@@ -19,6 +19,12 @@ export function ProfitLossClient({ initialReport }: { initialReport: ProfitLossR
   );
   const [loading, setLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    setReport(initialReport);
+    setStartDate(new Date(initialReport.dateRange.startDate).toISOString().split("T")[0]);
+    setEndDate(new Date(initialReport.dateRange.endDate).toISOString().split("T")[0]);
+  }, [initialReport]);
+
   const fetchReport = async (start: string, end: string) => {
     setLoading(true);
     try {
@@ -138,7 +144,12 @@ export function ProfitLossClient({ initialReport }: { initialReport: ProfitLossR
             ) : (
               report.incomeAccounts.map((acc) => (
                 <div key={acc.accountId} className="flex justify-between py-2.5 px-3 text-xs">
-                  <span className="font-medium text-foreground">{acc.name}</span>
+                  <Link
+                    href={`/accounts/${acc.accountId}`}
+                    className="font-medium text-navy hover:underline cursor-pointer"
+                  >
+                    {acc.name}
+                  </Link>
                   <span className="font-mono text-foreground font-semibold">{fmt(acc.balance)}</span>
                 </div>
               ))
@@ -157,7 +168,12 @@ export function ProfitLossClient({ initialReport }: { initialReport: ProfitLossR
             ) : (
               report.expenseAccounts.map((acc) => (
                 <div key={acc.accountId} className="flex justify-between py-2.5 px-3 text-xs">
-                  <span className="font-medium text-foreground">{acc.name}</span>
+                  <Link
+                    href={`/accounts/${acc.accountId}`}
+                    className="font-medium text-navy hover:underline cursor-pointer"
+                  >
+                    {acc.name}
+                  </Link>
                   <span className="font-mono text-foreground font-semibold">{fmt(acc.balance)}</span>
                 </div>
               ))

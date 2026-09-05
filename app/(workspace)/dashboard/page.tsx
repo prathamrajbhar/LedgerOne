@@ -7,13 +7,26 @@ import {
   getOutstandingPaymentsAction,
   getUserGreetingAction,
 } from "@/app/actions/dashboard.actions";
+import { resolveAccountingPeriod } from "@/lib/constants/accounting-periods";
 import { DashboardClient } from "./dashboard-client";
 
-export default async function DashboardPage() {
-  // Calculate date ranges
-  const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+interface DashboardPageProps {
+  searchParams?: {
+    period?: string;
+    from?: string;
+    to?: string;
+  };
+}
+
+export default async function DashboardPage({ searchParams }: DashboardPageProps) {
+  // Resolve active accounting period from search parameters
+  const periodInfo = resolveAccountingPeriod(
+    searchParams?.period,
+    searchParams?.from,
+    searchParams?.to
+  );
+
+  const { startDate, endDate, label, range } = periodInfo;
 
   // Fetch all dashboard data in parallel
   const [
@@ -25,9 +38,9 @@ export default async function DashboardPage() {
     outstandingPayments,
     userGreeting,
   ] = await Promise.all([
-    getDashboardKPIsAction(startOfMonth, endOfMonth),
+    getDashboardKPIsAction(startDate, endDate),
     getMonthlyOverviewAction(6),
-    getExpenseBreakdownAction(startOfMonth, endOfMonth),
+    getExpenseBreakdownAction(startDate, endDate),
     getRecentTransactionsAction(10),
     getInventoryStatusAction(),
     getOutstandingPaymentsAction(),
@@ -43,6 +56,8 @@ export default async function DashboardPage() {
       inventoryStatus={inventoryStatus}
       outstandingPayments={outstandingPayments}
       userGreeting={userGreeting}
+      periodLabel={label}
+      periodRange={range}
     />
   );
 }

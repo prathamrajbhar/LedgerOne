@@ -17,3 +17,7 @@ export function formatINR(amount: number | string | null | undefined): string {
     minimumFractionDigits: num % 1 === 0 ? 0 : 2,
   }).format(num);
 }
+
+export function formatCurrency(amount: number | string | null | undefined): string {
+  return formatINR(amount);
+}

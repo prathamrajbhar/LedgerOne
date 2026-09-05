@@ -23,6 +23,7 @@ import {
   ChevronRight,
   ArrowUpRight,
   ArrowDownRight,
+  Loader2,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -48,14 +49,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import type {
-  DashboardKPIs,
-  MonthlyOverviewData,
-  ExpenseBreakdownItem,
-  RecentTransaction,
-  InventoryStatus,
-  OutstandingPayments,
+import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  getMonthlyOverviewAction,
+  getExpenseBreakdownAction,
+  type DashboardKPIs,
+  type MonthlyOverviewData,
+  type ExpenseBreakdownItem,
+  type RecentTransaction,
+  type InventoryStatus,
+  type OutstandingPayments,
 } from "@/app/actions/dashboard.actions";
+import { getProductCategoriesAction } from "@/app/actions/product.actions";
+import { ContactForm } from "@/app/(workspace)/contacts/contact-form";
+import { ProductForm } from "@/app/(workspace)/products/product-form";
+import { ExpenseModal } from "@/components/forms/expense-modal";
+import { PaymentModal } from "@/components/forms/payment-modal";
+import { CreateInvoiceModal } from "@/components/forms/create-invoice-modal";
 
 interface DashboardClientProps {
   kpis: DashboardKPIs;
@@ -65,6 +81,8 @@ interface DashboardClientProps {
   inventoryStatus: InventoryStatus;
   outstandingPayments: OutstandingPayments;
   userGreeting: { greeting: string; userName: string };
+  periodLabel?: string;
+  periodRange?: string;
 }
 
 export function DashboardClient({
@@ -75,12 +93,115 @@ export function DashboardClient({
   inventoryStatus,
   outstandingPayments,
   userGreeting,
+  periodLabel = "September 2026 (Current)",
+  periodRange = "01 Sep 2026 - 30 Sep 2026",
 }: DashboardClientProps) {
+  const router = useRouter();
   const [chartPeriod, setChartPeriod] = React.useState("Last 6 Months");
   const [expensePeriod, setExpensePeriod] = React.useState("This Month");
   const [filterCategory, setFilterCategory] = React.useState("All Categories");
   const [filterStatus, setFilterStatus] = React.useState("All Statuses");
   const [searchQuery, setSearchQuery] = React.useState("");
+
+  // Quick Action Modal State
+  type QuickActionType = "invoice" | "expense" | "payment" | "customer" | "supplier" | "product";
+  const [activeModal, setActiveModal] = React.useState<QuickActionType | null>(null);
+  const [categories, setCategories] = React.useState<Array<{ id: string; name: string }>>([]);
+
+  // Load product categories for product modal
+  React.useEffect(() => {
+    if (activeModal === "product" && categories.length === 0) {
+      getProductCategoriesAction().then((res) => {
+        if (res.success && res.data) {
+          setCategories(res.data as Array<{ id: string; name: string }>);
+        }
+      });
+    }
+  }, [activeModal, categories.length]);
+
+  const handleQuickActionSuccess = React.useCallback(() => {
+    setActiveModal(null);
+    router.refresh();
+  }, [router]);
+
+  // Dynamic state for Overview chart
+  const [overviewData, setOverviewData] = React.useState<MonthlyOverviewData[]>(monthlyOverview);
+  const [isOverviewLoading, startOverviewTransition] = React.useTransition();
+
+  // Dynamic state for Expense Breakdown chart
+  const [breakdownData, setBreakdownData] = React.useState<ExpenseBreakdownItem[]>(expenseBreakdown);
+  const [isBreakdownLoading, startBreakdownTransition] = React.useTransition();
+
+  // Sync props when SSR/URL period changes
+  React.useEffect(() => {
+    setOverviewData(monthlyOverview);
+  }, [monthlyOverview]);
+
+  React.useEffect(() => {
+    setBreakdownData(expenseBreakdown);
+  }, [expenseBreakdown]);
+
+  // Handle Chart Period Change
+  const handleChartPeriodChange = (selected: "Last 6 Months" | "Last 12 Months" | "Year to Date") => {
+    setChartPeriod(selected);
+    startOverviewTransition(async () => {
+      try {
+        const periodParam = selected === "Last 12 Months" ? 12 : selected === "Year to Date" ? "ytd" : 6;
+        const data = await getMonthlyOverviewAction(periodParam);
+        setOverviewData(data);
+      } catch (error) {
+        console.error("Failed to load overview data:", error);
+        toast.error("Failed to update overview chart data");
+      }
+    });
+  };
+
+  // Handle Expense Period Change
+  const handleExpensePeriodChange = (selected: "This Month" | "Last Month" | "This Quarter" | "All Time") => {
+    setExpensePeriod(selected);
+    startBreakdownTransition(async () => {
+      try {
+        const now = new Date();
+        let startDate: Date;
+        let endDate: Date;
+
+        if (selected === "This Month") {
+          startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+        } else if (selected === "Last Month") {
+          startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+          endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+        } else if (selected === "This Quarter") {
+          const curMonth = now.getMonth();
+          let qStartMonth = 3;
+          let qEndMonth = 5;
+          const qYear = now.getFullYear();
+          if (curMonth >= 6 && curMonth <= 8) {
+            qStartMonth = 6;
+            qEndMonth = 8;
+          } else if (curMonth >= 9 && curMonth <= 11) {
+            qStartMonth = 9;
+            qEndMonth = 11;
+          } else if (curMonth <= 2) {
+            qStartMonth = 0;
+            qEndMonth = 2;
+          }
+          startDate = new Date(qYear, qStartMonth, 1, 0, 0, 0, 0);
+          endDate = new Date(qYear, qEndMonth + 1, 0, 23, 59, 59, 999);
+        } else {
+          // All Time
+          startDate = new Date(2020, 0, 1, 0, 0, 0, 0);
+          endDate = new Date(2099, 11, 31, 23, 59, 59, 999);
+        }
+
+        const data = await getExpenseBreakdownAction(startDate, endDate);
+        setBreakdownData(data);
+      } catch (error) {
+        console.error("Failed to load expense breakdown:", error);
+        toast.error("Failed to update expense breakdown data");
+      }
+    });
+  };
 
   const handleExport = () => {
     toast.success("Recent transactions exported to CSV successfully.");
@@ -94,15 +215,17 @@ export function DashboardClient({
       filterCategory === "All Categories" || tx.category === filterCategory;
     const matchesStatus =
       filterStatus === "All Statuses" ||
-      (filterStatus === "Paid" && (tx.status === "PAID" || tx.status === "RECEIVED")) ||
-      (filterStatus === "Pending" && tx.status === "PENDING");
+      (filterStatus === "Paid" &&
+        (tx.status === "PAID" || tx.status === "RECEIVED" || tx.status === "POSTED")) ||
+      (filterStatus === "Pending" &&
+        (tx.status === "PENDING" || tx.status === "NOT_PAID" || tx.status === "PARTIAL" || tx.status === "OVERDUE"));
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
   const [expenseChartType, setExpenseChartType] = React.useState<"donut" | "bar">("donut");
 
   // Calculate total expenses for breakdown
-  const totalExpensesBreakdown = expenseBreakdown.reduce((sum, item) => {
+  const totalExpensesBreakdown = breakdownData.reduce((sum, item) => {
     if (typeof item.rawAmount === "number") {
       return sum + item.rawAmount;
     }
@@ -119,7 +242,9 @@ export function DashboardClient({
             {userGreeting.greeting}, {userGreeting.userName}!
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Here&apos;s what&apos;s happening with your business today.
+            Here&apos;s what&apos;s happening with your business for{" "}
+            <span className="font-semibold text-foreground">{periodLabel}</span>{" "}
+            <span className="text-xs text-muted-foreground/80">({periodRange})</span>.
           </p>
         </div>
         <div className="text-right hidden sm:block">
@@ -149,7 +274,7 @@ export function DashboardClient({
             <div className={`flex items-center gap-1 text-[11px] mt-1 font-medium ${kpis.revenueChange >= 0 ? "text-success" : "text-destructive"}`}>
               {kpis.revenueChange >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
               <span>{Math.abs(kpis.revenueChange).toFixed(1)}%</span>
-              <span className="text-muted-foreground font-normal">vs prev month</span>
+              <span className="text-muted-foreground font-normal">vs prev period</span>
             </div>
           </div>
         </Card>
@@ -171,7 +296,7 @@ export function DashboardClient({
             <div className={`flex items-center gap-1 text-[11px] mt-1 font-medium ${kpis.expensesChange >= 0 ? "text-destructive" : "text-success"}`}>
               {kpis.expensesChange >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
               <span>{Math.abs(kpis.expensesChange).toFixed(1)}%</span>
-              <span className="text-muted-foreground font-normal">vs prev month</span>
+              <span className="text-muted-foreground font-normal">vs prev period</span>
             </div>
           </div>
         </Card>
@@ -193,7 +318,7 @@ export function DashboardClient({
             <div className={`flex items-center gap-1 text-[11px] mt-1 font-medium ${kpis.profitChange >= 0 ? "text-success" : "text-destructive"}`}>
               {kpis.profitChange >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
               <span>{Math.abs(kpis.profitChange).toFixed(1)}%</span>
-              <span className="text-muted-foreground font-normal">vs prev month</span>
+              <span className="text-muted-foreground font-normal">vs prev period</span>
             </div>
           </div>
         </Card>
@@ -290,19 +415,20 @@ export function DashboardClient({
               {/* Period Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5">
+                  <button className="h-7 px-2.5 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1.5 disabled:opacity-60">
+                    {isOverviewLoading && <Loader2 className="h-3 w-3 animate-spin text-navy" />}
                     <span>{chartPeriod}</span>
                     <span className="text-muted-foreground">▾</span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setChartPeriod("Last 6 Months")}>
+                  <DropdownMenuItem onClick={() => handleChartPeriodChange("Last 6 Months")}>
                     Last 6 Months
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setChartPeriod("Last 12 Months")}>
+                  <DropdownMenuItem onClick={() => handleChartPeriodChange("Last 12 Months")}>
                     Last 12 Months
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setChartPeriod("Year to Date")}>
+                  <DropdownMenuItem onClick={() => handleChartPeriodChange("Year to Date")}>
                     Year to Date
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -310,9 +436,14 @@ export function DashboardClient({
             </div>
           </div>
 
-          <div className="h-[280px] w-full pt-4">
+          <div className="h-[280px] w-full pt-4 relative">
+            {isOverviewLoading && (
+              <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                <Loader2 className="h-6 w-6 animate-spin text-navy" />
+              </div>
+            )}
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={monthlyOverview} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+              <ComposedChart data={overviewData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E7EC" />
                 <XAxis
                   dataKey="month"
@@ -388,22 +519,23 @@ export function DashboardClient({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1">
+                  <button className="h-7 px-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-surface-subtle transition-colors flex items-center gap-1 disabled:opacity-60">
+                    {isBreakdownLoading && <Loader2 className="h-3 w-3 animate-spin text-teal" />}
                     <span>{expensePeriod}</span>
                     <span className="text-muted-foreground text-[10px]">▾</span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setExpensePeriod("This Month")}>
+                  <DropdownMenuItem onClick={() => handleExpensePeriodChange("This Month")}>
                     This Month
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setExpensePeriod("Last Month")}>
+                  <DropdownMenuItem onClick={() => handleExpensePeriodChange("Last Month")}>
                     Last Month
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setExpensePeriod("This Quarter")}>
+                  <DropdownMenuItem onClick={() => handleExpensePeriodChange("This Quarter")}>
                     This Quarter
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setExpensePeriod("All Time")}>
+                  <DropdownMenuItem onClick={() => handleExpensePeriodChange("All Time")}>
                     All Time
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -411,20 +543,30 @@ export function DashboardClient({
             </div>
           </div>
 
-          {expenseBreakdown.length === 0 ? (
-            <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center text-center p-6 text-sm text-muted-foreground">
+          {breakdownData.length === 0 ? (
+            <div className="flex-1 min-h-[220px] flex flex-col items-center justify-center text-center p-6 text-sm text-muted-foreground relative">
+              {isBreakdownLoading && (
+                <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-teal" />
+                </div>
+              )}
               <Receipt className="h-8 w-8 text-muted-foreground/40 mb-2" />
               <span>No expense data available</span>
               <p className="text-xs text-muted-foreground/80 mt-1">Confirmed vendor bills and journal entries will appear here.</p>
             </div>
           ) : expenseChartType === "donut" ? (
-            <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+            <div className="flex-1 flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 relative">
+              {isBreakdownLoading && (
+                <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-teal" />
+                </div>
+              )}
               {/* Animated Donut Chart with Center Total */}
               <div className="relative w-44 h-44 flex-shrink-0 flex items-center justify-center">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
-                      data={expenseBreakdown}
+                      data={breakdownData}
                       cx="50%"
                       cy="50%"
                       innerRadius={50}
@@ -436,7 +578,7 @@ export function DashboardClient({
                       animationDuration={1200}
                       animationEasing="ease-out"
                     >
-                      {expenseBreakdown.map((entry, index) => (
+                      {breakdownData.map((entry, index) => (
                         <Cell
                           key={`cell-${index}`}
                           fill={entry.color}
@@ -473,7 +615,7 @@ export function DashboardClient({
 
               {/* Breakdown Category List */}
               <div className="w-full flex-1 space-y-1.5 min-w-0 max-h-[220px] overflow-y-auto pr-1">
-                {expenseBreakdown.map((item) => (
+                {breakdownData.map((item) => (
                   <div
                     key={item.name}
                     className="flex items-center justify-between text-xs py-1 border-b border-border/30 last:border-0 hover:bg-muted/30 px-1 rounded transition-colors gap-2"
@@ -501,7 +643,12 @@ export function DashboardClient({
             </div>
           ) : (
             /* Animated Bar Graph with Real Data */
-            <div className="flex-1 flex flex-col pt-3">
+            <div className="flex-1 flex flex-col pt-3 relative">
+              {isBreakdownLoading && (
+                <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+                  <Loader2 className="h-6 w-6 animate-spin text-teal" />
+                </div>
+              )}
               <div className="flex items-center justify-between text-xs text-muted-foreground px-1 mb-1">
                 <span>Category Breakdown</span>
                 <span className="font-semibold text-foreground">
@@ -511,7 +658,7 @@ export function DashboardClient({
               <div className="h-[210px] w-full pt-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={expenseBreakdown}
+                    data={breakdownData}
                     layout="vertical"
                     margin={{ top: 5, right: 25, left: 10, bottom: 5 }}
                   >
@@ -554,7 +701,7 @@ export function DashboardClient({
                       animationDuration={1000}
                       animationEasing="ease-out"
                     >
-                      {expenseBreakdown.map((entry, index) => (
+                      {breakdownData.map((entry, index) => (
                         <Cell key={`bar-cell-${index}`} fill={entry.color} />
                       ))}
                     </Bar>
@@ -564,7 +711,7 @@ export function DashboardClient({
 
               {/* Bar view bottom summary chips */}
               <div className="flex flex-wrap gap-1.5 pt-2 border-t border-border/50 mt-auto">
-                {expenseBreakdown.slice(0, 4).map((item) => (
+                {breakdownData.slice(0, 4).map((item) => (
                   <div
                     key={item.name}
                     className="flex items-center gap-1.5 bg-muted/40 px-2 py-0.5 rounded text-[11px]"
@@ -595,9 +742,10 @@ export function DashboardClient({
             Quick Actions
           </CardTitle>
           <div className="grid grid-cols-3 gap-2.5">
-            <Link
-              href="/invoices"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("invoice")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDF5FC] text-[#3478B9] group-hover:bg-navy group-hover:text-white transition-colors mb-2">
                 <FileText className="h-4 w-4" />
@@ -605,11 +753,12 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Create Invoice
               </span>
-            </Link>
+            </button>
 
-            <Link
-              href="/expenses"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-teal hover:bg-[#E7F5F5]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("expense")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-teal hover:bg-[#E7F5F5]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EAF7F1] text-success group-hover:bg-teal group-hover:text-white transition-colors mb-2">
                 <Receipt className="h-4 w-4" />
@@ -617,11 +766,12 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Record Expense
               </span>
-            </Link>
+            </button>
 
-            <Link
-              href="/payments"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("payment")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E7F5F5] text-teal group-hover:bg-navy group-hover:text-white transition-colors mb-2">
                 <CreditCard className="h-4 w-4" />
@@ -629,11 +779,12 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Add Payment
               </span>
-            </Link>
+            </button>
 
-            <Link
-              href="/contacts/new"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("customer")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDF5FC] text-[#3478B9] group-hover:bg-navy group-hover:text-white transition-colors mb-2">
                 <UserPlus className="h-4 w-4" />
@@ -641,11 +792,12 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Add Customer
               </span>
-            </Link>
+            </button>
 
-            <Link
-              href="/contacts/new?type=VENDOR"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("supplier")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-navy hover:bg-[#E8F0F7]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E8F0F7] text-navy group-hover:bg-navy group-hover:text-white transition-colors mb-2">
                 <Building2 className="h-4 w-4" />
@@ -653,11 +805,12 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Add Supplier
               </span>
-            </Link>
+            </button>
 
-            <Link
-              href="/products/new"
-              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-teal hover:bg-[#E7F5F5]/40 transition-all text-center group"
+            <button
+              type="button"
+              onClick={() => setActiveModal("product")}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-border hover:border-teal hover:bg-[#E7F5F5]/40 transition-all text-center group cursor-pointer"
             >
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EAF7F1] text-success group-hover:bg-teal group-hover:text-white transition-colors mb-2">
                 <PackagePlus className="h-4 w-4" />
@@ -665,7 +818,7 @@ export function DashboardClient({
               <span className="text-[11px] font-medium text-foreground leading-tight">
                 Add Product
               </span>
-            </Link>
+            </button>
           </div>
         </Card>
 
@@ -751,7 +904,7 @@ export function DashboardClient({
           <div className="space-y-2.5 pt-3">
             {/* Overdue Invoices */}
             <Link
-              href="/invoices"
+              href="/invoices?paymentStatus=OVERDUE"
               className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle transition-colors group"
             >
               <div className="flex items-center gap-2.5">
@@ -773,7 +926,7 @@ export function DashboardClient({
 
             {/* Pending Invoices */}
             <Link
-              href="/invoices"
+              href="/invoices?paymentStatus=PENDING"
               className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle transition-colors group"
             >
               <div className="flex items-center gap-2.5">
@@ -795,7 +948,7 @@ export function DashboardClient({
 
             {/* Receivables (Customers) */}
             <Link
-              href="/contacts"
+              href="/contacts?type=CUSTOMER"
               className="flex items-center justify-between p-2 rounded-lg hover:bg-surface-subtle transition-colors group"
             >
               <div className="flex items-center gap-2.5">
@@ -999,6 +1152,89 @@ export function DashboardClient({
           </table>
         </div>
       </Card>
+
+      {/* ================= Quick Action Modals ================= */}
+
+      {/* 1. Create Invoice Modal */}
+      <CreateInvoiceModal
+        open={activeModal === "invoice"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        onSuccess={handleQuickActionSuccess}
+      />
+
+      {/* 2. Record Expense Modal */}
+      <ExpenseModal
+        open={activeModal === "expense"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        onSuccess={handleQuickActionSuccess}
+      />
+
+      {/* 3. Add Payment Modal */}
+      <PaymentModal
+        open={activeModal === "payment"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+        onSuccess={handleQuickActionSuccess}
+      />
+
+      {/* 4. Add Customer Modal */}
+      <Dialog
+        open={activeModal === "customer"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
+          <DialogHeader className="border-b border-border pb-3 mb-2">
+            <DialogTitle className="text-lg font-bold text-navy">
+              Add New Customer
+            </DialogTitle>
+          </DialogHeader>
+          <ContactForm
+            initialData={{ type: "CUSTOMER" }}
+            isModal={true}
+            onSuccess={handleQuickActionSuccess}
+            onCancel={() => setActiveModal(null)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* 5. Add Supplier / Vendor Modal */}
+      <Dialog
+        open={activeModal === "supplier"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
+          <DialogHeader className="border-b border-border pb-3 mb-2">
+            <DialogTitle className="text-lg font-bold text-navy">
+              Add New Supplier / Vendor
+            </DialogTitle>
+          </DialogHeader>
+          <ContactForm
+            initialData={{ type: "VENDOR" }}
+            isModal={true}
+            onSuccess={handleQuickActionSuccess}
+            onCancel={() => setActiveModal(null)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* 6. Add Product Modal */}
+      <Dialog
+        open={activeModal === "product"}
+        onOpenChange={(open) => !open && setActiveModal(null)}
+      >
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl">
+          <DialogHeader className="border-b border-border pb-3 mb-2">
+            <DialogTitle className="text-lg font-bold text-navy">
+              Add New Product to Inventory
+            </DialogTitle>
+          </DialogHeader>
+          <ProductForm
+            categories={categories}
+            isModal={true}
+            onSuccess={handleQuickActionSuccess}
+            onCancel={() => setActiveModal(null)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

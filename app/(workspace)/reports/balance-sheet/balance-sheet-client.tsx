@@ -16,6 +16,11 @@ export function BalanceSheetClient({ initialReport }: { initialReport: BalanceSh
   );
   const [loading, setLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    setReport(initialReport);
+    setAsOfDate(new Date(initialReport.asOfDate).toISOString().split("T")[0]);
+  }, [initialReport]);
+
   const fetchReport = async (dateStr: string) => {
     setLoading(true);
     try {
@@ -112,7 +117,12 @@ export function BalanceSheetClient({ initialReport }: { initialReport: BalanceSh
             ) : (
               report.assets.accounts.map((acc) => (
                 <div key={acc.accountId} className="flex justify-between py-2.5 px-3 text-xs">
-                  <span className="font-medium text-foreground">{acc.accountName}</span>
+                  <Link
+                    href={`/accounts/${acc.accountId}`}
+                    className="font-medium text-navy hover:underline cursor-pointer"
+                  >
+                    {acc.accountName}
+                  </Link>
                   <span className="font-mono text-foreground font-semibold">{fmt(acc.balance)}</span>
                 </div>
               ))
@@ -132,7 +142,12 @@ export function BalanceSheetClient({ initialReport }: { initialReport: BalanceSh
               ) : (
                 report.liabilities.accounts.map((acc) => (
                   <div key={acc.accountId} className="flex justify-between py-2.5 px-3 text-xs">
-                    <span className="font-medium text-foreground">{acc.accountName}</span>
+                    <Link
+                      href={`/accounts/${acc.accountId}`}
+                      className="font-medium text-navy hover:underline cursor-pointer"
+                    >
+                      {acc.accountName}
+                    </Link>
                     <span className="font-mono text-foreground font-semibold">{fmt(acc.balance)}</span>
                   </div>
                 ))
@@ -151,7 +166,12 @@ export function BalanceSheetClient({ initialReport }: { initialReport: BalanceSh
               ) : (
                 report.equity.accounts.map((acc) => (
                   <div key={acc.accountId} className="flex justify-between py-2.5 px-3 text-xs">
-                    <span className="font-medium text-foreground">{acc.accountName}</span>
+                    <Link
+                      href={`/accounts/${acc.accountId}`}
+                      className="font-medium text-navy hover:underline cursor-pointer"
+                    >
+                      {acc.accountName}
+                    </Link>
                     <span className="font-mono text-foreground font-semibold">{fmt(acc.balance)}</span>
                   </div>
                 ))

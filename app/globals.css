@@ -53,6 +53,50 @@
   .tnum {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Polished native select inputs across entire app */
+  select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #ffffff;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.6rem center;
+    background-repeat: no-repeat;
+    background-size: 1.25em 1.25em;
+    padding-right: 2rem !important;
+    border-color: hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  select:focus {
+    border-color: #16324F;
+    outline: none;
+    box-shadow: 0 0 0 1px #16324F;
+  }
+
+  /* Polished native date/time/number inputs across entire app */
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    background-color: #ffffff;
+    border-color: hsl(var(--border));
+    color: hsl(var(--foreground));
+  }
+
+  input[type="date"]:focus,
+  input[type="datetime-local"]:focus,
+  input[type="time"]:focus {
+    border-color: #16324F;
+    outline: none;
+    box-shadow: 0 0 0 1px #16324F;
+  }
+
+  /* Remove default spinner on number inputs if wanted or style cleanly */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 0.5;
+  }
 }
 
 /* Custom Sleek Scrollbar */

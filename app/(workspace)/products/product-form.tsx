@@ -32,6 +32,9 @@ interface ProductFormProps {
   initialData?: ProductFormDataShape;
   categories: Array<{ id: string; name: string }>;
   isEdit?: boolean;
+  isModal?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 function parseDimensions(raw?: string) {
@@ -69,7 +72,14 @@ function parseDimensions(raw?: string) {
   return { length: "", width: "", height: "", unit: "cm" };
 }
 
-export function ProductForm({ initialData, categories, isEdit }: ProductFormProps) {
+export function ProductForm({
+  initialData,
+  categories,
+  isEdit,
+  isModal = false,
+  onSuccess,
+  onCancel,
+}: ProductFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
@@ -226,8 +236,12 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
             ? `Product "${formData.name}" updated successfully.`
             : `Product "${formData.name}" created successfully.`
         );
-        router.push("/products");
-        router.refresh();
+        if (isModal) {
+          onSuccess?.();
+        } else {
+          router.push("/products");
+          router.refresh();
+        }
       } else {
         toast.error(result.error || "Failed to save product");
         setLoading(false);
@@ -240,59 +254,63 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto pb-12">
+    <div className={isModal ? "space-y-4" : "space-y-6 max-w-5xl mx-auto pb-12"}>
       {/* Top Breadcrumb / Action Bar */}
-      <div className="flex items-center justify-between">
-        <Link href="/products">
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Products Catalog
-          </Button>
-        </Link>
-        <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
-          {isEdit ? "Editing Mode" : "New Inventory Entry"}
-        </span>
-      </div>
-
-      {/* Hero Header Card */}
-      <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
-            <Package className="h-6 w-6 text-navy" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-                {isEdit ? `Edit: ${formData.name}` : "Create New Product"}
-              </h1>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
-                Furniture ERP
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Configure product specifications, pricing, bill of materials, and stock control thresholds.
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-end sm:self-center">
+      {!isModal && (
+        <div className="flex items-center justify-between">
           <Link href="/products">
-            <Button type="button" variant="outline" size="sm" className="text-xs">
-              Cancel
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Products Catalog
             </Button>
           </Link>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            size="sm"
-            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Product"}
-          </Button>
+          <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
+            {isEdit ? "Editing Mode" : "New Inventory Entry"}
+          </span>
         </div>
-      </div>
+      )}
+
+      {/* Hero Header Card */}
+      {!isModal && (
+        <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
+              <Package className="h-6 w-6 text-navy" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+                  {isEdit ? `Edit: ${formData.name}` : "Create New Product"}
+                </h1>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
+                  Furniture ERP
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Configure product specifications, pricing, bill of materials, and stock control thresholds.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-end sm:self-center">
+            <Link href="/products">
+              <Button type="button" variant="outline" size="sm" className="text-xs">
+                Cancel
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              size="sm"
+              className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {loading ? "Saving..." : isEdit ? "Save Changes" : "Save Product"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -791,11 +809,24 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
 
             {/* Bottom Actions for Mobile / Sidebar */}
             <div className="flex items-center justify-end gap-3 pt-1">
-              <Link href="/products" className="w-full sm:w-auto">
-                <Button type="button" variant="outline" size="sm" className="w-full text-xs">
+              {isModal ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto text-xs"
+                  onClick={onCancel}
+                  disabled={loading}
+                >
                   Cancel
                 </Button>
-              </Link>
+              ) : (
+                <Link href="/products" className="w-full sm:w-auto">
+                  <Button type="button" variant="outline" size="sm" className="w-full text-xs">
+                    Cancel
+                  </Button>
+                </Link>
+              )}
               <Button
                 type="submit"
                 disabled={loading}

@@ -26,9 +26,18 @@ export interface ContactFormDataShape {
 interface ContactFormProps {
   initialData?: ContactFormDataShape;
   isEdit?: boolean;
+  isModal?: boolean;
+  onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
-export function ContactForm({ initialData, isEdit }: ContactFormProps) {
+export function ContactForm({
+  initialData,
+  isEdit,
+  isModal = false,
+  onSuccess,
+  onCancel,
+}: ContactFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlType = searchParams.get("type")?.toUpperCase();
@@ -109,8 +118,12 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
             ? `Contact "${formData.name}" updated successfully.`
             : `Contact "${formData.name}" created successfully.`
         );
-        router.push("/contacts");
-        router.refresh(); // Refresh the contacts list
+        if (isModal) {
+          onSuccess?.();
+        } else {
+          router.push("/contacts");
+          router.refresh(); // Refresh the contacts list
+        }
       } else {
         // Handle backend validation errors
         toast.error(result.error || "Failed to save contact");
@@ -131,67 +144,71 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto pb-12">
+    <div className={isModal ? "space-y-4" : "space-y-6 max-w-4xl mx-auto pb-12"}>
       {/* Top Breadcrumb / Navigation */}
-      <div className="flex items-center justify-between">
-        <Link href={backUrl}>
-          <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            Back to {entityTitle}s
-          </Button>
-        </Link>
-        <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
-          {isEdit ? `Editing ${entityTitle}` : `New ${entityTitle} Entry`}
-        </span>
-      </div>
-
-      {/* Hero Header Card */}
-      <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
-            {formData.type === "VENDOR" ? (
-              <Building2 className="h-6 w-6 text-navy" />
-            ) : (
-              <Users className="h-6 w-6 text-navy" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-                {isEdit ? `Edit: ${formData.name}` : `Create New ${entityTitle}`}
-              </h1>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
-                {entityTitle}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {formData.type === "CUSTOMER"
-                ? "Register client details, delivery addresses, and billing credentials for portal access."
-                : formData.type === "VENDOR"
-                ? "Register timber sawmills, upholstery vendors, hardware fittings suppliers, and payment terms."
-                : "Register customers, suppliers, raw material vendors, and partner accounts."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 self-end sm:self-center">
-          <Link href="/contacts">
-            <Button type="button" variant="outline" size="sm" className="text-xs">
-              Cancel
+      {!isModal && (
+        <div className="flex items-center justify-between">
+          <Link href={backUrl}>
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
+              <ArrowLeft className="h-4 w-4" />
+              Back to {entityTitle}s
             </Button>
           </Link>
-          <Button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            size="sm"
-            className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
-          >
-            <Save className="h-3.5 w-3.5" />
-            {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Contact"}
-          </Button>
+          <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
+            {isEdit ? `Editing ${entityTitle}` : `New ${entityTitle} Entry`}
+          </span>
         </div>
-      </div>
+      )}
+
+      {/* Hero Header Card */}
+      {!isModal && (
+        <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
+              {formData.type === "VENDOR" ? (
+                <Building2 className="h-6 w-6 text-navy" />
+              ) : (
+                <Users className="h-6 w-6 text-navy" />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+                  {isEdit ? `Edit: ${formData.name}` : `Create New ${entityTitle}`}
+                </h1>
+                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
+                  {entityTitle}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {formData.type === "CUSTOMER"
+                  ? "Register client details, delivery addresses, and billing credentials for portal access."
+                  : formData.type === "VENDOR"
+                  ? "Register timber sawmills, upholstery vendors, hardware fittings suppliers, and payment terms."
+                  : "Register customers, suppliers, raw material vendors, and partner accounts."}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-end sm:self-center">
+            <Link href="/contacts">
+              <Button type="button" variant="outline" size="sm" className="text-xs">
+                Cancel
+              </Button>
+            </Link>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={loading}
+              size="sm"
+              className="bg-navy hover:bg-navy-dark text-white text-xs gap-1.5 shadow-sm px-4"
+            >
+              <Save className="h-3.5 w-3.5" />
+              {loading ? "Saving..." : isEdit ? "Save Changes" : "Create Contact"}
+            </Button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Section 1: Basic Information */}
@@ -290,11 +307,24 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 pt-1">
-          <Link href="/contacts">
-            <Button type="button" variant="outline" size="sm" className="text-xs">
+          {isModal ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={onCancel}
+              disabled={loading}
+            >
               Cancel
             </Button>
-          </Link>
+          ) : (
+            <Link href="/contacts">
+              <Button type="button" variant="outline" size="sm" className="text-xs">
+                Cancel
+              </Button>
+            </Link>
+          )}
           <Button
             type="submit"
             disabled={loading}

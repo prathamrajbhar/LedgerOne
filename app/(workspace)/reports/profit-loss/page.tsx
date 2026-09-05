@@ -1,15 +1,27 @@
 import * as React from "react";
 import { generateProfitLossReportAction } from "@/app/actions/accounting.actions";
+import { resolveAccountingPeriod } from "@/lib/constants/accounting-periods";
 import { ProfitLossClient } from "./profit-loss-client";
 import type { ProfitLossReport } from "@/lib/services/reports/profit-loss.service";
 
-export default async function ProfitLossPage() {
-  const now = new Date();
-  const fiscalYearStart = new Date(now.getFullYear(), 0, 1);
+interface ProfitLossPageProps {
+  searchParams?: {
+    period?: string;
+    from?: string;
+    to?: string;
+  };
+}
+
+export default async function ProfitLossPage({ searchParams }: ProfitLossPageProps) {
+  const periodInfo = resolveAccountingPeriod(
+    searchParams?.period,
+    searchParams?.from,
+    searchParams?.to
+  );
 
   const result = await generateProfitLossReportAction({
-    startDate: fiscalYearStart,
-    endDate: now,
+    startDate: periodInfo.startDate,
+    endDate: periodInfo.endDate,
   });
 
   if (!result.success || !result.data) {

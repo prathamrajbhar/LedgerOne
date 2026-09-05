@@ -46,6 +46,8 @@ export default function AccountsPage() {
     setLoading(true);
     try {
       const result = await getChartOfAccountsAction({
+        search: search || undefined,
+        type: typeFilter !== "ALL" ? (typeFilter as AccountType) : undefined,
         includeArchived: statusFilter === "ARCHIVED",
       });
       if (result.success && result.data) {
@@ -58,7 +60,7 @@ export default function AccountsPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, search, typeFilter]);
 
   // Fetch accounts on mount or status change
   React.useEffect(() => {
@@ -100,11 +102,8 @@ export default function AccountsPage() {
   };
 
   const filtered = accounts.filter((acc) => {
-    const matchesSearch =
-      acc.name.toLowerCase().includes(search.toLowerCase()) ||
-      acc.code.toLowerCase().includes(search.toLowerCase());
-    const matchesType = typeFilter === "ALL" || acc.type === typeFilter;
-    return matchesSearch && matchesType;
+    // Filtering now done server-side, but keep for any edge cases
+    return true;
   });
 
   return (

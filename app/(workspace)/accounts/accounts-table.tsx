@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, Archive, RotateCcw, Trash2 } from "lucide-react";
@@ -43,6 +44,7 @@ interface AccountsTableProps {
 }
 
 export function AccountsTable({ accounts, isArchivedTab = false, onRefresh }: AccountsTableProps) {
+  const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
 
@@ -208,10 +210,13 @@ export function AccountsTable({ accounts, isArchivedTab = false, onRefresh }: Ac
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => toast.info(`Viewing ledger for ${acc.name}`)}>
+                      <DropdownMenuItem onClick={() => router.push(`/accounts/${acc.id}`)}>
                         View General Ledger
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toast.success(`Account ${acc.code} details copied.`)}>
+                      <DropdownMenuItem onClick={() => {
+                        navigator.clipboard.writeText(acc.code);
+                        toast.success(`Account code "${acc.code}" copied to clipboard`);
+                      }}>
                         Copy Account Code
                       </DropdownMenuItem>
 
