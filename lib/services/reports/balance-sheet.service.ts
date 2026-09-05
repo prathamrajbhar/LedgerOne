@@ -1,135 +1,215 @@
-/**
- * Balance Sheet Service
- * Computes deterministic Assets, Liabilities, and Equity balances
- */
-
 import { PrismaClient, AccountType } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
+import { ValidationError } from "../../utils/errors";
 
 const prisma = new PrismaClient();
 
-export interface AccountBalanceItem {
-  id: string;
-  name: string;
-  code?: string;
-  balance: Decimal;
+export interface BalanceSheetParams {
+  asOfDate?: Date;
+}
+
+export interface AccountBalance {
+  accountId: string;
+  accountName: string;
+  accountType: AccountType;
+  balance: number;
 }
 
 export interface BalanceSheetReport {
-  assets: AccountBalanceItem[];
-  totalAssets: Decimal;
-  liabilities: AccountBalanceItem[];
-  totalLiabilities: Decimal;
-  equity: AccountBalanceItem[];
-  totalEquity: Decimal;
-  isBalanced: boolean;
+  asOfDate: Date;
+  assets: {
+    accounts: AccountBalance[];
+    total: number;
+  };
+  liabilities: {
+    accounts: AccountBalance[];
+    total: number;
+  };
+  equity: {
+    accounts: AccountBalance[];
+    total: number;
+  };
+  balanceCheck: {
+    assetsTotal: number;
+    liabilitiesAndEquityTotal: number;
+    isBalanced: boolean;
+  };
 }
 
 export class BalanceSheetService {
-  async generate(asOfDate?: Date): Promise<BalanceSheetReport> {
-    const dateFilter = asOfDate
-      ? { journalEntry: { accountingDate: { lte: asOfDate }, status: "POSTED" as const } }
-      : { journalEntry: { status: "POSTED" as const } };
+  async generate(params: BalanceSheetParams = {}): Promise<BalanceSheetReport> {
+    const asOfDate = params.asOfDate || new Date();
 
-    // Fetch accounts
-    const accounts = await prisma.chartOfAccount.findMany({
-      where: { isArchived: false },
-      include: {
-        journalEntryLines: {
-          where: dateFilter,
-          select: {
-            debit: true,
-            credit: true,
+    const journalEntryLines = await prisma.journalEntryLine.findMany({
+      where: {
+        journalEntry: {
+          accountingDate: {
+            lte: asOfDate,
           },
+          status: "POSTED",
         },
       },
-      orderBy: { name: "asc" },
+      include: {
+        account: true,
+      },
     });
 
-    const assets: AccountBalanceItem[] = [];
-    const liabilities: AccountBalanceItem[] = [];
-    const equity: AccountBalanceItem[] = [];
+    const accountBalances = new Map<string, AccountBalance>();
 
-    let totalAssets = new Decimal(0);
-    let totalLiabilities = new Decimal(0);
-    let totalEquity = new Decimal(0);
+    for (const line of journalEntryLines) {
+      const accountId = line.accountId;
+      const accountName = line.account.name;
+      const accountType = line.account.type;
 
-    for (const acc of accounts) {
-      let debitSum = new Decimal(0);
-      let creditSum = new Decimal(0);
-
-      for (const line of acc.journalEntryLines) {
-        debitSum = debitSum.add(line.debit);
-        creditSum = creditSum.add(line.credit);
+      if (!accountBalances.has(accountId)) {
+        accountBalances.set(accountId, {
+          accountId,
+          accountName,
+          accountType,
+          balance: 0,
+        });
       }
 
-      // Assets: Normal debit balance (Debit - Credit)
-      // Bank / Cash are asset types
-      if (
-        acc.type === AccountType.ASSET ||
-        acc.type === AccountType.BANK ||
-        acc.type === AccountType.CASH
-      ) {
-        const balance = debitSum.sub(creditSum);
-        assets.push({ id: acc.id, name: acc.name, balance });
-        totalAssets = totalAssets.add(balance);
-      }
-      // Liabilities: Normal credit balance (Credit - Debit)
-      else if (acc.type === AccountType.LIABILITY) {
-        const balance = creditSum.sub(debitSum);
-        liabilities.push({ id: acc.id, name: acc.name, balance });
-        totalLiabilities = totalLiabilities.add(balance);
-      }
-      // Equity / Capital: Normal credit balance (Credit - Debit)
-      else if (acc.type === AccountType.CAPITAL) {
-        const balance = creditSum.sub(debitSum);
-        equity.push({ id: acc.id, name: acc.name, balance });
-        totalEquity = totalEquity.add(balance);
+      const accountBalance = accountBalances.get(accountId)!;
+
+      const debit = Number(line.debit);
+      const credit = Number(line.credit);
+
+      if (accountType === AccountType.ASSET || accountType === AccountType.BANK || accountType === AccountType.CASH) {
+        accountBalance.balance += debit - credit;
+      } else if (accountType === AccountType.LIABILITY || accountType === AccountType.CAPITAL) {
+        accountBalance.balance += credit - debit;
+      } else {
+        accountBalance.balance += debit - credit;
       }
     }
 
-    // Retained earnings calculation (Income - Expenses)
-    let netIncome = new Decimal(0);
-    for (const acc of accounts) {
-      if (
-        acc.type === AccountType.INCOME ||
-        acc.type === AccountType.EXPENSES ||
-        acc.type === AccountType.OTHER_EXPENSES
-      ) {
-        let d = new Decimal(0);
-        let c = new Decimal(0);
-        for (const line of acc.journalEntryLines) {
-          d = d.add(line.debit);
-          c = c.add(line.credit);
-        }
-        if (acc.type === AccountType.INCOME) {
-          netIncome = netIncome.add(c.sub(d));
-        } else {
-          netIncome = netIncome.sub(d.sub(c));
-        }
+    const assets: AccountBalance[] = [];
+    const liabilities: AccountBalance[] = [];
+    const equity: AccountBalance[] = [];
+
+    for (const balance of accountBalances.values()) {
+      if (balance.accountType === AccountType.ASSET ||
+          balance.accountType === AccountType.BANK ||
+          balance.accountType === AccountType.CASH) {
+        assets.push(balance);
+      } else if (balance.accountType === AccountType.LIABILITY) {
+        liabilities.push(balance);
+      } else if (balance.accountType === AccountType.CAPITAL) {
+        equity.push(balance);
       }
     }
 
-    if (!netIncome.isZero()) {
-      equity.push({
-        id: "retained-earnings",
-        name: "Current Year Earnings",
-        code: "3999",
-        balance: netIncome,
-      });
-      totalEquity = totalEquity.add(netIncome);
-    }
+    assets.sort((a, b) => a.accountName.localeCompare(b.accountName));
+    liabilities.sort((a, b) => a.accountName.localeCompare(b.accountName));
+    equity.sort((a, b) => a.accountName.localeCompare(b.accountName));
 
-    const isBalanced = totalAssets.equals(totalLiabilities.add(totalEquity));
+    const assetsTotal = assets.reduce((sum, acc) => sum + acc.balance, 0);
+    const liabilitiesTotal = liabilities.reduce((sum, acc) => sum + acc.balance, 0);
+    const equityTotal = equity.reduce((sum, acc) => sum + acc.balance, 0);
+
+    const liabilitiesAndEquityTotal = liabilitiesTotal + equityTotal;
+    const isBalanced = Math.abs(assetsTotal - liabilitiesAndEquityTotal) < 0.01;
 
     return {
-      assets,
-      totalAssets,
-      liabilities,
-      totalLiabilities,
-      equity,
-      totalEquity,
-      isBalanced,
+      asOfDate,
+      assets: {
+        accounts: assets,
+        total: assetsTotal,
+      },
+      liabilities: {
+        accounts: liabilities,
+        total: liabilitiesTotal,
+      },
+      equity: {
+        accounts: equity,
+        total: equityTotal,
+      },
+      balanceCheck: {
+        assetsTotal,
+        liabilitiesAndEquityTotal,
+        isBalanced,
+      },
+    };
+  }
+
+  async getProfitLoss(startDate: Date, endDate: Date) {
+    const journalEntryLines = await prisma.journalEntryLine.findMany({
+      where: {
+        journalEntry: {
+          accountingDate: {
+            gte: startDate,
+            lte: endDate,
+          },
+          status: "POSTED",
+        },
+      },
+      include: {
+        account: true,
+      },
+    });
+
+    const accountBalances = new Map<string, AccountBalance>();
+
+    for (const line of journalEntryLines) {
+      const accountId = line.accountId;
+      const accountName = line.account.name;
+      const accountType = line.account.type;
+
+      if (accountType !== AccountType.INCOME &&
+          accountType !== AccountType.EXPENSES &&
+          accountType !== AccountType.OTHER_EXPENSES) {
+        continue;
+      }
+
+      if (!accountBalances.has(accountId)) {
+        accountBalances.set(accountId, {
+          accountId,
+          accountName,
+          accountType,
+          balance: 0,
+        });
+      }
+
+      const accountBalance = accountBalances.get(accountId)!;
+
+      const debit = Number(line.debit);
+      const credit = Number(line.credit);
+
+      if (accountType === AccountType.INCOME) {
+        accountBalance.balance += credit - debit;
+      } else {
+        accountBalance.balance += debit - credit;
+      }
+    }
+
+    const income: AccountBalance[] = [];
+    const expenses: AccountBalance[] = [];
+
+    for (const balance of accountBalances.values()) {
+      if (balance.accountType === AccountType.INCOME) {
+        income.push(balance);
+      } else if (balance.accountType === AccountType.EXPENSES ||
+                 balance.accountType === AccountType.OTHER_EXPENSES) {
+        expenses.push(balance);
+      }
+    }
+
+    const incomeTotal = income.reduce((sum, acc) => sum + acc.balance, 0);
+    const expensesTotal = expenses.reduce((sum, acc) => sum + acc.balance, 0);
+    const netProfit = incomeTotal - expensesTotal;
+
+    return {
+      startDate,
+      endDate,
+      income: {
+        accounts: income,
+        total: incomeTotal,
+      },
+      expenses: {
+        accounts: expenses,
+        total: expensesTotal,
+      },
+      netProfit,
     };
   }
 }

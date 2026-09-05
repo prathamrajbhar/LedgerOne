@@ -1,188 +1,336 @@
-/**
- * Purchase Order Service
- * Handles purchase order lifecycle: Draft -> Confirmed -> Cancelled
- */
-
-import { PrismaClient, DocumentStatus } from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
-import { ValidationError, NotFoundError } from "../utils/errors";
+import { PrismaClient, DocumentStatus, Prisma } from "@prisma/client";
+import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
 const prisma = new PrismaClient();
 
-export interface PurchaseOrderLineInput {
+export interface CreatePurchaseOrderLineInput {
   productId: string;
-  analyticAccountId?: string;
+  analyticAccountId: string;
   quantity: number;
   unitPrice: number;
 }
 
 export interface CreatePurchaseOrderInput {
   vendorId: string;
-  orderDate: Date | string;
-  expectedDate?: Date | string;
-  notes?: string;
-  lines: PurchaseOrderLineInput[];
-  userId?: string;
+  orderDate: Date;
+  lines: CreatePurchaseOrderLineInput[];
+  createdById: string;
+}
+
+export interface UpdatePurchaseOrderInput {
+  id: string;
+  vendorId?: string;
+  orderDate?: Date;
+  lines?: CreatePurchaseOrderLineInput[];
 }
 
 export interface ListPurchaseOrdersParams {
-  status?: DocumentStatus;
   vendorId?: string;
+  status?: DocumentStatus;
+  startDate?: Date;
+  endDate?: Date;
   page?: number;
   limit?: number;
 }
 
 export class PurchaseOrderService {
-  async list(params: ListPurchaseOrdersParams = {}) {
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const skip = (page - 1) * limit;
+  private async generatePoNumber(): Promise<string> {
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.poNumberPrefix || "PO";
 
-    const where: any = {};
-    if (params.status) where.status = params.status;
-    if (params.vendorId) where.vendorId = params.vendorId;
+    const lastPo = await prisma.purchaseOrder.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
 
-    const [data, total] = await Promise.all([
+    let nextNumber = 1;
+    if (lastPo) {
+      const match = lastPo.poNumber.match(/\d+$/);
+      if (match) {
+        nextNumber = parseInt(match[0]) + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(5, "0")}`;
+  }
+
+  private calculateLineTotal(quantity: number, unitPrice: number): number {
+    return quantity * unitPrice;
+  }
+
+  private calculateTotal(lines: CreatePurchaseOrderLineInput[]): number {
+    return lines.reduce((sum, line) => {
+      return sum + this.calculateLineTotal(line.quantity, line.unitPrice);
+    }, 0);
+  }
+
+  async create(input: CreatePurchaseOrderInput) {
+    if (!input.lines || input.lines.length === 0) {
+      throw new ValidationError("Purchase order must have at least one line");
+    }
+
+    const vendor = await prisma.contact.findUnique({
+      where: { id: input.vendorId },
+    });
+
+    if (!vendor) {
+      throw new ValidationError("Vendor not found");
+    }
+
+    if (vendor.type !== "VENDOR" && vendor.type !== "BOTH") {
+      throw new ValidationError("Contact must be a vendor");
+    }
+
+    for (const line of input.lines) {
+      if (line.quantity <= 0) {
+        throw new ValidationError("Quantity must be greater than 0");
+      }
+      if (line.unitPrice < 0) {
+        throw new ValidationError("Unit price cannot be negative");
+      }
+
+      const product = await prisma.product.findUnique({
+        where: { id: line.productId },
+      });
+      if (!product) {
+        throw new ValidationError(`Product ${line.productId} not found`);
+      }
+
+      const analyticAccount = await prisma.analyticAccount.findUnique({
+        where: { id: line.analyticAccountId },
+      });
+      if (!analyticAccount) {
+        throw new ValidationError(`Analytic account ${line.analyticAccountId} not found`);
+      }
+    }
+
+    const poNumber = await this.generatePoNumber();
+    const total = this.calculateTotal(input.lines);
+
+    const po = await prisma.purchaseOrder.create({
+      data: {
+        poNumber,
+        vendorId: input.vendorId,
+        orderDate: input.orderDate,
+        status: DocumentStatus.DRAFT,
+        total: new Prisma.Decimal(total),
+        createdById: input.createdById,
+        lines: {
+          create: input.lines.map((line) => ({
+            productId: line.productId,
+            analyticAccountId: line.analyticAccountId,
+            quantity: new Prisma.Decimal(line.quantity),
+            unitPrice: new Prisma.Decimal(line.unitPrice),
+            lineTotal: new Prisma.Decimal(this.calculateLineTotal(line.quantity, line.unitPrice)),
+          })),
+        },
+      },
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return po;
+  }
+
+  async update(input: UpdatePurchaseOrderInput) {
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id: input.id },
+      include: { lines: true },
+    });
+
+    if (!po) {
+      throw new NotFoundError("Purchase order not found");
+    }
+
+    if (po.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only DRAFT purchase orders can be updated");
+    }
+
+    if (input.vendorId) {
+      const vendor = await prisma.contact.findUnique({
+        where: { id: input.vendorId },
+      });
+
+      if (!vendor) {
+        throw new ValidationError("Vendor not found");
+      }
+
+      if (vendor.type !== "VENDOR" && vendor.type !== "BOTH") {
+        throw new ValidationError("Contact must be a vendor");
+      }
+    }
+
+    const updateData: any = {
+      vendorId: input.vendorId,
+      orderDate: input.orderDate,
+    };
+
+    if (input.lines) {
+      if (input.lines.length === 0) {
+        throw new ValidationError("Purchase order must have at least one line");
+      }
+
+      const total = this.calculateTotal(input.lines);
+      updateData.total = new Prisma.Decimal(total);
+      updateData.lines = {
+        deleteMany: {},
+        create: input.lines.map((line) => ({
+          productId: line.productId,
+          analyticAccountId: line.analyticAccountId,
+          quantity: new Prisma.Decimal(line.quantity),
+          unitPrice: new Prisma.Decimal(line.unitPrice),
+          lineTotal: new Prisma.Decimal(this.calculateLineTotal(line.quantity, line.unitPrice)),
+        })),
+      };
+    }
+
+    const updated = await prisma.purchaseOrder.update({
+      where: { id: input.id },
+      data: updateData,
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return updated;
+  }
+
+  async confirm(id: string) {
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id },
+    });
+
+    if (!po) {
+      throw new NotFoundError("Purchase order not found");
+    }
+
+    if (po.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only DRAFT purchase orders can be confirmed");
+    }
+
+    const confirmed = await prisma.purchaseOrder.update({
+      where: { id },
+      data: { status: DocumentStatus.CONFIRMED },
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return confirmed;
+  }
+
+  async cancel(id: string) {
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id },
+    });
+
+    if (!po) {
+      throw new NotFoundError("Purchase order not found");
+    }
+
+    if (po.status === DocumentStatus.CANCELLED) {
+      throw new ConflictError("Purchase order is already cancelled");
+    }
+
+    const cancelled = await prisma.purchaseOrder.update({
+      where: { id },
+      data: { status: DocumentStatus.CANCELLED },
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return cancelled;
+  }
+
+  async findById(id: string) {
+    const po = await prisma.purchaseOrder.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    if (!po) {
+      throw new NotFoundError("Purchase order not found");
+    }
+
+    return po;
+  }
+
+  async list(params: ListPurchaseOrdersParams) {
+    const { vendorId, status, startDate, endDate, page = 1, limit = 20 } = params;
+
+    const where: Prisma.PurchaseOrderWhereInput = {
+      ...(vendorId && { vendorId }),
+      ...(status && { status }),
+      ...(startDate && endDate && {
+        orderDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      }),
+    };
+
+    const [purchaseOrders, total] = await Promise.all([
       prisma.purchaseOrder.findMany({
         where,
         include: {
-          vendor: { select: { id: true, name: true, email: true } },
-          lines: {
-            include: {
-              product: { select: { id: true, name: true } },
-              analyticAccount: { select: { id: true, name: true } },
-            },
+          vendor: true,
+          createdBy: true,
+          _count: {
+            select: { lines: true },
           },
         },
-        orderBy: { createdAt: "desc" },
-        skip,
+        orderBy: { orderDate: "desc" },
+        skip: (page - 1) * limit,
         take: limit,
       }),
       prisma.purchaseOrder.count({ where }),
     ]);
 
     return {
-      data,
+      data: purchaseOrders,
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit) || 1,
+      totalPages: Math.ceil(total / limit),
     };
-  }
-
-  async findById(id: string) {
-    const order = await prisma.purchaseOrder.findUnique({
-      where: { id },
-      include: {
-        vendor: true,
-        createdBy: { select: { id: true, name: true, email: true } },
-        lines: {
-          include: {
-            product: true,
-            analyticAccount: true,
-          },
-        },
-        vendorBills: true,
-      },
-    });
-
-    if (!order) {
-      throw new NotFoundError("Purchase order not found");
-    }
-
-    return order;
-  }
-
-  async create(input: CreatePurchaseOrderInput) {
-    if (!input.vendorId) {
-      throw new ValidationError("Vendor is required");
-    }
-    if (!input.lines || input.lines.length === 0) {
-      throw new ValidationError("At least one line item is required");
-    }
-
-    // Resolve or find a default user if none provided
-    let userId = input.userId;
-    if (!userId) {
-      const user = await prisma.user.findFirst();
-      if (!user) throw new ValidationError("No registered user found");
-      userId = user.id;
-    }
-
-    // Resolve default analytic account for expenses if missing
-    let defaultExpenseAccount = await prisma.analyticAccount.findFirst({
-      where: { type: "EXPENSES" },
-    });
-    if (!defaultExpenseAccount) {
-      defaultExpenseAccount = await prisma.analyticAccount.create({
-        data: { name: "General Operations", type: "EXPENSES" },
-      });
-    }
-
-    const orderNumber = await this.generatePoNumber();
-
-    let orderTotal = new Decimal(0);
-    const linesData = input.lines.map((line) => {
-      const qty = new Decimal(line.quantity);
-      const price = new Decimal(line.unitPrice);
-      const lineTotal = qty.mul(price);
-      orderTotal = orderTotal.add(lineTotal);
-
-      return {
-        productId: line.productId,
-        analyticAccountId: line.analyticAccountId || defaultExpenseAccount!.id,
-        quantity: qty,
-        unitPrice: price,
-        lineTotal,
-      };
-    });
-
-    const order = await prisma.purchaseOrder.create({
-      data: {
-        poNumber: orderNumber,
-        vendorId: input.vendorId,
-        orderDate: new Date(input.orderDate),
-        status: DocumentStatus.DRAFT,
-        total: orderTotal,
-        createdById: userId,
-        lines: {
-          create: linesData,
-        },
-      },
-      include: {
-        vendor: true,
-        lines: {
-          include: {
-            product: true,
-            analyticAccount: true,
-          },
-        },
-      },
-    });
-
-    return order;
-  }
-
-  async confirm(id: string) {
-    const order = await prisma.purchaseOrder.findUnique({
-      where: { id },
-    });
-    if (!order) throw new NotFoundError("Purchase order not found");
-    if (order.status !== DocumentStatus.DRAFT) {
-      throw new ValidationError("Only draft orders can be confirmed");
-    }
-
-    return prisma.purchaseOrder.update({
-      where: { id },
-      data: { status: DocumentStatus.CONFIRMED },
-    });
-  }
-
-  private async generatePoNumber(): Promise<string> {
-    const count = await prisma.purchaseOrder.count();
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.poNumberPrefix || "PO";
-    return `${prefix}-${String(count + 1).padStart(5, "0")}`;
   }
 }
 

@@ -1,89 +1,401 @@
-/**
- * Vendor Bill Service
- * Manages vendor bills, approval workflows, and bill payments
- */
-
-import {
-  PrismaClient,
-  DocumentStatus,
-  PaymentStatus,
-  PaymentMethod,
-} from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
-import { ValidationError, NotFoundError } from "../utils/errors";
+import { PrismaClient, DocumentStatus, PaymentStatus, Prisma } from "@prisma/client";
+import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
 
 const prisma = new PrismaClient();
 
-export interface VendorBillLineInput {
+export interface CreateVendorBillLineInput {
   productId: string;
-  analyticAccountId?: string;
+  analyticAccountId: string;
   quantity: number;
   unitPrice: number;
 }
 
 export interface CreateVendorBillInput {
   vendorId: string;
-  billDate: Date | string;
-  dueDate: Date | string;
   purchaseOrderId?: string;
-  lines: VendorBillLineInput[];
-  userId?: string;
+  billDate: Date;
+  dueDate: Date;
+  lines: CreateVendorBillLineInput[];
+  createdById: string;
 }
 
-export interface RecordBillPaymentInput {
-  billId: string;
-  amount: number | Decimal;
-  paymentMethod: PaymentMethod;
-  paymentDate?: Date | string;
-  note?: string;
-  userId?: string;
+export interface UpdateVendorBillInput {
+  id: string;
+  vendorId?: string;
+  billDate?: Date;
+  dueDate?: Date;
+  lines?: CreateVendorBillLineInput[];
 }
 
 export interface ListVendorBillsParams {
+  vendorId?: string;
+  purchaseOrderId?: string;
   status?: DocumentStatus;
   paymentStatus?: PaymentStatus;
-  vendorId?: string;
+  startDate?: Date;
+  endDate?: Date;
   page?: number;
   limit?: number;
 }
 
 export class VendorBillService {
-  async list(params: ListVendorBillsParams = {}) {
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const skip = (page - 1) * limit;
+  private async generateBillNumber(): Promise<string> {
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.billNumberPrefix || "BILL";
 
-    const where: any = {};
-    if (params.status) where.status = params.status;
-    if (params.paymentStatus) where.paymentStatus = params.paymentStatus;
-    if (params.vendorId) where.vendorId = params.vendorId;
+    const lastBill = await prisma.vendorBill.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
 
-    const [data, total] = await Promise.all([
-      prisma.vendorBill.findMany({
-        where,
-        include: {
-          vendor: { select: { id: true, name: true, email: true } },
-          purchaseOrder: { select: { id: true, poNumber: true } },
+    let nextNumber = 1;
+    if (lastBill) {
+      const match = lastBill.billNumber.match(/\d+$/);
+      if (match) {
+        nextNumber = parseInt(match[0]) + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(5, "0")}`;
+  }
+
+  private calculateLineTotal(quantity: number, unitPrice: number): number {
+    return quantity * unitPrice;
+  }
+
+  private calculateTotal(lines: CreateVendorBillLineInput[]): number {
+    return lines.reduce((sum, line) => {
+      return sum + this.calculateLineTotal(line.quantity, line.unitPrice);
+    }, 0);
+  }
+
+  async create(input: CreateVendorBillInput) {
+    if (!input.lines || input.lines.length === 0) {
+      throw new ValidationError("Vendor bill must have at least one line");
+    }
+
+    if (input.dueDate < input.billDate) {
+      throw new ValidationError("Due date cannot be before bill date");
+    }
+
+    const vendor = await prisma.contact.findUnique({
+      where: { id: input.vendorId },
+    });
+
+    if (!vendor) {
+      throw new ValidationError("Vendor not found");
+    }
+
+    if (vendor.type !== "VENDOR" && vendor.type !== "BOTH") {
+      throw new ValidationError("Contact must be a vendor");
+    }
+
+    if (input.purchaseOrderId) {
+      const po = await prisma.purchaseOrder.findUnique({
+        where: { id: input.purchaseOrderId },
+      });
+
+      if (!po) {
+        throw new ValidationError("Purchase order not found");
+      }
+
+      if (po.status !== DocumentStatus.CONFIRMED) {
+        throw new ValidationError("Can only create bill from confirmed purchase order");
+      }
+    }
+
+    for (const line of input.lines) {
+      if (line.quantity <= 0) {
+        throw new ValidationError("Quantity must be greater than 0");
+      }
+      if (line.unitPrice < 0) {
+        throw new ValidationError("Unit price cannot be negative");
+      }
+
+      const product = await prisma.product.findUnique({
+        where: { id: line.productId },
+      });
+      if (!product) {
+        throw new ValidationError(`Product ${line.productId} not found`);
+      }
+
+      const analyticAccount = await prisma.analyticAccount.findUnique({
+        where: { id: line.analyticAccountId },
+      });
+      if (!analyticAccount) {
+        throw new ValidationError(`Analytic account ${line.analyticAccountId} not found`);
+      }
+    }
+
+    const billNumber = await this.generateBillNumber();
+    const total = this.calculateTotal(input.lines);
+
+    const bill = await prisma.vendorBill.create({
+      data: {
+        billNumber,
+        vendorId: input.vendorId,
+        purchaseOrderId: input.purchaseOrderId,
+        billDate: input.billDate,
+        dueDate: input.dueDate,
+        status: DocumentStatus.DRAFT,
+        paymentStatus: PaymentStatus.NOT_PAID,
+        total: new Prisma.Decimal(total),
+        amountPaid: new Prisma.Decimal(0),
+        amountDue: new Prisma.Decimal(total),
+        createdById: input.createdById,
+        lines: {
+          create: input.lines.map((line) => ({
+            productId: line.productId,
+            analyticAccountId: line.analyticAccountId,
+            quantity: new Prisma.Decimal(line.quantity),
+            unitPrice: new Prisma.Decimal(line.unitPrice),
+            lineTotal: new Prisma.Decimal(this.calculateLineTotal(line.quantity, line.unitPrice)),
+          })),
+        },
+      },
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return bill;
+  }
+
+  async update(input: UpdateVendorBillInput) {
+    const bill = await prisma.vendorBill.findUnique({
+      where: { id: input.id },
+      include: { lines: true },
+    });
+
+    if (!bill) {
+      throw new NotFoundError("Vendor bill not found");
+    }
+
+    if (bill.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only DRAFT vendor bills can be updated");
+    }
+
+    if (input.dueDate && input.billDate && input.dueDate < input.billDate) {
+      throw new ValidationError("Due date cannot be before bill date");
+    }
+
+    if (input.vendorId) {
+      const vendor = await prisma.contact.findUnique({
+        where: { id: input.vendorId },
+      });
+
+      if (!vendor) {
+        throw new ValidationError("Vendor not found");
+      }
+
+      if (vendor.type !== "VENDOR" && vendor.type !== "BOTH") {
+        throw new ValidationError("Contact must be a vendor");
+      }
+    }
+
+    const updateData: any = {
+      vendorId: input.vendorId,
+      billDate: input.billDate,
+      dueDate: input.dueDate,
+    };
+
+    if (input.lines) {
+      if (input.lines.length === 0) {
+        throw new ValidationError("Vendor bill must have at least one line");
+      }
+
+      const total = this.calculateTotal(input.lines);
+      updateData.total = new Prisma.Decimal(total);
+      updateData.amountDue = new Prisma.Decimal(total);
+      updateData.lines = {
+        deleteMany: {},
+        create: input.lines.map((line) => ({
+          productId: line.productId,
+          analyticAccountId: line.analyticAccountId,
+          quantity: new Prisma.Decimal(line.quantity),
+          unitPrice: new Prisma.Decimal(line.unitPrice),
+          lineTotal: new Prisma.Decimal(this.calculateLineTotal(line.quantity, line.unitPrice)),
+        })),
+      };
+    }
+
+    const updated = await prisma.vendorBill.update({
+      where: { id: input.id },
+      data: updateData,
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return updated;
+  }
+
+  async confirm(id: string) {
+    const bill = await prisma.vendorBill.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        lines: {
+          include: {
+            analyticAccount: true,
+          },
+        },
+      },
+    });
+
+    if (!bill) {
+      throw new NotFoundError("Vendor bill not found");
+    }
+
+    if (bill.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only DRAFT vendor bills can be confirmed");
+    }
+
+    const purchaseJournal = await prisma.journal.findFirst({
+      where: { type: "PURCHASE" },
+    });
+
+    if (!purchaseJournal) {
+      throw new ValidationError("Purchase journal not found. Please configure journals first.");
+    }
+
+    const jeNumber = await this.generateJournalEntryNumber();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.vendorBill.update({
+        where: { id },
+        data: { status: DocumentStatus.CONFIRMED },
+      });
+
+      await tx.journalEntry.create({
+        data: {
+          entryNumber: jeNumber,
+          journalId: purchaseJournal.id,
+          accountingDate: bill.billDate,
+          status: "POSTED",
+          source: "VENDOR_BILL",
+          vendorBillId: bill.id,
+          totalDebit: bill.total,
+          totalCredit: bill.total,
+          createdById: bill.createdById,
           lines: {
-            include: {
-              product: { select: { id: true, name: true } },
+            create: [
+              {
+                accountId: purchaseJournal.defaultAccountId,
+                partnerId: bill.vendorId,
+                debit: bill.total,
+                credit: new Prisma.Decimal(0),
+              },
+              {
+                accountId: purchaseJournal.defaultAccountId,
+                partnerId: bill.vendorId,
+                debit: new Prisma.Decimal(0),
+                credit: bill.total,
+              },
+            ],
+          },
+        },
+      });
+    });
+
+    const confirmed = await prisma.vendorBill.findUnique({
+      where: { id },
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+        journalEntries: {
+          include: {
+            lines: {
+              include: {
+                account: true,
+              },
             },
           },
         },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.vendorBill.count({ where }),
-    ]);
+      },
+    });
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1,
-    };
+    return confirmed;
+  }
+
+  private async generateJournalEntryNumber(): Promise<string> {
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.jeNumberPrefix || "JE";
+
+    const lastJe = await prisma.journalEntry.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+
+    let nextNumber = 1;
+    if (lastJe) {
+      const match = lastJe.entryNumber.match(/\d+$/);
+      if (match) {
+        nextNumber = parseInt(match[0]) + 1;
+      }
+    }
+
+    return `${prefix}${String(nextNumber).padStart(5, "0")}`;
+  }
+
+  async cancel(id: string) {
+    const bill = await prisma.vendorBill.findUnique({
+      where: { id },
+      include: {
+        payments: true,
+      },
+    });
+
+    if (!bill) {
+      throw new NotFoundError("Vendor bill not found");
+    }
+
+    if (bill.status === DocumentStatus.CANCELLED) {
+      throw new ConflictError("Vendor bill is already cancelled");
+    }
+
+    if (bill.payments.length > 0) {
+      throw new ConflictError("Cannot cancel vendor bill with existing payments");
+    }
+
+    const cancelled = await prisma.vendorBill.update({
+      where: { id },
+      data: { status: DocumentStatus.CANCELLED },
+      include: {
+        vendor: true,
+        purchaseOrder: true,
+        lines: {
+          include: {
+            product: true,
+            analyticAccount: true,
+          },
+        },
+        createdBy: true,
+      },
+    });
+
+    return cancelled;
   }
 
   async findById(id: string) {
@@ -92,7 +404,6 @@ export class VendorBillService {
       include: {
         vendor: true,
         purchaseOrder: true,
-        createdBy: { select: { id: true, name: true, email: true } },
         lines: {
           include: {
             product: true,
@@ -100,6 +411,16 @@ export class VendorBillService {
           },
         },
         payments: true,
+        journalEntries: {
+          include: {
+            lines: {
+              include: {
+                account: true,
+              },
+            },
+          },
+        },
+        createdBy: true,
       },
     });
 
@@ -110,147 +431,102 @@ export class VendorBillService {
     return bill;
   }
 
-  async create(input: CreateVendorBillInput) {
-    if (!input.vendorId) throw new ValidationError("Vendor is required");
-    if (!input.lines || input.lines.length === 0) {
-      throw new ValidationError("At least one line item is required");
-    }
+  async list(params: ListVendorBillsParams) {
+    const { vendorId, purchaseOrderId, status, paymentStatus, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let userId = input.userId;
-    if (!userId) {
-      const user = await prisma.user.findFirst();
-      if (!user) throw new ValidationError("No registered user found");
-      userId = user.id;
-    }
-
-    let defaultExpenseAccount = await prisma.analyticAccount.findFirst({
-      where: { type: "EXPENSES" },
-    });
-    if (!defaultExpenseAccount) {
-      defaultExpenseAccount = await prisma.analyticAccount.create({
-        data: { name: "General Operating Expenses", type: "EXPENSES" },
-      });
-    }
-
-    const billNumber = await this.generateBillNumber();
-
-    let billTotal = new Decimal(0);
-    const linesData = input.lines.map((line) => {
-      const qty = new Decimal(line.quantity);
-      const price = new Decimal(line.unitPrice);
-      const lineTotal = qty.mul(price);
-      billTotal = billTotal.add(lineTotal);
-
-      return {
-        productId: line.productId,
-        analyticAccountId: line.analyticAccountId || defaultExpenseAccount!.id,
-        quantity: qty,
-        unitPrice: price,
-        lineTotal,
-      };
-    });
-
-    const bill = await prisma.vendorBill.create({
-      data: {
-        billNumber,
-        vendorId: input.vendorId,
-        purchaseOrderId: input.purchaseOrderId || null,
-        billDate: new Date(input.billDate),
-        dueDate: new Date(input.dueDate),
-        status: DocumentStatus.DRAFT,
-        paymentStatus: PaymentStatus.NOT_PAID,
-        total: billTotal,
-        amountPaid: new Decimal(0),
-        amountDue: billTotal,
-        createdById: userId,
-        lines: {
-          create: linesData,
+    const where: Prisma.VendorBillWhereInput = {
+      ...(vendorId && { vendorId }),
+      ...(purchaseOrderId && { purchaseOrderId }),
+      ...(status && { status }),
+      ...(paymentStatus && { paymentStatus }),
+      ...(startDate && endDate && {
+        billDate: {
+          gte: startDate,
+          lte: endDate,
         },
-      },
-      include: {
-        vendor: true,
-        lines: {
-          include: {
-            product: true,
-            analyticAccount: true,
+      }),
+    };
+
+    const [vendorBills, total] = await Promise.all([
+      prisma.vendorBill.findMany({
+        where,
+        include: {
+          vendor: true,
+          purchaseOrder: true,
+          createdBy: true,
+          _count: {
+            select: { lines: true, payments: true },
           },
         },
+        orderBy: { billDate: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.vendorBill.count({ where }),
+    ]);
+
+    return {
+      data: vendorBills,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async computePaymentStatus(billId: string): Promise<PaymentStatus> {
+    const bill = await prisma.vendorBill.findUnique({
+      where: { id: billId },
+      include: {
+        payments: true,
       },
     });
 
-    return bill;
+    if (!bill) {
+      throw new NotFoundError("Vendor bill not found");
+    }
+
+    const totalPaid = bill.payments.reduce((sum, payment) => {
+      return sum + Number(payment.amount);
+    }, 0);
+
+    if (totalPaid === 0) {
+      return PaymentStatus.NOT_PAID;
+    } else if (totalPaid >= Number(bill.total)) {
+      return PaymentStatus.PAID;
+    } else {
+      return PaymentStatus.PARTIAL;
+    }
   }
 
-  async confirm(id: string) {
+  async updatePaymentStatus(billId: string) {
+    const paymentStatus = await this.computePaymentStatus(billId);
+
     const bill = await prisma.vendorBill.findUnique({
-      where: { id },
-      include: { lines: true, vendor: true },
+      where: { id: billId },
+      include: {
+        payments: true,
+      },
     });
-    if (!bill) throw new NotFoundError("Vendor bill not found");
-    if (bill.status !== DocumentStatus.DRAFT) {
-      throw new ValidationError("Only draft bills can be confirmed");
+
+    if (!bill) {
+      throw new NotFoundError("Vendor bill not found");
     }
 
-    return prisma.vendorBill.update({
-      where: { id },
-      data: { status: DocumentStatus.CONFIRMED },
+    const totalPaid = bill.payments.reduce((sum, payment) => {
+      return sum + Number(payment.amount);
+    }, 0);
+
+    const amountDue = Number(bill.total) - totalPaid;
+
+    await prisma.vendorBill.update({
+      where: { id: billId },
+      data: {
+        paymentStatus,
+        amountPaid: new Prisma.Decimal(totalPaid),
+        amountDue: new Prisma.Decimal(Math.max(0, amountDue)),
+      },
     });
-  }
-
-  async recordPayment(input: RecordBillPaymentInput) {
-    const bill = await prisma.vendorBill.findUnique({
-      where: { id: input.billId },
-    });
-    if (!bill) throw new NotFoundError("Vendor bill not found");
-    if (bill.status !== DocumentStatus.CONFIRMED) {
-      throw new ValidationError("Payments can only be recorded on confirmed bills");
-    }
-
-    const payAmount = new Decimal(input.amount);
-    if (payAmount.lte(0)) {
-      throw new ValidationError("Payment amount must be greater than zero");
-    }
-    if (payAmount.gt(bill.amountDue)) {
-      throw new ValidationError(
-        `Payment amount (${payAmount.toString()}) cannot exceed amount due (${bill.amountDue.toString()})`
-      );
-    }
-
-    return prisma.$transaction(async (tx) => {
-      const payment = await tx.billPayment.create({
-        data: {
-          vendorBillId: bill.id,
-          amount: payAmount,
-          paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
-          paymentMethod: input.paymentMethod,
-          note: input.note,
-        },
-      });
-
-      const newAmountPaid = bill.amountPaid.add(payAmount);
-      const newAmountDue = bill.total.sub(newAmountPaid);
-      const newPaymentStatus = newAmountDue.isZero()
-        ? PaymentStatus.PAID
-        : PaymentStatus.PARTIAL;
-
-      await tx.vendorBill.update({
-        where: { id: bill.id },
-        data: {
-          amountPaid: newAmountPaid,
-          amountDue: newAmountDue,
-          paymentStatus: newPaymentStatus,
-        },
-      });
-
-      return payment;
-    });
-  }
-
-  private async generateBillNumber(): Promise<string> {
-    const count = await prisma.vendorBill.count();
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.billNumberPrefix || "BILL";
-    return `${prefix}-${String(count + 1).padStart(5, "0")}`;
   }
 }
 

@@ -1,130 +1,627 @@
 /**
  * Customer Invoice Service
- * Manages customer invoices, payments, and portal invoice listings
+ * Handles customer invoice creation (from SO or standalone), confirmation (Journal Entry #1),
+ * cancellation, payment status tracking, and querying.
  */
 
-import {
-  PrismaClient,
-  DocumentStatus,
-  PaymentStatus,
-  PaymentMethod,
-} from "@prisma/client";
-import { Decimal } from "@prisma/client/runtime/library";
-import { ValidationError, NotFoundError } from "../utils/errors";
+import { PrismaClient, DocumentStatus, PaymentStatus, Prisma, JournalEntrySource, JournalType, AccountType } from "@prisma/client";
+import { ValidationError, NotFoundError, ConflictError } from "../utils/errors";
+import { journalEntryService } from "./journal-entry.service";
 
 const prisma = new PrismaClient();
 
 export interface CustomerInvoiceLineInput {
   productId: string;
-  analyticAccountId?: string;
-  taxRateId?: string;
+  description: string;
   quantity: number;
   unitPrice: number;
+  taxRateId?: string;
+  analyticAccountId?: string;
 }
 
-export interface CreateCustomerInvoiceInput {
+export interface CreateStandaloneInvoiceInput {
   customerId: string;
-  invoiceDate: Date | string;
-  dueDate: Date | string;
-  salesOrderId?: string;
+  invoiceDate: Date;
+  dueDate: Date;
   invoiceReference?: string;
   lines: CustomerInvoiceLineInput[];
+  notes?: string;
   userId?: string;
+  createdById?: string;
 }
 
-export interface RecordInvoicePaymentInput {
-  invoiceId: string;
-  amount: number | Decimal;
-  paymentMethod: PaymentMethod;
-  paymentDate?: Date | string;
-  note?: string;
-  userId?: string;
+export interface UpdateCustomerInvoiceInput {
+  id: string;
+  customerId?: string;
+  invoiceDate?: Date;
+  dueDate?: Date;
+  invoiceReference?: string;
+  lines?: CustomerInvoiceLineInput[];
+  notes?: string;
 }
 
 export interface ListCustomerInvoicesParams {
+  customerId?: string;
   status?: DocumentStatus;
   paymentStatus?: PaymentStatus;
-  customerId?: string;
+  salesOrderId?: string;
+  startDate?: Date;
+  endDate?: Date;
   page?: number;
   limit?: number;
 }
 
 export class CustomerInvoiceService {
-  async list(params: ListCustomerInvoicesParams = {}) {
-    const page = params.page || 1;
-    const limit = params.limit || 20;
-    const skip = (page - 1) * limit;
-
-    const where: any = {};
-    if (params.status) where.status = params.status;
-    if (params.paymentStatus) where.paymentStatus = params.paymentStatus;
-    if (params.customerId) where.customerId = params.customerId;
-
-    const [data, total] = await Promise.all([
-      prisma.customerInvoice.findMany({
-        where,
-        include: {
-          customer: { select: { id: true, name: true, email: true } },
-          salesOrder: { select: { id: true, soNumber: true } },
-          lines: {
-            include: {
-              product: { select: { id: true, name: true } },
-            },
+  /**
+   * Create invoice from a confirmed Sales Order
+   */
+  async createFromSalesOrder(salesOrderId: string, invoiceDate?: Date, dueDate?: Date, userId?: string) {
+    const salesOrder = await prisma.salesOrder.findUnique({
+      where: { id: salesOrderId },
+      include: {
+        customer: true,
+        lines: {
+          include: {
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
           },
         },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.customerInvoice.count({ where }),
-    ]);
+      },
+    });
 
-    return {
-      data,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit) || 1,
-    };
+    if (!salesOrder) {
+      throw new NotFoundError("Sales order not found");
+    }
+
+    if (salesOrder.status !== "CONFIRMED") {
+      throw new ConflictError("Can only create invoice from confirmed sales orders");
+    }
+
+    // Determine user
+    let createdById = userId || salesOrder.createdById;
+    if (!createdById) {
+      const defaultUser = await prisma.user.findFirst();
+      if (!defaultUser) {
+        throw new ValidationError("No user found to set as creator");
+      }
+      createdById = defaultUser.id;
+    }
+
+    const invDate = invoiceDate || new Date();
+    const invDueDate = dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days default
+
+    // Calculate totals from SO lines
+    let subtotal = new Prisma.Decimal(0);
+    let totalTax = new Prisma.Decimal(0);
+
+    const invoiceLines = salesOrder.lines.map((line) => {
+      const lineSubtotal = line.quantity.mul(line.unitPrice);
+      const taxAmt = line.taxAmount || new Prisma.Decimal(0);
+
+      subtotal = subtotal.add(lineSubtotal);
+      totalTax = totalTax.add(taxAmt);
+
+      return {
+        productId: line.productId,
+        analyticAccountId: line.analyticAccountId,
+        taxRateId: line.taxRateId,
+        quantity: line.quantity,
+        unitPrice: line.unitPrice,
+        lineTotal: line.lineTotal,
+        taxAmount: taxAmt,
+      };
+    });
+
+    const total = subtotal.add(totalTax);
+
+    // Generate invoice number
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.invoiceNumberPrefix || "INV";
+    const count = await prisma.customerInvoice.count();
+    const invoiceNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+
+    const invoice = await prisma.customerInvoice.create({
+      data: {
+        invoiceNumber,
+        customerId: salesOrder.customerId,
+        salesOrderId: salesOrder.id,
+        invoiceDate: invDate,
+        dueDate: invDueDate,
+        status: DocumentStatus.DRAFT,
+        paymentStatus: PaymentStatus.NOT_PAID,
+        total,
+        amountPaid: new Prisma.Decimal(0),
+        amountDue: total,
+        createdById,
+        lines: {
+          create: invoiceLines,
+        },
+      },
+      include: {
+        customer: true,
+        createdBy: true,
+        salesOrder: true,
+        lines: {
+          include: {
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
+          },
+        },
+      },
+    });
+
+    return invoice;
   }
 
   /**
-   * Strictly isolated query for customer portal
+   * Create standalone customer invoice
    */
-  async listForContact(contactId: string) {
-    if (!contactId) {
-      throw new ValidationError("Contact ID is required");
+  async createStandalone(input: CreateStandaloneInvoiceInput) {
+    if (!input.customerId) {
+      throw new ValidationError("Customer is required");
+    }
+    if (!input.lines || input.lines.length === 0) {
+      throw new ValidationError("At least one line item is required");
     }
 
-    return prisma.customerInvoice.findMany({
-      where: { customerId: contactId },
+    const customer = await prisma.contact.findUnique({
+      where: { id: input.customerId },
+    });
+
+    if (!customer) {
+      throw new NotFoundError("Customer not found");
+    }
+
+    if (customer.type !== "CUSTOMER" && customer.type !== "BOTH") {
+      throw new ValidationError("Selected contact is not a customer");
+    }
+
+    const productIds = input.lines.map((l) => l.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+    });
+
+    if (products.length !== productIds.length) {
+      throw new ValidationError("One or more products not found");
+    }
+
+    let createdById = input.createdById || input.userId;
+    if (!createdById) {
+      const defaultUser = await prisma.user.findFirst();
+      if (!defaultUser) {
+        throw new ValidationError("No user found to set as creator");
+      }
+      createdById = defaultUser.id;
+    }
+
+    const defaultAnalyticAccount = await prisma.analyticAccount.findFirst({
+      where: { type: "INCOME" },
+    }) || await prisma.analyticAccount.findFirst();
+
+    let subtotal = new Prisma.Decimal(0);
+    let totalTax = new Prisma.Decimal(0);
+
+    const linesWithTotals = await Promise.all(
+      input.lines.map(async (line) => {
+        if (line.quantity <= 0) {
+          throw new ValidationError("Line quantity must be greater than zero");
+        }
+        if (line.unitPrice < 0) {
+          throw new ValidationError("Line unit price cannot be negative");
+        }
+
+        const lineSubtotal = new Prisma.Decimal(line.quantity).mul(new Prisma.Decimal(line.unitPrice));
+        let lineTax = new Prisma.Decimal(0);
+
+        if (line.taxRateId) {
+          const taxRate = await prisma.taxRate.findUnique({
+            where: { id: line.taxRateId },
+          });
+          if (taxRate) {
+            lineTax = lineSubtotal.mul(taxRate.percentage).div(100);
+          }
+        }
+
+        const lineTotal = lineSubtotal.add(lineTax);
+        subtotal = subtotal.add(lineSubtotal);
+        totalTax = totalTax.add(lineTax);
+
+        const analyticAccountId = line.analyticAccountId || defaultAnalyticAccount?.id;
+        if (!analyticAccountId) {
+          throw new ValidationError("Analytic account is required for invoice lines");
+        }
+
+        return {
+          productId: line.productId,
+          analyticAccountId,
+          quantity: new Prisma.Decimal(line.quantity),
+          unitPrice: new Prisma.Decimal(line.unitPrice),
+          taxRateId: line.taxRateId || null,
+          lineTotal,
+          taxAmount: lineTax,
+        };
+      })
+    );
+
+    const total = subtotal.add(totalTax);
+
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.invoiceNumberPrefix || "INV";
+    const count = await prisma.customerInvoice.count();
+    const invoiceNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+
+    const invoice = await prisma.customerInvoice.create({
+      data: {
+        invoiceNumber,
+        customerId: input.customerId,
+        invoiceReference: input.invoiceReference,
+        invoiceDate: input.invoiceDate,
+        dueDate: input.dueDate,
+        status: DocumentStatus.DRAFT,
+        paymentStatus: PaymentStatus.NOT_PAID,
+        total,
+        amountPaid: new Prisma.Decimal(0),
+        amountDue: total,
+        createdById,
+        lines: {
+          create: linesWithTotals,
+        },
+      },
       include: {
+        customer: true,
+        createdBy: true,
         lines: {
           include: {
-            product: { select: { id: true, name: true } },
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
           },
         },
-        payments: true,
       },
-      orderBy: { createdAt: "desc" },
+    });
+
+    return invoice;
+  }
+
+  /**
+   * Update draft invoice
+   */
+  async update(input: UpdateCustomerInvoiceInput) {
+    const invoice = await prisma.customerInvoice.findUnique({
+      where: { id: input.id },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError("Customer invoice not found");
+    }
+
+    if (invoice.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only draft invoices can be updated");
+    }
+
+    if (input.lines) {
+      if (input.lines.length === 0) {
+        throw new ValidationError("At least one line item is required");
+      }
+
+      const defaultAnalyticAccount = await prisma.analyticAccount.findFirst({
+        where: { type: "INCOME" },
+      }) || await prisma.analyticAccount.findFirst();
+
+      let subtotal = new Prisma.Decimal(0);
+      let totalTax = new Prisma.Decimal(0);
+
+      const linesWithTotals = await Promise.all(
+        input.lines.map(async (line) => {
+          if (line.quantity <= 0) {
+            throw new ValidationError("Line quantity must be greater than zero");
+          }
+          if (line.unitPrice < 0) {
+            throw new ValidationError("Line unit price cannot be negative");
+          }
+
+          const lineSubtotal = new Prisma.Decimal(line.quantity).mul(new Prisma.Decimal(line.unitPrice));
+          let lineTax = new Prisma.Decimal(0);
+
+          if (line.taxRateId) {
+            const taxRate = await prisma.taxRate.findUnique({
+              where: { id: line.taxRateId },
+            });
+            if (taxRate) {
+              lineTax = lineSubtotal.mul(taxRate.percentage).div(100);
+            }
+          }
+
+          const lineTotal = lineSubtotal.add(lineTax);
+          subtotal = subtotal.add(lineSubtotal);
+          totalTax = totalTax.add(lineTax);
+
+          const analyticAccountId = line.analyticAccountId || defaultAnalyticAccount?.id;
+          if (!analyticAccountId) {
+            throw new ValidationError("Analytic account is required for invoice lines");
+          }
+
+          return {
+            productId: line.productId,
+            analyticAccountId,
+            quantity: new Prisma.Decimal(line.quantity),
+            unitPrice: new Prisma.Decimal(line.unitPrice),
+            taxRateId: line.taxRateId || null,
+            lineTotal,
+            taxAmount: lineTax,
+          };
+        })
+      );
+
+      const total = subtotal.add(totalTax);
+
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.customerInvoiceLine.deleteMany({
+          where: { invoiceId: input.id },
+        });
+
+        return tx.customerInvoice.update({
+          where: { id: input.id },
+          data: {
+            customerId: input.customerId,
+            invoiceReference: input.invoiceReference,
+            invoiceDate: input.invoiceDate,
+            dueDate: input.dueDate,
+            total,
+            amountDue: total.sub(invoice.amountPaid),
+            lines: {
+              create: linesWithTotals,
+            },
+          },
+          include: {
+            customer: true,
+            createdBy: true,
+            lines: {
+              include: {
+                product: true,
+                taxRate: true,
+                analyticAccount: true,
+              },
+            },
+          },
+        });
+      });
+
+      return updated;
+    }
+
+    const updated = await prisma.customerInvoice.update({
+      where: { id: input.id },
+      data: {
+        customerId: input.customerId,
+        invoiceReference: input.invoiceReference,
+        invoiceDate: input.invoiceDate,
+        dueDate: input.dueDate,
+      },
+      include: {
+        customer: true,
+        createdBy: true,
+        lines: {
+          include: {
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
+          },
+        },
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Confirm customer invoice → generates Journal Entry #1
+   * (Debit: Accounts Receivable, Credit: Income Account)
+   */
+  async confirm(id: string, userId?: string) {
+    const invoice = await prisma.customerInvoice.findUnique({
+      where: { id },
+      include: {
+        customer: true,
+        lines: {
+          include: {
+            product: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError("Customer invoice not found");
+    }
+
+    if (invoice.status !== DocumentStatus.DRAFT) {
+      throw new ConflictError("Only draft invoices can be confirmed");
+    }
+
+    // Determine creator / actor
+    let actionUserId = userId || invoice.createdById;
+    if (!actionUserId) {
+      const defaultUser = await prisma.user.findFirst();
+      if (!defaultUser) {
+        throw new ValidationError("No user found to attribute journal entry");
+      }
+      actionUserId = defaultUser.id;
+    }
+
+    // Find Sales Journal
+    const journal = await prisma.journal.findFirst({
+      where: { type: JournalType.SALES },
+    }) || await prisma.journal.findFirst();
+
+    if (!journal) {
+      throw new ValidationError("No Sales Journal configured in Chart of Accounts");
+    }
+
+    // Find Accounts Receivable (Asset) and Income Account
+    const arAccount = await prisma.chartOfAccount.findFirst({
+      where: { type: AccountType.ASSET, name: { contains: "Receivable" } },
+    }) || await prisma.chartOfAccount.findFirst({
+      where: { type: AccountType.ASSET },
+    });
+
+    const incomeAccount = await prisma.chartOfAccount.findFirst({
+      where: { type: AccountType.INCOME },
+    });
+
+    if (!arAccount || !incomeAccount) {
+      throw new ValidationError("Accounts Receivable or Income account missing in Chart of Accounts");
+    }
+
+    // Confirm invoice and generate Journal Entry #1
+    const confirmedInvoice = await prisma.customerInvoice.update({
+      where: { id },
+      data: { status: DocumentStatus.CONFIRMED },
+      include: {
+        customer: true,
+        createdBy: true,
+        lines: {
+          include: {
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
+          },
+        },
+      },
+    });
+
+    // Generate Journal Entry #1:
+    // Line 1: Debit Accounts Receivable (total) with partnerId = customerId
+    // Line 2: Credit Income Account (total)
+    await journalEntryService.autoGenerate({
+      source: JournalEntrySource.CUSTOMER_INVOICE,
+      journalId: journal.id,
+      accountingDate: invoice.invoiceDate,
+      sourceDocumentId: invoice.id,
+      userId: actionUserId,
+      lines: [
+        {
+          accountId: arAccount.id,
+          partnerId: invoice.customerId,
+          debit: invoice.total,
+          credit: new Prisma.Decimal(0),
+        },
+        {
+          accountId: incomeAccount.id,
+          partnerId: invoice.customerId,
+          debit: new Prisma.Decimal(0),
+          credit: invoice.total,
+        },
+      ],
+    });
+
+    return confirmedInvoice;
+  }
+
+  /**
+   * Cancel customer invoice
+   */
+  async cancel(id: string) {
+    const invoice = await prisma.customerInvoice.findUnique({
+      where: { id },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError("Customer invoice not found");
+    }
+
+    if (invoice.status === DocumentStatus.CANCELLED) {
+      throw new ConflictError("Invoice is already cancelled");
+    }
+
+    return prisma.customerInvoice.update({
+      where: { id },
+      data: { status: DocumentStatus.CANCELLED },
+      include: {
+        customer: true,
+        createdBy: true,
+        lines: {
+          include: {
+            product: true,
+            taxRate: true,
+            analyticAccount: true,
+          },
+        },
+      },
     });
   }
 
+  /**
+   * Recalculate invoice payment status and amounts based on linked InvoicePayment records
+   */
+  async updatePaymentStatus(id: string) {
+    const invoice = await prisma.customerInvoice.findUnique({
+      where: { id },
+      include: { payments: true },
+    });
+
+    if (!invoice) {
+      throw new NotFoundError("Customer invoice not found");
+    }
+
+    let totalPaid = new Prisma.Decimal(0);
+    for (const payment of invoice.payments) {
+      totalPaid = totalPaid.add(payment.amount);
+    }
+
+    const amountDue = invoice.total.sub(totalPaid);
+    let paymentStatus: PaymentStatus = PaymentStatus.NOT_PAID;
+
+    if (amountDue.lte(0)) {
+      paymentStatus = PaymentStatus.PAID;
+    } else if (totalPaid.gt(0)) {
+      paymentStatus = PaymentStatus.PARTIAL;
+    }
+
+    return prisma.customerInvoice.update({
+      where: { id },
+      data: {
+        amountPaid: totalPaid,
+        amountDue: amountDue.lt(0) ? new Prisma.Decimal(0) : amountDue,
+        paymentStatus,
+      },
+      include: {
+        customer: true,
+        payments: true,
+      },
+    });
+  }
+
+  /**
+   * Find invoice by ID
+   */
   async findById(id: string) {
     const invoice = await prisma.customerInvoice.findUnique({
       where: { id },
       include: {
         customer: true,
+        createdBy: true,
         salesOrder: true,
-        createdBy: { select: { id: true, name: true, email: true } },
         lines: {
           include: {
             product: true,
-            analyticAccount: true,
             taxRate: true,
+            analyticAccount: true,
           },
         },
         payments: true,
+        journalEntries: {
+          include: {
+            lines: {
+              include: {
+                account: true,
+              },
+            },
+          },
+        },
+        gatewayTransactions: true,
       },
     });
 
@@ -135,150 +632,49 @@ export class CustomerInvoiceService {
     return invoice;
   }
 
-  async create(input: CreateCustomerInvoiceInput) {
-    if (!input.customerId) throw new ValidationError("Customer is required");
-    if (!input.lines || input.lines.length === 0) {
-      throw new ValidationError("At least one line item is required");
-    }
+  /**
+   * List customer invoices with filtering and pagination
+   */
+  async list(params: ListCustomerInvoicesParams) {
+    const { customerId, status, paymentStatus, salesOrderId, startDate, endDate, page = 1, limit = 20 } = params;
 
-    let userId = input.userId;
-    if (!userId) {
-      const user = await prisma.user.findFirst();
-      if (!user) throw new ValidationError("No registered user found");
-      userId = user.id;
-    }
+    const where: Prisma.CustomerInvoiceWhereInput = {
+      ...(customerId && { customerId }),
+      ...(status && { status }),
+      ...(paymentStatus && { paymentStatus }),
+      ...(salesOrderId && { salesOrderId }),
+      ...(startDate && { invoiceDate: { gte: startDate } }),
+      ...(endDate && { invoiceDate: { lte: endDate } }),
+    };
 
-    let defaultIncomeAccount = await prisma.analyticAccount.findFirst({
-      where: { type: "INCOME" },
-    });
-    if (!defaultIncomeAccount) {
-      defaultIncomeAccount = await prisma.analyticAccount.create({
-        data: { name: "General Sales Income", type: "INCOME" },
-      });
-    }
-
-    const invoiceNumber = await this.generateInvoiceNumber();
-
-    let invoiceTotal = new Decimal(0);
-    const linesData = input.lines.map((line) => {
-      const qty = new Decimal(line.quantity);
-      const price = new Decimal(line.unitPrice);
-      const lineTotal = qty.mul(price);
-      invoiceTotal = invoiceTotal.add(lineTotal);
-
-      return {
-        productId: line.productId,
-        analyticAccountId: line.analyticAccountId || defaultIncomeAccount!.id,
-        taxRateId: line.taxRateId || null,
-        quantity: qty,
-        unitPrice: price,
-        lineTotal,
-        taxAmount: new Decimal(0),
-      };
-    });
-
-    const invoice = await prisma.customerInvoice.create({
-      data: {
-        invoiceNumber,
-        customerId: input.customerId,
-        salesOrderId: input.salesOrderId || null,
-        invoiceReference: input.invoiceReference || null,
-        invoiceDate: new Date(input.invoiceDate),
-        dueDate: new Date(input.dueDate),
-        status: DocumentStatus.DRAFT,
-        paymentStatus: PaymentStatus.NOT_PAID,
-        total: invoiceTotal,
-        amountPaid: new Decimal(0),
-        amountDue: invoiceTotal,
-        createdById: userId,
-        lines: {
-          create: linesData,
-        },
-      },
-      include: {
-        customer: true,
-        lines: {
-          include: {
-            product: true,
-            analyticAccount: true,
+    const [invoices, total] = await Promise.all([
+      prisma.customerInvoice.findMany({
+        where,
+        include: {
+          customer: true,
+          createdBy: true,
+          salesOrder: true,
+          lines: {
+            include: {
+              product: true,
+            },
           },
+          payments: true,
         },
-      },
-    });
+        orderBy: { invoiceDate: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.customerInvoice.count({ where }),
+    ]);
 
-    return invoice;
-  }
-
-  async confirm(id: string) {
-    const invoice = await prisma.customerInvoice.findUnique({
-      where: { id },
-      include: { lines: true, customer: true },
-    });
-    if (!invoice) throw new NotFoundError("Customer invoice not found");
-    if (invoice.status !== DocumentStatus.DRAFT) {
-      throw new ValidationError("Only draft invoices can be confirmed");
-    }
-
-    return prisma.customerInvoice.update({
-      where: { id },
-      data: { status: DocumentStatus.CONFIRMED },
-    });
-  }
-
-  async recordPayment(input: RecordInvoicePaymentInput) {
-    const invoice = await prisma.customerInvoice.findUnique({
-      where: { id: input.invoiceId },
-    });
-    if (!invoice) throw new NotFoundError("Customer invoice not found");
-    if (invoice.status !== DocumentStatus.CONFIRMED) {
-      throw new ValidationError("Payments can only be recorded on confirmed invoices");
-    }
-
-    const payAmount = new Decimal(input.amount);
-    if (payAmount.lte(0)) {
-      throw new ValidationError("Payment amount must be greater than zero");
-    }
-    if (payAmount.gt(invoice.amountDue)) {
-      throw new ValidationError(
-        `Payment amount (${payAmount.toString()}) cannot exceed amount due (${invoice.amountDue.toString()})`
-      );
-    }
-
-    return prisma.$transaction(async (tx) => {
-      const payment = await tx.invoicePayment.create({
-        data: {
-          invoiceId: invoice.id,
-          amount: payAmount,
-          paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
-          paymentMethod: input.paymentMethod,
-          note: input.note,
-        },
-      });
-
-      const newAmountPaid = invoice.amountPaid.add(payAmount);
-      const newAmountDue = invoice.total.sub(newAmountPaid);
-      const newPaymentStatus = newAmountDue.isZero()
-        ? PaymentStatus.PAID
-        : PaymentStatus.PARTIAL;
-
-      await tx.customerInvoice.update({
-        where: { id: invoice.id },
-        data: {
-          amountPaid: newAmountPaid,
-          amountDue: newAmountDue,
-          paymentStatus: newPaymentStatus,
-        },
-      });
-
-      return payment;
-    });
-  }
-
-  private async generateInvoiceNumber(): Promise<string> {
-    const count = await prisma.customerInvoice.count();
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.invoiceNumberPrefix || "INV";
-    return `${prefix}-${String(count + 1).padStart(5, "0")}`;
+    return {
+      data: invoices,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
 
