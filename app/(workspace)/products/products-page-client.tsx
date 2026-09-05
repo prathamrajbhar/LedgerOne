@@ -41,7 +41,8 @@ export function ProductsPageClient({
   const searchParams = useSearchParams();
 
   const [viewMode, setViewMode] = React.useState<"list" | "kanban">("list");
-  const [search, setSearch] = React.useState(initialSearch);
+  const [searchInput, setSearchInput] = React.useState(initialSearch);
+  const isInitialMount = React.useRef(true);
   const [selectedCategory, setSelectedCategory] = React.useState(initialCategoryId || "ALL");
   const [selectedStatus, setSelectedStatus] = React.useState<"ACTIVE" | "ARCHIVED">(
     searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE"
@@ -64,12 +65,22 @@ export function ProductsPageClient({
     [pathname, router, searchParams]
   );
 
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-  };
+  // Debounced live search
+  React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      updateSearchParams({ search: searchInput, page: "1" });
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchInput, updateSearchParams]);
 
   const handleSearchSubmit = () => {
-    updateSearchParams({ search, page: "1" });
+    updateSearchParams({ search: searchInput, page: "1" });
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -108,15 +119,15 @@ export function ProductsPageClient({
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             type="text"
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 handleSearchSubmit();
               }
             }}
             placeholder="Search by product name, SKU, or material..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+            className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground outline-none focus:outline-none focus:ring-0 focus:border-border-strong hover:border-border-strong transition-colors"
           />
         </div>
 
