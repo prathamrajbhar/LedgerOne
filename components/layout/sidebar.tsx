@@ -47,7 +47,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
       >
         {/* Brand Header */}
         <div className="h-16 px-4 flex items-center gap-3 border-b border-border/70 flex-shrink-0 bg-white">
-          <div className="relative w-9 h-9 flex-shrink-0 rounded-full bg-white border border-border/60 shadow-2xs overflow-hidden flex items-center justify-center p-0.5">
+          <div className="relative w-9 h-9 flex-shrink-0 rounded-xl bg-white border border-border/60 shadow-2xs overflow-hidden flex items-center justify-center p-0.5">
             <Image
               src="/logo.png"
               alt="LedgerOne Logo"

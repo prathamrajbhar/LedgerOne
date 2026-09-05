@@ -343,15 +343,15 @@ export function HelpAssistantWidget() {
           <div className="absolute -bottom-1.5 w-12 h-3 rounded-full bg-teal/30 blur-sm pointer-events-none animate-shadow-pulse" />
         )}
 
-        {/* Main Floating Robot Button */}
+        {/* Main Floating Robot Button (Light Theme matching website vibe) */}
         <button
           onClick={() => setOpen(!open)}
           onMouseEnter={() => setIsBtnHovered(true)}
           onMouseLeave={() => setIsBtnHovered(false)}
-          className={`flex h-[72px] w-[72px] items-center justify-center rounded-full bg-gradient-to-br from-[#16324F] via-[#167C80] to-[#0F243A] text-white shadow-[0_14px_40px_rgba(22,124,128,0.5),0_0_28px_rgba(0,245,212,0.35)] hover:shadow-[0_20px_55px_rgba(22,124,128,0.7),0_0_40px_rgba(0,245,212,0.65)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-3.5 border-teal/70 relative group ${
+          className={`flex h-[72px] w-[72px] items-center justify-center rounded-full text-navy shadow-[0_14px_35px_rgba(22,50,79,0.22),0_0_25px_rgba(22,124,128,0.25)] hover:shadow-[0_20px_45px_rgba(22,50,79,0.32),0_0_35px_rgba(22,124,128,0.45)] transition-all duration-300 transform hover:scale-110 active:scale-95 border-3.5 border-[#167C80] relative group ${
             open
-              ? "!from-slate-800 !to-slate-900 border-white/50"
-              : "animate-robo-jump"
+              ? "!bg-navy text-white border-navy"
+              : "animate-robo-jump bg-gradient-to-br from-white via-[#F4F8FA] to-[#E6EFF6]"
           }`}
           aria-label={open ? "Close Help Assistant" : "Open Help Assistant"}
         >

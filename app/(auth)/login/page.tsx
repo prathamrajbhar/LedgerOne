@@ -68,12 +68,12 @@ export default function LoginPage() {
         </div>
 
         {/* LedgerOne Brand Logo Image */}
-        <div className="relative w-16 h-16 flex-shrink-0 rounded-full p-0.5 bg-white border border-border/60 shadow-xs flex items-center justify-center overflow-hidden">
+        <div className="relative w-14 h-14 flex-shrink-0 rounded-2xl p-1 bg-white border border-border/60 shadow-2xs flex items-center justify-center overflow-hidden">
           <Image
             src="/logo.png"
             alt="LedgerOne Logo"
-            width={64}
-            height={64}
+            width={56}
+            height={56}
             className="w-full h-full object-contain"
             priority
           />
