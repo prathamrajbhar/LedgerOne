@@ -108,77 +108,76 @@ export default function PortalPayInvoicePage() {
           </Button>
         </Card>
       ) : (
-        <Card className="shadow-lg">
-          <CardHeader className="border-b bg-gray-50/50">
+        <Card className="rounded-xl border-border bg-white shadow-card overflow-hidden">
+          <CardHeader className="border-b border-border bg-[#F9FAFB] py-4 px-6">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-lg">Checkout & Payment</CardTitle>
+                <CardTitle className="text-base font-semibold text-navy">Checkout & Payment</CardTitle>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Invoice #{invoice?.invoiceNumber || invoiceId}
                 </p>
               </div>
-              <div className="flex items-center gap-1 text-xs text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded">
-                <ShieldCheck className="h-4 w-4" /> 256-bit Encrypted
+              <div className="flex items-center gap-1 text-xs text-emerald-700 font-semibold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                <ShieldCheck className="h-3.5 w-3.5" /> 256-bit Encrypted
               </div>
             </div>
           </CardHeader>
-          <CardContent className="pt-6 space-y-5">
-            <div className="p-4 rounded-lg bg-gray-50 border space-y-2">
-              <div className="flex justify-between text-sm">
+          <CardContent className="p-6 space-y-5">
+            <div className="p-4 rounded-xl bg-surface-subtle border border-border space-y-2">
+              <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Invoice Total:</span>
-                <span className="text-gray-900 font-medium">
-                  ${Number(invoice?.total || 0).toFixed(2)}
+                <span className="text-foreground font-medium">
+                  ₹{Number(invoice?.total || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs">
                 <span className="text-muted-foreground">Already Paid:</span>
-                <span className="text-emerald-600 font-medium">
-                  ${Number(invoice?.amountPaid || 0).toFixed(2)}
+                <span className="text-emerald-700 font-medium">
+                  ₹{Number(invoice?.amountPaid || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
-              <div className="flex justify-between text-base font-bold pt-2 border-t text-gray-900">
+              <div className="flex justify-between text-sm font-bold pt-2 border-t border-border text-navy">
                 <span>Amount Due Today:</span>
-                <span className="text-primary text-xl">
-                  ${Number(invoice?.amountDue || 0).toFixed(2)}
+                <span className="text-base text-navy">
+                  ₹{Number(invoice?.amountDue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                Payment Provider
-              </p>
-              <div className="p-3.5 rounded-lg border-2 border-primary bg-primary/5 flex items-center justify-between">
+            <div className="border border-border rounded-xl p-4 bg-white space-y-3">
+              <p className="text-xs font-semibold text-foreground">Payment Provider</p>
+              <div className="p-3 rounded-xl border-2 border-navy bg-primary-light/20 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-primary" />
+                  <CreditCard className="h-4 w-4 text-navy" />
                   <div>
-                    <p className="font-semibold text-sm text-gray-900">
-                      Razorpay Gateway
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      UPI, Credit/Debit Cards, Net Banking
-                    </p>
+                    <p className="font-semibold text-xs text-navy">Razorpay Gateway</p>
+                    <p className="text-[11px] text-muted-foreground">UPI, Credit/Debit Cards, Net Banking</p>
                   </div>
                 </div>
-                <span className="h-2.5 w-2.5 rounded-full bg-primary" />
+                <span className="h-2 w-2 rounded-full bg-navy" />
               </div>
             </div>
           </CardContent>
-          <CardFooter className="border-t pt-4">
+          <CardFooter className="bg-[#F9FAFB] border-t border-border px-6 py-4 flex items-center justify-between">
+            <Link href="/invoices">
+              <Button variant="ghost" size="sm" className="text-xs text-muted-foreground hover:text-foreground">
+                Cancel
+              </Button>
+            </Link>
             <Button
-              className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-6 text-base"
               onClick={handlePayNow}
               disabled={processing || Number(invoice?.amountDue || 0) <= 0}
+              className="bg-navy hover:bg-navy-hover text-white text-xs gap-2 shadow-sm"
             >
               {processing ? (
                 <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Authorizing Payment...
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Processing...
                 </>
               ) : (
                 <>
-                  <CreditCard className="h-5 w-5" />
-                  Pay ${Number(invoice?.amountDue || 0).toFixed(2)} Now
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Pay ₹{Number(invoice?.amountDue || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </>
               )}
             </Button>
