@@ -257,6 +257,16 @@ export class AuthService {
       throw new ConflictError("Contact already has portal access");
     }
 
+    // Check if a user with this email already exists
+    const existingUserWithEmail = await prisma.user.findUnique({
+      where: { email: contact.email },
+    });
+    if (existingUserWithEmail) {
+      throw new ConflictError(
+        `A system user with email "${contact.email}" already exists (Login ID: ${existingUserWithEmail.loginId}, Role: ${existingUserWithEmail.role}).`
+      );
+    }
+
     // Generate temporary password
     const tempPassword = this.generateTemporaryPassword();
     const hashedPassword = await hash(tempPassword, 12);

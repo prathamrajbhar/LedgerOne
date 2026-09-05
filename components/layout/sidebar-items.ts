@@ -18,8 +18,6 @@ import {
   FolderTree,
   FileCheck,
   Coins,
-  UserPlus,
-  Layers,
   Building,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
@@ -38,10 +36,10 @@ export interface NavSection {
 }
 
 /**
- * Complete navigation structure matching docs/rbac.md
+ * Navigation structure aligned with actual file structure and docs/rbac.md
  *
  * ADMINISTRATOR: Full system access
- * ACCOUNTANT: Financial and accounting access (no User Management, no Product Categories, no Settings)
+ * ACCOUNTANT: Financial and accounting access (no User Management, no Settings)
  * CONTACT: Portal only (handled separately in PortalSidebar.tsx)
  */
 export const navSections: NavSection[] = [
@@ -62,20 +60,8 @@ export const navSections: NavSection[] = [
     items: [
       {
         name: "Users",
-        href: "/users",
+        href: "/settings/users-management",
         icon: Users,
-        allowedRoles: [UserRole.ADMINISTRATOR]
-      },
-      {
-        name: "Create User",
-        href: "/users/create",
-        icon: UserPlus,
-        allowedRoles: [UserRole.ADMINISTRATOR]
-      },
-      {
-        name: "Roles / Permissions",
-        href: "/users/roles",
-        icon: ShieldCheck,
         allowedRoles: [UserRole.ADMINISTRATOR]
       },
     ],
@@ -96,14 +82,14 @@ export const navSections: NavSection[] = [
         icon: Building
       },
       {
-        name: "Contacts",
+        name: "All Contacts",
         href: "/contacts",
         icon: Users
       },
     ],
   },
 
-  // Products - ADMINISTRATOR and ACCOUNTANT (but Product Categories is Admin-only)
+  // Products - ADMINISTRATOR and ACCOUNTANT
   {
     title: "Products",
     items: [
@@ -111,12 +97,6 @@ export const navSections: NavSection[] = [
         name: "Products",
         href: "/products",
         icon: Package
-      },
-      {
-        name: "Product Categories",
-        href: "/products/categories",
-        icon: Layers,
-        allowedRoles: [UserRole.ADMINISTRATOR] // ACCOUNTANT cannot see this
       },
     ],
   },
@@ -241,8 +221,14 @@ export const navSections: NavSection[] = [
     title: "Settings",
     items: [
       {
-        name: "System Settings",
-        href: "/settings",
+        name: "Company Profile",
+        href: "/settings/company-profile",
+        icon: Settings,
+        allowedRoles: [UserRole.ADMINISTRATOR]
+      },
+      {
+        name: "Fiscal Year",
+        href: "/settings/fiscal-year",
         icon: Settings,
         allowedRoles: [UserRole.ADMINISTRATOR]
       },
@@ -255,7 +241,7 @@ export const navSections: NavSection[] = [
  *
  * Rules from docs/rbac.md:
  * - ADMINISTRATOR: See everything
- * - ACCOUNTANT: See all except User Management, Product Categories, and Settings
+ * - ACCOUNTANT: See all except User Management and Settings
  * - CONTACT: Portal only (not handled here)
  */
 export function getFilteredNavSections(userRole: UserRole): NavSection[] {
