@@ -46,6 +46,7 @@
     "lucide-react": "^1.41.0",
     "next": "^14.2.0",
     "next-auth": "^5.0.0-beta.16",
+    "nodemailer": "^8.0.11",
     "razorpay": "^2.9.8",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
@@ -60,6 +61,7 @@
   "devDependencies": {
     "@playwright/test": "^1.42.0",
     "@types/node": "^26.4.1",
+    "@types/nodemailer": "^8.0.1",
     "@types/react": "^18.2.61",
     "@types/react-dom": "^18.2.19",
     "@typescript-eslint/eslint-plugin": "^8.69.0",

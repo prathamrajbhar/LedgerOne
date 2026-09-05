@@ -218,24 +218,27 @@ export function Navbar({
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+
+              {/* Profile - visible to all */}
               <DropdownMenuItem asChild>
-                <Link href="/profile" className="flex items-center gap-2">
+                <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>My Profile</span>
+                  <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
 
-              {/* Admin-only menu items */}
+              {/* ADMINISTRATOR-only menu items per docs/rbac.md */}
               {userRole === UserRole.ADMINISTRATOR && (
                 <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/users" className="flex items-center gap-2">
+                    <Link href="/settings/users-management" className="flex items-center gap-2 cursor-pointer">
                       <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Users</span>
+                      <span>User Management</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link href="/settings" className="flex items-center gap-2">
+                    <Link href="/settings/company-profile" className="flex items-center gap-2 cursor-pointer">
                       <SettingsIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span>Settings</span>
                     </Link>

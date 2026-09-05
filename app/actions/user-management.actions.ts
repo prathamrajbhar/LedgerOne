@@ -76,6 +76,7 @@ export async function createInternalUserAction(input: {
     );
 
     revalidatePath("/settings/users");
+    revalidatePath("/settings/users-management");
     return { success: true, data: user };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to create user";
@@ -93,6 +94,7 @@ export async function inviteContactToPortalAction(contactId: string): Promise<Us
     });
 
     revalidatePath("/settings/users");
+    revalidatePath("/settings/users-management");
     return { success: true, data: invitation };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to invite contact to portal";
@@ -110,6 +112,7 @@ export async function toggleUserStatusAction(userId: string, isActive: boolean):
     });
 
     revalidatePath("/settings/users");
+    revalidatePath("/settings/users-management");
     return { success: true };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update user status";

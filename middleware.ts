@@ -27,44 +27,44 @@ export async function middleware(request: NextRequest) {
 
   const userRole = token.role as string | undefined;
 
-  // Workspace routes - only Admin and Accountant
-  if (
-    pathname.startsWith("/workspace") ||
-    pathname === "/dashboard" ||
-    pathname.startsWith("/sales") ||
-    pathname.startsWith("/purchases") ||
-    pathname.startsWith("/invoices") ||
-    pathname.startsWith("/bills") ||
-    pathname.startsWith("/payments") ||
-    pathname.startsWith("/contacts") ||
-    pathname.startsWith("/products") ||
-    pathname.startsWith("/accounts") ||
-    pathname.startsWith("/journals") ||
-    pathname.startsWith("/journal-entries") ||
-    pathname.startsWith("/budgets") ||
-    pathname.startsWith("/analytic-accounts") ||
-    pathname.startsWith("/reports") ||
-    pathname.startsWith("/settings")
-  ) {
+  // Workspace routes - only ADMINISTRATOR and ACCOUNTANT
+  const workspaceRoutes = [
+    "/workspace",
+    "/dashboard",
+    "/contacts",
+    "/products",
+    "/accounts",
+    "/journals",
+    "/journal-entries",
+    "/payments",
+    "/analytic-accounts",
+    "/sales",
+    "/purchase",
+    "/budgets",
+    "/reports",
+    "/settings"
+  ];
+
+  const isWorkspaceRoute = workspaceRoutes.some((route) => pathname.startsWith(route));
+
+  if (isWorkspaceRoute) {
+    // CONTACT users should go to portal
     if (userRole === "CONTACT") {
-      // Contacts should go to portal
       return NextResponse.redirect(new URL("/portal/home", request.url));
     }
 
-    // Admin-only routes
-    if (pathname.startsWith("/settings/users") && userRole !== "ADMINISTRATOR") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
+    // ADMINISTRATOR-only routes per docs/rbac.md
+    // All routes under /settings/* are ADMINISTRATOR only
     if (pathname.startsWith("/settings") && userRole !== "ADMINISTRATOR") {
+      // ACCOUNTANT trying to access ADMINISTRATOR-only routes
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
 
-  // Portal routes - only Contact
+  // Portal routes - only CONTACT
   if (pathname.startsWith("/portal") && !pathname.startsWith("/portal/login")) {
     if (userRole !== "CONTACT") {
-      // Admin and Accountant should go to workspace
+      // ADMINISTRATOR and ACCOUNTANT should go to workspace
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

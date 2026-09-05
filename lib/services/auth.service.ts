@@ -258,14 +258,43 @@ export class AuthService {
       throw new ConflictError("Contact already has portal access");
     }
 
+    // Check if a user with this email already exists
+    const existingUserWithEmail = await prisma.user.findUnique({
+      where: { email: contact.email },
+    });
+    if (existingUserWithEmail) {
+      throw new ConflictError(
+        `A system user with email "${contact.email}" already exists (Login ID: ${existingUserWithEmail.loginId}, Role: ${existingUserWithEmail.role}).`
+      );
+    }
+
     // Generate temporary password
     const tempPassword = this.generateTemporaryPassword();
     const hashedPassword = await hash(tempPassword, 12);
 
+    // Find latest portal user loginId to generate next sequence (e.g. cust003)
+    const latestPortalUser = await prisma.user.findFirst({
+      where: {
+        role: UserRole.CONTACT,
+        loginId: { startsWith: "cust" },
+      },
+      orderBy: { loginId: "desc" },
+      select: { loginId: true },
+    });
+
+    let nextNumber = 1;
+    if (latestPortalUser?.loginId) {
+      const match = latestPortalUser.loginId.match(/^cust(\d+)$/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
+    const generatedLoginId = `cust${String(nextNumber).padStart(3, "0")}`;
+
     // Create Contact-role user and link to contact
     const user = await prisma.user.create({
       data: {
-        loginId: `contact_${contact.id.slice(0, 8)}`,
+        loginId: generatedLoginId,
         email: contact.email,
         password: hashedPassword,
         role: UserRole.CONTACT,
