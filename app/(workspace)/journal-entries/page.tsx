@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { toast } from "sonner";
 import {
   getJournalsAction,
@@ -254,6 +255,24 @@ export default function JournalEntriesPage() {
     ]);
   };
 
+  const accountOptions = React.useMemo(() => {
+    return accounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.code} - ${acc.name}`,
+      subLabel: `Account #${acc.code}`,
+    }));
+  }, [accounts]);
+
+  const partnerOptions = React.useMemo(() => {
+    return [
+      { value: "", label: "None" },
+      ...contacts.map((c) => ({
+        value: c.id,
+        label: c.name,
+      })),
+    ];
+  }, [contacts]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -430,38 +449,29 @@ export default function JournalEntriesPage() {
                       <tbody className="divide-y divide-border">
                         {lines.map((line) => (
                           <tr key={line.id} className="bg-white">
-                            <td className="py-2 px-3">
-                              <select
+                            <td className="py-2 px-3 min-w-[220px]">
+                              <SearchableSelect
+                                size="sm"
                                 value={line.accountId}
-                                onChange={(e) =>
-                                  updateLine(line.id, "accountId", e.target.value)
+                                onChange={(val) =>
+                                  updateLine(line.id, "accountId", val)
                                 }
-                                className="w-full px-2 py-1.5 text-xs rounded border border-border bg-white focus:outline-none focus:ring-1 focus:ring-teal/30 focus:border-teal"
-                                required
-                              >
-                                <option value="">Select account</option>
-                                {accounts.map((acc) => (
-                                  <option key={acc.id} value={acc.id}>
-                                    {acc.code} - {acc.name}
-                                  </option>
-                                ))}
-                              </select>
+                                options={accountOptions}
+                                placeholder="Select account"
+                                searchPlaceholder="Search account by code, name..."
+                              />
                             </td>
-                            <td className="py-2 px-3">
-                              <select
+                            <td className="py-2 px-3 min-w-[170px]">
+                              <SearchableSelect
+                                size="sm"
                                 value={line.partnerId}
-                                onChange={(e) =>
-                                  updateLine(line.id, "partnerId", e.target.value)
+                                onChange={(val) =>
+                                  updateLine(line.id, "partnerId", val)
                                 }
-                                className="w-full px-2 py-1.5 text-xs rounded border border-border bg-white focus:outline-none focus:ring-1 focus:ring-teal/30 focus:border-teal"
-                              >
-                                <option value="">None</option>
-                                {contacts.map((c) => (
-                                  <option key={c.id} value={c.id}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </select>
+                                options={partnerOptions}
+                                placeholder="None"
+                                searchPlaceholder="Search partner..."
+                              />
                             </td>
                             <td className="py-2 px-3">
                               <input
