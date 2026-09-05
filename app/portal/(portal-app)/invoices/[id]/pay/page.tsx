@@ -14,6 +14,28 @@ export default async function PortalInvoicePayPage({
 
   const invoice = await prisma.customerInvoice.findUnique({
     where: { id: params.id },
+    include: {
+      customer: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
+      salesOrder: {
+        select: {
+          soNumber: true,
+        },
+      },
+      lines: {
+        include: {
+          product: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!invoice || invoice.customerId !== portalSession.contactId) {
@@ -32,6 +54,14 @@ export default async function PortalInvoicePayPage({
     total: Number(invoice.total),
     amountPaid: Number(invoice.amountPaid),
     amountDue: Number(invoice.amountDue),
+    customerName: invoice.customer?.name || "Valued Customer",
+    customerEmail: invoice.customer?.email || "",
+    soNumber: invoice.salesOrder?.soNumber || null,
+    lines: invoice.lines.map((l) => ({
+      name: l.product.name,
+      quantity: Number(l.quantity),
+      lineTotal: Number(l.lineTotal),
+    })),
   };
 
   return (

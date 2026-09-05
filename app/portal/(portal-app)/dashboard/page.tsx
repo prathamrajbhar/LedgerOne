@@ -1,12 +1,14 @@
 import { auth } from "@/lib/auth/auth.config";
 import { redirect } from "next/navigation";
 import { ContactType, PaymentStatus } from "@prisma/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Receipt, DollarSign, Clock } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { FileText, Receipt, CircleDollarSign, Clock, ArrowRight, CreditCard, CheckCircle2 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import Link from "next/link";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { Button } from "@/components/ui/button";
 
 async function getCustomerDashboardData(contactId: string) {
-  // Get invoices for this customer
   const invoices = await prisma.customerInvoice.findMany({
     where: {
       customerId: contactId,
@@ -49,7 +51,7 @@ async function getCustomerDashboardData(contactId: string) {
         customerId: contactId,
       },
       createdAt: {
-        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
     },
   });
@@ -57,13 +59,12 @@ async function getCustomerDashboardData(contactId: string) {
   return {
     invoices,
     totalInvoices,
-    totalAmountDue: totalAmountDue._sum.amountDue || 0,
+    totalAmountDue: Number(totalAmountDue._sum.amountDue || 0),
     recentPayments,
   };
 }
 
 async function getVendorDashboardData(contactId: string) {
-  // Get bills for this vendor
   const bills = await prisma.vendorBill.findMany({
     where: {
       vendorId: contactId,
@@ -106,7 +107,7 @@ async function getVendorDashboardData(contactId: string) {
         vendorId: contactId,
       },
       createdAt: {
-        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
     },
   });
@@ -114,7 +115,7 @@ async function getVendorDashboardData(contactId: string) {
   return {
     bills,
     totalBills,
-    totalAmountDue: totalAmountDue._sum.amountDue || 0,
+    totalAmountDue: Number(totalAmountDue._sum.amountDue || 0),
     recentPayments,
   };
 }
@@ -128,9 +129,8 @@ export default async function PortalDashboardPage() {
 
   const contactId = session.user.contactId;
   const contactType = session.user.contactType || ContactType.CUSTOMER;
-  const contactName = session.user.contactName || "User";
+  const contactName = session.user.contactName || session.user.name || "Partner";
 
-  // Fetch data based on contact type
   const isCustomer = contactType === ContactType.CUSTOMER || contactType === ContactType.BOTH;
   const isVendor = contactType === ContactType.VENDOR || contactType === ContactType.BOTH;
 
@@ -139,248 +139,306 @@ export default async function PortalDashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
-      <div>
-        <h1 className="text-2xl font-bold text-navy">Welcome back, {contactName}!</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Here&apos;s an overview of your account activity
-        </p>
+      {/* Welcome Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/70 pb-5">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-navy">
+            Welcome back, {contactName}!
+          </h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+            Here is a comprehensive overview of your billing, invoices, and payment activity
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {isCustomer && (
+            <Link href="/portal/billing">
+              <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 border-border">
+                <FileText className="h-3.5 w-3.5 text-teal" />
+                <span>My Billing</span>
+              </Button>
+            </Link>
+          )}
+          {isVendor && (
+            <Link href="/portal/bills">
+              <Button size="sm" variant="outline" className="text-xs h-8 gap-1.5 border-border">
+                <Receipt className="h-3.5 w-3.5 text-teal" />
+                <span>View Bills</span>
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
-      {/* Customer Summary Cards */}
+      {/* CUSTOMER SECTION */}
       {isCustomer && customerData && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+        <div className="space-y-6">
+          {/* KPI Metrics Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Total Invoices */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E7F5F5] text-teal">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
                   Total Invoices
-                </CardTitle>
-                <FileText className="h-4 w-4 text-teal" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">{customerData.totalInvoices}</div>
-                <p className="text-xs text-muted-foreground mt-1">All time</p>
-              </CardContent>
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-foreground tracking-tight tnum">
+                  {customerData.totalInvoices}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">All time issued</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            {/* Amount Due */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FDEEEE] text-destructive">
+                  <CircleDollarSign className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
                   Amount Due
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-red-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-destructive tracking-tight tnum">
                   ₹{customerData.totalAmountDue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Outstanding balance</p>
-              </CardContent>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Outstanding balance</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            {/* Recent Payments */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDF5FC] text-[#3478B9]">
+                  <Receipt className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
                   Recent Payments
-                </CardTitle>
-                <Receipt className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">{customerData.recentPayments}</div>
-                <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
-              </CardContent>
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-foreground tracking-tight tnum">
+                  {customerData.recentPayments}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Last 30 days completed</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
+            {/* Pending Invoices */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#FFF8E6] text-amber-600">
+                  <Clock className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
                   Pending Invoices
-                </CardTitle>
-                <Clock className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-navy tracking-tight tnum">
                   {customerData.invoices.filter((inv) => inv.paymentStatus !== PaymentStatus.PAID).length}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
-              </CardContent>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Awaiting settlement</p>
+              </div>
             </Card>
           </div>
 
-          {/* Recent Invoices */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Recent Invoices</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {customerData.invoices.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                  <p>No invoices found</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {customerData.invoices.map((invoice) => (
-                    <div
-                      key={invoice.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-navy">{invoice.invoiceNumber}</span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              invoice.paymentStatus === PaymentStatus.PAID
-                                ? "bg-green-100 text-green-700"
-                                : invoice.paymentStatus === PaymentStatus.PARTIAL
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {invoice.paymentStatus}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Date: {new Date(invoice.invoiceDate).toLocaleDateString("en-IN")} | Due:{" "}
-                          {new Date(invoice.dueDate).toLocaleDateString("en-IN")}
-                        </p>
+          {/* Recent Invoices Card */}
+          <Card className="border border-border bg-white shadow-card overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-border/70 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-navy">Recent Invoices</h2>
+                <p className="text-xs text-muted-foreground">Latest invoices generated for your account</p>
+              </div>
+              <Link
+                href="/portal/billing"
+                className="text-xs font-semibold text-teal hover:text-teal-dark flex items-center gap-1"
+              >
+                <span>View all</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {customerData.invoices.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm font-medium">No invoices found</p>
+                <p className="text-xs text-muted-foreground mt-0.5">You have no invoices issued yet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/60">
+                {customerData.invoices.map((invoice) => (
+                  <div
+                    key={invoice.id}
+                    className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#F8FAFC] transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-semibold text-sm text-navy">{invoice.invoiceNumber}</span>
+                        <StatusBadge status={invoice.paymentStatus} />
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-navy">
+                      <p className="text-xs text-muted-foreground">
+                        Issued: {new Date(invoice.invoiceDate).toLocaleDateString("en-IN")} • Due:{" "}
+                        <span className="font-medium text-foreground">{new Date(invoice.dueDate).toLocaleDateString("en-IN")}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-4">
+                      <div className="text-left sm:text-right">
+                        <div className="font-bold text-navy text-sm sm:text-base tnum">
                           ₹{Number(invoice.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                         </div>
-                        {Number(invoice.amountDue) > 0 && (
-                          <div className="text-xs text-red-600 mt-1">
+                        {Number(invoice.amountDue) > 0 ? (
+                          <div className="text-[11px] font-medium text-destructive tnum">
                             Due: ₹{Number(invoice.amountDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-medium text-green-600 flex items-center gap-1 sm:justify-end">
+                            <CheckCircle2 className="h-3 w-3" /> Fully Paid
                           </div>
                         )}
                       </div>
+
+                      {invoice.paymentStatus !== PaymentStatus.PAID && (
+                        <Link href={`/portal/invoices/${invoice.id}/pay`}>
+                          <Button size="sm" className="h-8 text-xs bg-navy hover:bg-navy-dark text-white gap-1.5 shadow-xs">
+                            <CreditCard className="h-3 w-3" /> Pay
+                          </Button>
+                        </Link>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
-        </>
+        </div>
       )}
 
-      {/* Vendor Summary Cards */}
+      {/* VENDOR SECTION */}
       {isVendor && vendorData && (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total Bills
-                </CardTitle>
-                <Receipt className="h-4 w-4 text-teal" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">{vendorData.totalBills}</div>
-                <p className="text-xs text-muted-foreground mt-1">All time</p>
-              </CardContent>
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Total Bills */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#E7F5F5] text-teal">
+                  <Receipt className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Total Vendor Bills
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-foreground tracking-tight tnum">
+                  {vendorData.totalBills}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Submitted bills</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Amount Receivable
-                </CardTitle>
-                <DollarSign className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">
+            {/* Total Pending Payout */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#F0EEFF] text-[#6366F1]">
+                  <CircleDollarSign className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Pending Payout
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-navy tracking-tight tnum">
                   ₹{vendorData.totalAmountDue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Pending from company</p>
-              </CardContent>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Payable balance</p>
+              </div>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Payments Received
-                </CardTitle>
-                <Receipt className="h-4 w-4 text-green-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">{vendorData.recentPayments}</div>
-                <p className="text-xs text-muted-foreground mt-1">Last 30 days</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Pending Bills
-                </CardTitle>
-                <Clock className="h-4 w-4 text-orange-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-navy">
-                  {vendorData.bills.filter((bill) => bill.paymentStatus !== PaymentStatus.PAID).length}
+            {/* Recent Payments Received */}
+            <Card className="p-4 hover:border-border-strong transition-all bg-white shadow-card">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EDF5FC] text-[#3478B9]">
+                  <CheckCircle2 className="h-4 w-4" />
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">Awaiting payment</p>
-              </CardContent>
+                <span className="text-xs font-medium text-muted-foreground">
+                  Payments Received
+                </span>
+              </div>
+              <div className="mt-3">
+                <div className="text-xl sm:text-2xl font-bold text-foreground tracking-tight tnum">
+                  {vendorData.recentPayments}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Last 30 days cleared</p>
+              </div>
             </Card>
           </div>
 
-          {/* Recent Bills */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Recent Bills</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {vendorData.bills.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Receipt className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                  <p>No bills found</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {vendorData.bills.map((bill) => (
-                    <div
-                      key={bill.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-navy">{bill.billNumber}</span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full ${
-                              bill.paymentStatus === PaymentStatus.PAID
-                                ? "bg-green-100 text-green-700"
-                                : bill.paymentStatus === PaymentStatus.PARTIAL
-                                ? "bg-orange-100 text-orange-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {bill.paymentStatus}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Date: {new Date(bill.billDate).toLocaleDateString("en-IN")} | Due:{" "}
-                          {new Date(bill.dueDate).toLocaleDateString("en-IN")}
-                        </p>
+          {/* Recent Bills Card */}
+          <Card className="border border-border bg-white shadow-card overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-border/70 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm sm:text-base font-bold text-navy">Recent Vendor Bills</h2>
+                <p className="text-xs text-muted-foreground">Bills submitted to LedgerOne for settlement</p>
+              </div>
+              <Link
+                href="/portal/bills"
+                className="text-xs font-semibold text-teal hover:text-teal-dark flex items-center gap-1"
+              >
+                <span>View all</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {vendorData.bills.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Receipt className="h-10 w-10 mx-auto mb-2 text-muted-foreground/30" />
+                <p className="text-sm font-medium">No bills found</p>
+                <p className="text-xs text-muted-foreground mt-0.5">No vendor bills recorded yet.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-border/60">
+                {vendorData.bills.map((bill) => (
+                  <div
+                    key={bill.id}
+                    className="p-4 sm:px-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[#F8FAFC] transition-colors"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2.5">
+                        <span className="font-semibold text-sm text-navy">{bill.billNumber}</span>
+                        <StatusBadge status={bill.paymentStatus} />
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-navy">
-                          ₹{Number(bill.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                        </div>
-                        {Number(bill.amountDue) > 0 && (
-                          <div className="text-xs text-orange-600 mt-1">
-                            Pending: ₹{Number(bill.amountDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                          </div>
-                        )}
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Bill Date: {new Date(bill.billDate).toLocaleDateString("en-IN")} • Due:{" "}
+                        <span className="font-medium text-foreground">{new Date(bill.dueDate).toLocaleDateString("en-IN")}</span>
+                      </p>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
+
+                    <div className="text-left sm:text-right">
+                      <div className="font-bold text-navy text-sm sm:text-base tnum">
+                        ₹{Number(bill.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                      </div>
+                      {Number(bill.amountDue) > 0 ? (
+                        <div className="text-[11px] font-medium text-amber-600 tnum">
+                          Pending: ₹{Number(bill.amountDue).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-medium text-green-600 flex items-center gap-1 sm:justify-end">
+                          <CheckCircle2 className="h-3 w-3" /> Fully Cleared
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
-        </>
+        </div>
       )}
     </div>
   );

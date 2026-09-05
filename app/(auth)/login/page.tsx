@@ -56,28 +56,14 @@ export default function LoginPage() {
 
   return (
     <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-6 sm:p-7 space-y-4 backdrop-blur-sm">
-      {/* Header with Title and New Brand Logo */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-            Welcome Back
-          </h2>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            Sign in to your LedgerOne workspace and continue managing your business with ease.
-          </p>
-        </div>
-
-        {/* LedgerOne Brand Logo Image */}
-        <div className="relative w-14 h-14 flex-shrink-0 rounded-2xl p-1 bg-white border border-border/60 shadow-2xs flex items-center justify-center overflow-hidden">
-          <Image
-            src="/logo.png"
-            alt="LedgerOne Logo"
-            width={56}
-            height={56}
-            className="w-full h-full object-contain"
-            priority
-          />
-        </div>
+      {/* Header with Title */}
+      <div>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
+          Welcome Back
+        </h2>
+        <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+          Sign in to your LedgerOne workspace and continue managing your business with ease.
+        </p>
       </div>
 
       {/* Login Form */}

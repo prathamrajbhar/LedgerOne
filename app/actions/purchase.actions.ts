@@ -150,6 +150,16 @@ export async function confirmBillAction(id: string) {
   }
 }
 
+export async function cancelBillAction(id: string) {
+  try {
+    const bill = await vendorBillService.cancel(id);
+    return { success: true, data: bill };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to cancel bill" };
+  }
+}
+
 export async function getPurchaseOrdersAction() {
   try {
     const pos = await prisma.purchaseOrder.findMany({
@@ -181,6 +191,11 @@ export async function getVendorBillsAction() {
           include: {
             product: true,
             analyticAccount: true,
+          },
+        },
+        payments: {
+          orderBy: {
+            paymentDate: "desc",
           },
         },
       },
