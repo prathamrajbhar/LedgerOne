@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth.config";
 import { UserRole, ContactType } from "@prisma/client";
 import PortalHeader from "./components/PortalHeader";
 import PortalSidebar from "./components/PortalSidebar";
+import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
 
 export default async function PortalLayout({
   children,
@@ -33,6 +34,9 @@ export default async function PortalLayout({
           {children}
         </main>
       </div>
+
+      {/* Help Assistant Widget - Portal users get it too */}
+      <HelpAssistantWidget />
     </div>
   );
 }

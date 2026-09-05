@@ -1,38 +1,37 @@
-"use client";
-
 import * as React from "react";
-import { useState } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
-import { Navbar } from "@/components/layout/navbar";
-import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/auth.config";
+import { UserRole } from "@prisma/client";
+import WorkspaceLayoutClient from "./workspace-layout-client";
 
-export default function WorkspaceLayout({
+export default async function WorkspaceLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const session = await auth();
+
+  // Redirect to login if not authenticated
+  if (!session?.user) {
+    redirect("/login");
+  }
+
+  // Ensure user is Admin or Accountant (not Contact)
+  if (session.user.role === UserRole.CONTACT) {
+    redirect("/portal/home");
+  }
+
+  const userRole = session.user.role;
+  const userName = session.user.name || "User";
+  const userEmail = session.user.email;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar Navigation */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Static / Sticky Top Navbar */}
-        <Navbar onMenuClick={() => setSidebarOpen(true)} />
-
-        {/* Scrollable Page Content */}
-        <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-7">
-          <div className="max-w-[1600px] mx-auto w-full">
-            {children}
-          </div>
-        </main>
-      </div>
-
-      {/* Persistent Help Assistant Chat Widget */}
-      <HelpAssistantWidget />
-    </div>
+    <WorkspaceLayoutClient
+      userRole={userRole}
+      userName={userName}
+      userEmail={userEmail}
+    >
+      {children}
+    </WorkspaceLayoutClient>
   );
 }

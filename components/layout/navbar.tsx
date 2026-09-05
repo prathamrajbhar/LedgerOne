@@ -21,15 +21,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GlobalSearchDialog } from "@/components/ui/global-search";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
+import { UserRole } from "@prisma/client";
 
 interface NavbarProps {
   onMenuClick?: () => void;
+  userRole: UserRole;
+  userName: string;
+  userEmail: string;
 }
 
-export function Navbar({ onMenuClick }: NavbarProps) {
+export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarProps) {
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [selectedPeriod, setSelectedPeriod] = React.useState("01 Nov 2024 - 30 Nov 2024");
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
+  };
+
+  // Get user initials
+  const initials = userName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  // Get role display name
+  const roleDisplay = userRole === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
 
   return (
     <>
@@ -108,14 +128,14 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2.5 pl-1.5 pr-2 py-1 rounded-lg hover:bg-surface-subtle transition-colors text-left">
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-navy text-white text-xs font-semibold overflow-hidden border border-border">
-                  <span>RM</span>
+                  <span>{initials}</span>
                 </div>
                 <div className="hidden sm:flex flex-col">
                   <span className="text-xs font-semibold text-foreground leading-tight">
-                    Rohan Mehta
+                    {userName}
                   </span>
                   <span className="text-[10px] text-muted-foreground font-normal">
-                    Administrator
+                    {roleDisplay}
                   </span>
                 </div>
                 <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
@@ -124,8 +144,8 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-0.5">
-                  <p className="text-xs font-semibold text-foreground">Rohan Mehta</p>
-                  <p className="text-[11px] text-muted-foreground">rohan.mehta@ledgerone.in</p>
+                  <p className="text-xs font-semibold text-foreground">{userName}</p>
+                  <p className="text-[11px] text-muted-foreground">{userEmail}</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -135,24 +155,29 @@ export function Navbar({ onMenuClick }: NavbarProps) {
                   <span>My Profile</span>
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/settings" className="flex items-center gap-2">
-                  <SettingsIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Company Settings</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/accounts" className="flex items-center gap-2">
-                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>Accounting Permissions</span>
-                </Link>
-              </DropdownMenuItem>
+
+              {/* Admin-only menu items */}
+              {userRole === UserRole.ADMINISTRATOR && (
+                <>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/users" className="flex items-center gap-2">
+                      <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Users</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings" className="flex items-center gap-2">
+                      <SettingsIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span>Settings</span>
+                    </Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/login" className="flex items-center gap-2 text-destructive focus:text-destructive">
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span>Sign Out</span>
-                </Link>
+              <DropdownMenuItem onClick={handleLogout} className="flex items-center gap-2 text-destructive focus:text-destructive cursor-pointer">
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Logout</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

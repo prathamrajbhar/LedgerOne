@@ -4,16 +4,22 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { navSections } from "./sidebar-items";
+import { getFilteredNavSections } from "./sidebar-items";
+import { UserRole } from "@prisma/client";
 
-export function Sidebar({
-  isOpen,
-  onClose,
-}: {
+interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
-}) {
+  userRole: UserRole;
+}
+
+export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
   const pathname = usePathname();
+
+  // Get filtered navigation based on user role
+  const navSections = React.useMemo(() => {
+    return getFilteredNavSections(userRole);
+  }, [userRole]);
 
   return (
     <>
@@ -57,8 +63,6 @@ export function Sidebar({
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard" || pathname === "/"
-                    : item.href === "/reports"
-                    ? pathname === "/reports"
                     : pathname === item.href || pathname.startsWith(item.href + "/");
 
                 return (
