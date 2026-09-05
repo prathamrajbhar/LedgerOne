@@ -12,8 +12,8 @@ export default async function PurchasesPage() {
     return (
       <div className="space-y-5">
         <PageHeader
-          title="Purchase Orders & Vendor Bills"
-          description="Procure raw timber, foam, upholstery fabrics, hardware fittings, and track vendor payables."
+          title="Purchase Orders"
+          description="Procure raw timber, foam, upholstery fabrics, and track procurement orders."
         />
         <div className="rounded-xl border border-border bg-white p-8 text-center">
           <p className="text-sm text-muted-foreground">Failed to load purchase orders. Please try again.</p>
@@ -27,8 +27,8 @@ export default async function PurchasesPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Purchase Orders & Vendor Bills"
-        description="Procure raw timber, foam, upholstery fabrics, hardware fittings, and track vendor payables."
+        title="Purchase Orders"
+        description="Procure raw timber, foam, upholstery fabrics, hardware fittings, and track vendor procurement."
         actions={<PurchaseOrderForm />}
       />
 

@@ -80,71 +80,183 @@ export class EmailService {
     const portalUrl = `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/login`;
 
     const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
-            .content { background-color: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; }
-            .credentials { background-color: white; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0; }
-            .credentials strong { display: inline-block; width: 180px; }
-            .button { display: inline-block; background-color: #2563eb; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-            .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
-            .warning { background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 20px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1 style="margin: 0;">Welcome to LedgerOne Portal</h1>
-            </div>
-            <div class="content">
-              <p>Hello <strong>${contactName}</strong>,</p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your LedgerOne Portal Invitation</title>
+  <!--[if mso]>
+  <style type="text/css">
+    body, table, td, p, a { font-family: Arial, Helvetica, sans-serif !important; }
+  </style>
+  <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; background-color: #F3F6F9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F3F6F9; padding: 36px 12px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card Container (max 600px) -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #FFFFFF; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(22, 50, 79, 0.08), 0 8px 10px -6px rgba(22, 50, 79, 0.04); border: 1px solid #E2E8F0;">
+          
+          <!-- Top Accent Gradient Bar -->
+          <tr>
+            <td height="5" style="background: linear-gradient(90deg, #16324F 0%, #167C80 50%, #2DD4BF 100%);"></td>
+          </tr>
 
-              <p>You have been invited to access the LedgerOne Portal. This portal allows you to:</p>
-              <ul>
-                <li>View your invoices and bills</li>
-                <li>Make payments online</li>
-                <li>Track your transaction history</li>
-                <li>Download payment receipts</li>
-              </ul>
+          <!-- Header / Brand Section -->
+          <tr>
+            <td style="padding: 32px 36px 20px 36px; background-color: #FFFFFF; border-bottom: 1px solid #F1F5F9;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <!-- Brand Wordmark -->
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="background-color: #16324F; width: 38px; height: 38px; border-radius: 10px; text-align: center; vertical-align: middle; color: #FFFFFF; font-size: 20px; font-weight: 800; letter-spacing: -0.5px;">
+                          L1
+                        </td>
+                        <td style="padding-left: 14px;">
+                          <div style="font-size: 20px; font-weight: 800; color: #16324F; letter-spacing: -0.5px; line-height: 1.2;">
+                            Ledger<span style="color: #167C80;">One</span>
+                          </div>
+                          <div style="font-size: 11px; font-weight: 600; color: #64748B; text-transform: uppercase; letter-spacing: 1px;">
+                            Client & Partner Portal
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td align="right">
+                    <span style="display: inline-block; padding: 4px 10px; font-size: 11px; font-weight: 700; color: #167C80; background-color: #E3F3F3; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.5px;">
+                      Official Invitation
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-              <div class="credentials">
-                <h3 style="margin-top: 0;">Your Login Credentials</h3>
-                <p><strong>Portal URL:</strong> <a href="${portalUrl}">${portalUrl}</a></p>
-                <p><strong>Login ID:</strong> ${loginId}</p>
-                <p><strong>Temporary Password:</strong> ${temporaryPassword}</p>
-              </div>
-
-              <div class="warning">
-                <strong>Important Security Notice:</strong>
-                <p style="margin: 5px 0 0 0;">This is a temporary password. For your security, you will be required to change it upon your first login.</p>
-              </div>
-
-              <p style="text-align: center;">
-                <a href="${portalUrl}" class="button">Login to Portal</a>
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 32px 36px 28px 36px;">
+              <!-- Greeting -->
+              <h2 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 700; color: #1E293B; line-height: 1.3;">
+                Welcome, ${contactName}
+              </h2>
+              <p style="margin: 0 0 22px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                You have been granted secure access to your organization's financial portal on <strong>LedgerOne</strong>. You can now view issued invoices, track payment reconciliations, and manage statements in real-time.
               </p>
 
-              <p><strong>Need Help?</strong><br>
-              If you have any questions or need assistance accessing the portal, please contact our support team.</p>
+              <!-- Credentials Card -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; margin: 0 0 24px 0;">
+                <tr>
+                  <td style="padding: 20px 22px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #16324F; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px;">
+                      Your Temporary Access Credentials
+                    </div>
 
-              <div class="footer">
-                <p>This is an automated message from LedgerOne Accounting System.<br>
-                Please do not reply to this email.</p>
-                <p>&copy; ${new Date().getFullYear()} LedgerOne. All rights reserved.</p>
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <!-- Login ID -->
+                      <tr>
+                        <td width="35%" style="padding: 7px 0; font-size: 13px; color: #64748B; font-weight: 500;">
+                          Login ID / Email:
+                        </td>
+                        <td width="65%" style="padding: 7px 0; font-size: 13px; font-weight: 700; color: #0F172A; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;">
+                          ${loginId}
+                        </td>
+                      </tr>
+                      <!-- Temporary Password -->
+                      <tr>
+                        <td width="35%" style="padding: 7px 0; font-size: 13px; color: #64748B; font-weight: 500;">
+                          Temporary Password:
+                        </td>
+                        <td width="65%" style="padding: 7px 0;">
+                          <span style="display: inline-block; padding: 4px 10px; background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 6px; font-size: 14px; font-weight: 700; color: #16324F; font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; letter-spacing: 0.5px;">
+                            ${temporaryPassword}
+                          </span>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Call To Action Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 24px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="${portalUrl}" target="_blank" style="display: inline-block; background-color: #16324F; color: #FFFFFF; font-size: 14px; font-weight: 700; text-decoration: none; padding: 14px 34px; border-radius: 10px; box-shadow: 0 4px 12px rgba(22, 50, 79, 0.25); text-align: center;">
+                      Sign In to LedgerOne Portal &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Security Notice Callout -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #FEF3C7; border-left: 4px solid #F59E0B; border-radius: 8px; margin: 0 0 24px 0;">
+                <tr>
+                  <td style="padding: 14px 16px;">
+                    <div style="font-size: 12px; font-weight: 700; color: #92400E; margin-bottom: 3px;">
+                      Mandatory Security Setup
+                    </div>
+                    <div style="font-size: 12px; color: #B45309; line-height: 1.5;">
+                      Upon your first sign-in, you will be prompted to replace this temporary password with a secure permanent one before accessing account data.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What you can do inside the portal -->
+              <div style="border-top: 1px solid #F1F5F9; padding-top: 20px; margin-top: 20px;">
+                <div style="font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">
+                  Features available in your portal:
+                </div>
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13px; color: #64748B;">
+                  <tr>
+                    <td style="padding: 4px 0;">
+                      <span style="color: #167C80; font-weight: bold; margin-right: 6px;">&#10003;</span> Review verified invoices, purchase orders & account balances
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0;">
+                      <span style="color: #167C80; font-weight: bold; margin-right: 6px;">&#10003;</span> Complete seamless online payment reconciliations
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 4px 0;">
+                      <span style="color: #167C80; font-weight: bold; margin-right: 6px;">&#10003;</span> Download official GST invoices and payment receipts (PDF)
+                    </td>
+                  </tr>
+                </table>
               </div>
-            </div>
-          </div>
-        </body>
-      </html>
+
+            </td>
+          </tr>
+
+          <!-- Footer Section -->
+          <tr>
+            <td style="padding: 24px 36px 32px 36px; background-color: #F8FAFC; border-top: 1px solid #E2E8F0; text-align: center;">
+              <p style="margin: 0 0 8px 0; font-size: 12px; color: #64748B; line-height: 1.5;">
+                This automated invitation was generated by <strong>LedgerOne Accounting System</strong>.
+              </p>
+              <p style="margin: 0; font-size: 11px; color: #94A3B8;">
+                &copy; ${new Date().getFullYear()} LedgerOne Inc. All rights reserved. &bull; Enterprise Financial Cloud
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
 
     return this.send({
       to: email,
-      subject: "You're invited to LedgerOne Portal",
+      subject: `You're invited to LedgerOne Portal - Access Credentials`,
       html,
     });
   }

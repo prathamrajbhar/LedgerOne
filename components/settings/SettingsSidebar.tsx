@@ -46,7 +46,7 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
     },
     {
       title: "Users Management",
-      href: "/settings/users-management",
+      href: "/users",
       icon: ShieldCheck,
       description: "Staff accounts & portal permissions",
       adminOnly: true,

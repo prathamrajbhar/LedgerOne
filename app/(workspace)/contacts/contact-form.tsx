@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
@@ -30,13 +30,33 @@ interface ContactFormProps {
 
 export function ContactForm({ initialData, isEdit }: ContactFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlType = searchParams.get("type")?.toUpperCase();
+  const defaultType =
+    initialData?.type ||
+    (urlType === "CUSTOMER" || urlType === "VENDOR" ? urlType : "CUSTOMER");
+
   const [formData, setFormData] = React.useState({
     name: initialData?.name || "",
-    type: initialData?.type || "CUSTOMER",
+    type: defaultType as "CUSTOMER" | "VENDOR" | "BOTH",
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     address: initialData?.address || "",
   });
+
+  const backUrl =
+    formData.type === "CUSTOMER"
+      ? "/contacts?type=CUSTOMER"
+      : formData.type === "VENDOR"
+      ? "/contacts?type=VENDOR"
+      : "/contacts";
+
+  const entityTitle =
+    formData.type === "CUSTOMER"
+      ? "Customer"
+      : formData.type === "VENDOR"
+      ? "Vendor / Supplier"
+      : "Contact";
 
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [loading, setLoading] = React.useState(false);
@@ -114,14 +134,14 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
     <div className="space-y-6 max-w-4xl mx-auto pb-12">
       {/* Top Breadcrumb / Navigation */}
       <div className="flex items-center justify-between">
-        <Link href="/contacts">
+        <Link href={backUrl}>
           <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
-            Back to Contacts
+            Back to {entityTitle}s
           </Button>
         </Link>
         <span className="text-xs text-muted-foreground bg-white/80 px-2.5 py-1 rounded-full border border-border">
-          {isEdit ? "Editing Mode" : "New Directory Entry"}
+          {isEdit ? `Editing ${entityTitle}` : `New ${entityTitle} Entry`}
         </span>
       </div>
 
@@ -129,19 +149,27 @@ export function ContactForm({ initialData, isEdit }: ContactFormProps) {
       <div className="bg-white rounded-2xl border border-border shadow-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="h-12 w-12 rounded-2xl bg-[#EBF3F9] text-navy flex items-center justify-center flex-shrink-0 border border-navy/10">
-            <Users className="h-6 w-6 text-navy" />
+            {formData.type === "VENDOR" ? (
+              <Building2 className="h-6 w-6 text-navy" />
+            ) : (
+              <Users className="h-6 w-6 text-navy" />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-                {isEdit ? `Edit: ${formData.name}` : "Create New Contact"}
+                {isEdit ? `Edit: ${formData.name}` : `Create New ${entityTitle}`}
               </h1>
               <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-[#E3F3F3] text-[#167C80]">
-                Directory
+                {entityTitle}
               </span>
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Register customer accounts, furniture suppliers, raw material vendors, and business partners.
+              {formData.type === "CUSTOMER"
+                ? "Register client details, delivery addresses, and billing credentials for portal access."
+                : formData.type === "VENDOR"
+                ? "Register timber sawmills, upholstery vendors, hardware fittings suppliers, and payment terms."
+                : "Register customers, suppliers, raw material vendors, and partner accounts."}
             </p>
           </div>
         </div>

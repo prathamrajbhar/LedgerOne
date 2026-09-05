@@ -72,7 +72,7 @@ export const navSections: NavSection[] = [
     items: [
       {
         name: "Users",
-        href: "/settings/users-management",
+        href: "/users",
         icon: Users,
         allowedRoles: [UserRole.ADMINISTRATOR],
         description: "Manage system access & roles",
@@ -153,6 +153,12 @@ export const navSections: NavSection[] = [
         href: "/bills",
         icon: Receipt,
         description: "Payables & incoming supplier bills",
+      },
+      {
+        name: "Expenses",
+        href: "/expenses",
+        icon: Receipt,
+        description: "Operational costs & AI receipt scanner",
       },
       {
         name: "Bill Payments",
