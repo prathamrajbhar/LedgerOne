@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { ProductsTable, FurnitureProductItem } from "./products-table";
 import { ProductsKanban } from "./products-kanban";
 import { Pagination } from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface ProductsPageClientProps {
   initialProducts: FurnitureProductItem[];
@@ -115,21 +122,22 @@ export function ProductsPageClient({
 
         {/* Category Pills & View Mode */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end overflow-x-auto">
-          <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
-            {categories.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryChange(cat.id)}
-                className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
-                  selectedCategory === cat.id
-                    ? "bg-white text-navy font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          {/* Collection/Category Dropdown */}
+          <Select
+            value={selectedCategory}
+            onValueChange={(val) => handleCategoryChange(val)}
+          >
+            <SelectTrigger className="h-9 min-w-[150px] text-xs bg-white border-border text-foreground font-medium">
+              <SelectValue placeholder="All Collections" />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Active vs Archived status toggle */}
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border flex-shrink-0">

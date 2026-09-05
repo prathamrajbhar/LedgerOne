@@ -20,6 +20,13 @@ import {
   createAccountAction
 } from "@/app/actions/master-data.actions";
 import { AccountType } from "@prisma/client";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function AccountsPage() {
   const [accounts, setAccounts] = React.useState<AccountItem[]>([]);
@@ -186,21 +193,23 @@ export default function AccountsPage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
-            {["ALL", "BANK", "ASSET", "LIABILITY", "INCOME", "EXPENSES"].map((t) => (
-              <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
-                className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
-                  typeFilter === t
-                    ? "bg-white text-navy font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          {/* Account Type Dropdown */}
+          <Select
+            value={typeFilter}
+            onValueChange={(val) => setTypeFilter(val)}
+          >
+            <SelectTrigger className="h-9 w-[135px] text-xs bg-white border-border text-foreground font-medium">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Types</SelectItem>
+              <SelectItem value="BANK">Bank</SelectItem>
+              <SelectItem value="ASSET">Asset</SelectItem>
+              <SelectItem value="LIABILITY">Liability</SelectItem>
+              <SelectItem value="INCOME">Income</SelectItem>
+              <SelectItem value="EXPENSES">Expenses</SelectItem>
+            </SelectContent>
+          </Select>
 
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border shrink-0">
             <button

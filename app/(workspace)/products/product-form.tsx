@@ -54,14 +54,37 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
     e.preventDefault();
     const newErrors: Record<string, string> = {};
 
+    const costNum = parseFloat(formData.cost.toString());
+    const salesPriceNum = parseFloat(formData.salesPrice.toString());
+    const stockNum = parseFloat(formData.stock.toString());
+    const reorderPointNum = parseFloat(formData.reorderPoint.toString());
+
     if (!formData.name.trim()) newErrors.name = "Product name is required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-    if (!formData.salesPrice) newErrors.salesPrice = "Sales price is required";
-    if (!formData.cost) newErrors.cost = "Cost price is required";
+
+    if (!formData.cost) {
+      newErrors.cost = "Cost price is required";
+    } else if (isNaN(costNum) || costNum < 0) {
+      newErrors.cost = "Cost price must be 0 or a positive value";
+    }
+
+    if (!formData.salesPrice) {
+      newErrors.salesPrice = "Sales price is required";
+    } else if (isNaN(salesPriceNum) || salesPriceNum < 0) {
+      newErrors.salesPrice = "Selling price must be 0 or a positive value";
+    }
+
+    if (formData.stock !== "" && (isNaN(stockNum) || stockNum < 0)) {
+      newErrors.stock = "Initial stock count cannot be negative";
+    }
+
+    if (formData.reorderPoint !== "" && (isNaN(reorderPointNum) || reorderPointNum < 0)) {
+      newErrors.reorderPoint = "Reorder alert threshold cannot be negative";
+    }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      toast.error("Please fill in required fields");
+      toast.error("Please provide valid positive values");
       return;
     }
 
@@ -75,10 +98,10 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
         sku: formData.sku.trim() || undefined,
         material: formData.material.trim() || undefined,
         dimensions: formData.dimensions.trim() || undefined,
-        salesPrice: parseFloat(formData.salesPrice.toString()),
-        cost: parseFloat(formData.cost.toString()),
-        stock: parseInt(formData.stock.toString()) || 0,
-        reorderPoint: parseInt(formData.reorderPoint.toString()) || 10,
+        salesPrice: Math.max(0, parseFloat(formData.salesPrice.toString())),
+        cost: Math.max(0, parseFloat(formData.cost.toString())),
+        stock: Math.max(0, parseInt(formData.stock.toString(), 10) || 0),
+        reorderPoint: Math.max(0, parseInt(formData.reorderPoint.toString(), 10) || 10),
       };
 
       let result;
@@ -229,11 +252,21 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
             <FormInput
               label="Cost Price (₹)"
               type="number"
+              min="0"
+              step="0.01"
               required
               value={formData.cost}
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                  e.preventDefault();
+                }
+              }}
               onChange={(e) => {
-                setFormData({ ...formData, cost: e.target.value });
-                if (errors.cost) setErrors({ ...errors, cost: "" });
+                const val = e.target.value;
+                if (val === "" || parseFloat(val) >= 0) {
+                  setFormData({ ...formData, cost: val });
+                  if (errors.cost) setErrors({ ...errors, cost: "" });
+                }
               }}
               placeholder="18500"
               error={errors.cost}
@@ -242,11 +275,21 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
             <FormInput
               label="Selling Price (₹)"
               type="number"
+              min="0"
+              step="0.01"
               required
               value={formData.salesPrice}
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "e" || e.key === "E" || e.key === "+") {
+                  e.preventDefault();
+                }
+              }}
               onChange={(e) => {
-                setFormData({ ...formData, salesPrice: e.target.value });
-                if (errors.salesPrice) setErrors({ ...errors, salesPrice: "" });
+                const val = e.target.value;
+                if (val === "" || parseFloat(val) >= 0) {
+                  setFormData({ ...formData, salesPrice: val });
+                  if (errors.salesPrice) setErrors({ ...errors, salesPrice: "" });
+                }
               }}
               placeholder="32000"
               error={errors.salesPrice}
@@ -255,18 +298,46 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
             <FormInput
               label="Initial Stock Count"
               type="number"
+              min="0"
+              step="1"
               value={formData.stock}
-              onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
+                  e.preventDefault();
+                }
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || parseInt(val, 10) >= 0) {
+                  setFormData({ ...formData, stock: val });
+                  if (errors.stock) setErrors({ ...errors, stock: "" });
+                }
+              }}
               placeholder="0"
+              error={errors.stock}
             />
 
             <FormInput
               label="Reorder Alert Threshold"
               type="number"
+              min="0"
+              step="1"
               value={formData.reorderPoint}
-              onChange={(e) => setFormData({ ...formData, reorderPoint: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "-" || e.key === "." || e.key === "e" || e.key === "E" || e.key === "+") {
+                  e.preventDefault();
+                }
+              }}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "" || parseInt(val, 10) >= 0) {
+                  setFormData({ ...formData, reorderPoint: val });
+                  if (errors.reorderPoint) setErrors({ ...errors, reorderPoint: "" });
+                }
+              }}
               placeholder="10"
               helperText="Triggers low-stock alert when remaining inventory reaches this."
+              error={errors.reorderPoint}
             />
           </CardContent>
         </Card>

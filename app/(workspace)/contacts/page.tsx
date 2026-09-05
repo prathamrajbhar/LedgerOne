@@ -12,6 +12,13 @@ import { getContactsAction } from "@/app/actions/contact.actions";
 import { ContactType } from "@prisma/client";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ContactsPage() {
   const searchParams = useSearchParams();
@@ -138,26 +145,24 @@ export default function ContactsPage() {
 
         {/* Type Filter Buttons + List/Kanban Toggle */}
         <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
-          {/* Type Filter Buttons */}
-          <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">
-            {["ALL", "CUSTOMER", "VENDOR"].map((type) => (
-              <button
-                key={type}
-                onClick={() => {
-                  setTypeFilter(type);
-                  setPage(1);
-                }}
-                disabled={loading}
-                className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  typeFilter === type
-                    ? "bg-white text-navy font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {type === "ALL" ? "All" : type === "CUSTOMER" ? "Customers" : "Suppliers"}
-              </button>
-            ))}
-          </div>
+          {/* Type Filter Dropdown */}
+          <Select
+            value={typeFilter}
+            onValueChange={(val) => {
+              setTypeFilter(val);
+              setPage(1);
+            }}
+            disabled={loading}
+          >
+            <SelectTrigger className="h-9 w-[140px] text-xs bg-white border-border text-foreground font-medium">
+              <SelectValue placeholder="All Contacts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Contacts</SelectItem>
+              <SelectItem value="CUSTOMER">Customers</SelectItem>
+              <SelectItem value="VENDOR">Suppliers</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Status Filter (Active vs Archived) */}
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border">

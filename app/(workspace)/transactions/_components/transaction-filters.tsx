@@ -45,7 +45,7 @@ export function TransactionFilters() {
         <select
           value={status}
           onChange={(e) => setStatus(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground outline-none focus:outline-none focus:ring-0 focus:border-border-strong hover:border-border-strong transition-colors"
         >
           <option value="">All Status</option>
           <option value="DRAFT">Draft</option>
@@ -55,7 +55,7 @@ export function TransactionFilters() {
         <select
           value={source}
           onChange={(e) => setSource(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground outline-none focus:outline-none focus:ring-0 focus:border-border-strong hover:border-border-strong transition-colors"
         >
           <option value="">All Sources</option>
           <option value="MANUAL">Manual</option>

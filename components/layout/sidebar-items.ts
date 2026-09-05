@@ -80,11 +80,6 @@ export const navSections: NavSection[] = [
         href: "/contacts?type=VENDOR",
         icon: Building
       },
-      {
-        name: "All Contacts",
-        href: "/contacts",
-        icon: Users
-      },
     ],
   },
 
