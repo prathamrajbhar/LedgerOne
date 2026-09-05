@@ -1,6 +1,5 @@
-import { Resend } from "resend";
-
-const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy_key_for_initialization");
+import nodemailer from "nodemailer";
+import type { Transporter } from "nodemailer";
 
 export interface SendEmailInput {
   to: string;
@@ -9,27 +8,66 @@ export interface SendEmailInput {
 }
 
 export class EmailService {
+  private transporter: Transporter | null = null;
+
+  private async getTransporter(): Promise<Transporter> {
+    if (this.transporter) {
+      return this.transporter;
+    }
+
+    const host = process.env.SMTP_HOST || "smtp.gmail.com";
+    const port = Number(process.env.SMTP_PORT) || 587;
+    const secure = process.env.SMTP_SECURE === "true" || port === 465;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    // If explicit credentials are provided, use them
+    if (user && pass) {
+      this.transporter = nodemailer.createTransport({
+        host,
+        port,
+        secure,
+        auth: {
+          user,
+          pass,
+        },
+      });
+      return this.transporter;
+    }
+
+    // Otherwise create an automatic Ethereal test account for development/testing
+    const testAccount = await nodemailer.createTestAccount();
+    this.transporter = nodemailer.createTransport({
+      host: testAccount.smtp.host,
+      port: testAccount.smtp.port,
+      secure: testAccount.smtp.secure,
+      auth: {
+        user: testAccount.user,
+        pass: testAccount.pass,
+      },
+    });
+    return this.transporter;
+  }
+
   async send(input: SendEmailInput) {
-    if (!process.env.RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY environment variable is not set");
-    }
+    const transporter = await this.getTransporter();
+    const fromAddress =
+      process.env.SMTP_FROM ||
+      (process.env.SMTP_USER ? `LedgerOne <${process.env.SMTP_USER}>` : '"LedgerOne" <noreply@ledgerone.com>');
 
-    if (!process.env.RESEND_FROM_EMAIL) {
-      throw new Error("RESEND_FROM_EMAIL environment variable is not set");
-    }
-
-    const { data, error } = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL,
+    const info = await transporter.sendMail({
+      from: fromAddress,
       to: input.to,
       subject: input.subject,
       html: input.html,
     });
 
-    if (error) {
-      throw new Error(`Email sending failed: ${error.message}`);
-    }
+    const previewUrl = nodemailer.getTestMessageUrl(info);
 
-    return data;
+    return {
+      messageId: info.messageId,
+      previewUrl: previewUrl || undefined,
+    };
   }
 
   async sendPortalInvitation(

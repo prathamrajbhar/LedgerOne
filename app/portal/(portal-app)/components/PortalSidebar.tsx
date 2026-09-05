@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ContactType } from "@prisma/client";
 import {
-  Home,
+  LayoutDashboard,
   FileText,
   Receipt,
   History,
@@ -27,6 +27,17 @@ interface MenuItem {
   action?: () => void;
 }
 
+/**
+ * Portal Sidebar per docs/rbac.md
+ *
+ * User/Contact Sidebar:
+ * - Dashboard (limited)
+ * - My Invoices (Customer only or Both)
+ * - My Bills (Vendor only or Both)
+ * - Payments (Payment History)
+ * - Profile
+ * - Logout
+ */
 export default function PortalSidebar({ contactType }: PortalSidebarProps) {
   const pathname = usePathname();
 
@@ -34,50 +45,49 @@ export default function PortalSidebar({ contactType }: PortalSidebarProps) {
     await signOut({ callbackUrl: "/portal/login" });
   };
 
-  // Always visible items
-  const alwaysVisibleItems: MenuItem[] = [
+  // Build menu structure per docs/rbac.md
+  const menuItems: MenuItem[] = [
+    // Dashboard - always visible (limited for portal users)
     {
-      label: "Portal Home",
+      label: "Dashboard",
       href: "/portal/home",
-      icon: Home,
+      icon: LayoutDashboard,
       visibleFor: [ContactType.CUSTOMER, ContactType.VENDOR, ContactType.BOTH],
     },
-    {
-      label: "Payment History",
-      href: "/portal/payments",
-      icon: History,
-      visibleFor: [ContactType.CUSTOMER, ContactType.VENDOR, ContactType.BOTH],
-    },
-  ];
 
-  // Customer-specific items
-  const customerItems: MenuItem[] = [
+    // My Invoices - Customer only or Both
     {
       label: "My Invoices",
       href: "/portal/invoices",
       icon: FileText,
       visibleFor: [ContactType.CUSTOMER, ContactType.BOTH],
     },
-  ];
 
-  // Vendor-specific items
-  const vendorItems: MenuItem[] = [
+    // My Bills - Vendor only or Both
     {
       label: "My Bills",
       href: "/portal/bills",
       icon: Receipt,
       visibleFor: [ContactType.VENDOR, ContactType.BOTH],
     },
-  ];
 
-  // Profile and logout (always visible)
-  const bottomItems: MenuItem[] = [
+    // Payments - always visible (payment history)
     {
-      label: "My Profile",
+      label: "Payments",
+      href: "/portal/payments",
+      icon: History,
+      visibleFor: [ContactType.CUSTOMER, ContactType.VENDOR, ContactType.BOTH],
+    },
+
+    // Profile - always visible
+    {
+      label: "Profile",
       href: "/portal/profile",
       icon: User,
       visibleFor: [ContactType.CUSTOMER, ContactType.VENDOR, ContactType.BOTH],
     },
+
+    // Logout - always visible
     {
       label: "Logout",
       href: "#",
@@ -88,18 +98,15 @@ export default function PortalSidebar({ contactType }: PortalSidebarProps) {
     },
   ];
 
-  // Build menu structure
-  const menuItems: MenuItem[] = [
-    ...alwaysVisibleItems,
-    ...customerItems.filter((item) => item.visibleFor.includes(contactType)),
-    ...vendorItems.filter((item) => item.visibleFor.includes(contactType)),
-    ...bottomItems,
-  ];
+  // Filter menu items based on contact type
+  const visibleItems = menuItems.filter((item) =>
+    item.visibleFor.includes(contactType)
+  );
 
   return (
     <aside className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-white border-r border-border shadow-sm flex flex-col">
       <nav className="flex-1 p-4 space-y-1">
-        {menuItems.map((item) => {
+        {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
 

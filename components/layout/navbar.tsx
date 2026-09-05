@@ -48,7 +48,7 @@ export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarPro
     .toUpperCase()
     .slice(0, 2);
 
-  // Get role display name
+  // Get role display name per docs/rbac.md
   const roleDisplay = userRole === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
 
   return (
@@ -149,26 +149,29 @@ export function Navbar({ onMenuClick, userRole, userName, userEmail }: NavbarPro
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+
+              {/* Profile - visible to all */}
               <DropdownMenuItem asChild>
                 <Link href="/profile" className="flex items-center gap-2">
                   <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span>My Profile</span>
+                  <span>Profile</span>
                 </Link>
               </DropdownMenuItem>
 
-              {/* Admin-only menu items */}
+              {/* ADMINISTRATOR-only menu items per docs/rbac.md */}
               {userRole === UserRole.ADMINISTRATOR && (
                 <>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link href="/settings/users" className="flex items-center gap-2">
+                    <Link href="/users" className="flex items-center gap-2">
                       <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Users</span>
+                      <span>User Management</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
                     <Link href="/settings" className="flex items-center gap-2">
                       <SettingsIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span>Settings</span>
+                      <span>System Settings</span>
                     </Link>
                   </DropdownMenuItem>
                 </>
