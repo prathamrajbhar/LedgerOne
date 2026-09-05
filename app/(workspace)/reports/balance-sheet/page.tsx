@@ -20,7 +20,7 @@ export default async function BalanceSheetPage({ searchParams }: BalanceSheetPag
   );
 
   const result = await generateBalanceSheetAction({
-    asOfDate: periodInfo.endDate,
+    asOfDate: periodInfo.end,
   });
 
   if (!result.success || !result.data) {

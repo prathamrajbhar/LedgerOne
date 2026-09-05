@@ -26,7 +26,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     searchParams?.to
   );
 
-  const { startDate, endDate, label, range } = periodInfo;
+  const { startDate, endDate, label, range, start, end } = periodInfo;
 
   // Fetch all dashboard data in parallel
   const [
@@ -38,9 +38,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     outstandingPayments,
     userGreeting,
   ] = await Promise.all([
-    getDashboardKPIsAction(startDate, endDate),
+    getDashboardKPIsAction(start, end),
     getMonthlyOverviewAction(6),
-    getExpenseBreakdownAction(startDate, endDate),
+    getExpenseBreakdownAction(start, end),
     getRecentTransactionsAction(10),
     getInventoryStatusAction(),
     getOutstandingPaymentsAction(),

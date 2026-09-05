@@ -72,6 +72,7 @@ export default function ContactsPage() {
           phone?: string | null;
           address?: string | null;
           isArchived?: boolean;
+          outstandingBalance?: number;
         }>;
         totalPages: number;
         total: number;
@@ -84,7 +85,7 @@ export default function ContactsPage() {
         phone: c.phone || undefined,
         address: c.address || undefined,
         isArchived: c.isArchived,
-        outstandingBalance: 0,
+        outstandingBalance: typeof c.outstandingBalance === "number" ? c.outstandingBalance : 0,
       }));
 
       setContacts(mappedContacts);

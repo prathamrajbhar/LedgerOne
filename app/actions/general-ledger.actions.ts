@@ -15,7 +15,6 @@ export async function getGeneralLedgerAction(params: GeneralLedgerParams): Promi
   try {
     const ledger = await generalLedgerService.getAccountLedger(params);
 
-    // Convert Decimal to number for client consumption
     const serializedLedger = {
       account: ledger.account,
       lines: ledger.lines.map((line) => ({

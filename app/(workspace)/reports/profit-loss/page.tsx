@@ -20,8 +20,8 @@ export default async function ProfitLossPage({ searchParams }: ProfitLossPagePro
   );
 
   const result = await generateProfitLossReportAction({
-    startDate: periodInfo.startDate,
-    endDate: periodInfo.endDate,
+    startDate: periodInfo.start,
+    endDate: periodInfo.end,
   });
 
   if (!result.success || !result.data) {

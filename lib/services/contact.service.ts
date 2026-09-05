@@ -128,12 +128,64 @@ export class ContactService {
         take: limit,
         skip: offset,
         orderBy: { name: "asc" },
+        include: {
+          customerInvoices: {
+            where: {
+              status: { not: "CANCELLED" },
+              paymentStatus: { not: "PAID" },
+            },
+            select: {
+              amountDue: true,
+            },
+          },
+          vendorBills: {
+            where: {
+              status: { not: "CANCELLED" },
+              paymentStatus: { not: "PAID" },
+            },
+            select: {
+              amountDue: true,
+            },
+          },
+        },
       }),
       prisma.contact.count({ where }),
     ]);
 
+    const serializedContacts = contacts.map((c) => {
+      const customerDue = (c.customerInvoices || []).reduce(
+        (sum, inv) => sum + Number(inv.amountDue),
+        0
+      );
+      const vendorDue = (c.vendorBills || []).reduce(
+        (sum, bill) => sum + Number(bill.amountDue),
+        0
+      );
+      const outstandingBalance =
+        c.type === "CUSTOMER"
+          ? customerDue
+          : c.type === "VENDOR"
+          ? vendorDue
+          : customerDue + vendorDue;
+
+      return {
+        id: c.id,
+        name: c.name,
+        type: c.type,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        profileImage: c.profileImage,
+        bannerUrl: c.bannerUrl,
+        isArchived: c.isArchived,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        outstandingBalance,
+      };
+    });
+
     return {
-      data: contacts,
+      data: serializedContacts,
       total,
       limit,
       offset,
