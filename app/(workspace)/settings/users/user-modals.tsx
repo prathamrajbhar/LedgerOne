@@ -61,12 +61,12 @@ export function CreateUserModal() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button size="sm" className="text-xs bg-navy hover:bg-navy-dark text-white gap-1.5">
-          <UserPlus className="h-3.5 w-3.5" /> Add Internal User
+          <UserPlus className="h-3.5 w-3.5" /> Create Staff Account
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-navy">Create Internal User</DialogTitle>
+          <DialogTitle className="text-base font-bold text-navy">Create Staff Account</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <FormInput label="Full Name" required value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. John Doe" />
@@ -127,12 +127,12 @@ export function InviteContactModal({ contacts }: { contacts: UninvitedContact[] 
     <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setInvitationResult(null); }}>
       <DialogTrigger asChild>
         <Button size="sm" variant="outline" className="text-xs gap-1.5">
-          <Mail className="h-3.5 w-3.5" /> Invite Contact to Portal
+          <Mail className="h-3.5 w-3.5" /> Invite Client / Vendor
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md bg-white">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-navy">Invite Contact to Portal</DialogTitle>
+          <DialogTitle className="text-base font-bold text-navy">Invite Client / Vendor</DialogTitle>
         </DialogHeader>
         {invitationResult ? (
           <div className="space-y-4 pt-2">

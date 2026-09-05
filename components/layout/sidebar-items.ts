@@ -14,7 +14,6 @@ import {
   TrendingUp,
   PieChart,
   Settings,
-  ShieldCheck,
   FolderTree,
   FileCheck,
   Coins,
