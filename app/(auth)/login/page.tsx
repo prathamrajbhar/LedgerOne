@@ -43,8 +43,9 @@ export default function LoginPage() {
         toast.success("Welcome back!");
         // Determine correct landing page based on role (Portal vs Workspace)
         const targetUrl = await getPostLoginRedirectAction(loginId);
-        router.push(targetUrl);
-        router.refresh();
+        // Hard navigation guarantees fresh cookies in request headers across middleware on production
+        window.location.href = targetUrl || "/dashboard";
+        return;
       }
     } catch (error) {
       console.error("Login error:", error);
