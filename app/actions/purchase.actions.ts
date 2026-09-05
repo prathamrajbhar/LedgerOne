@@ -198,11 +198,6 @@ export async function getVendorBillsAction() {
             paymentDate: "desc",
           },
         },
-        emailLogs: {
-          orderBy: {
-            sentAt: "desc",
-          },
-        },
       },
       orderBy: { billDate: "desc" },
     });
@@ -243,11 +238,6 @@ export async function getVendorBillByIdAction(id: string) {
             paymentDate: "desc",
           },
         },
-        emailLogs: {
-          orderBy: {
-            sentAt: "desc",
-          },
-        },
       },
     });
 
@@ -255,7 +245,24 @@ export async function getVendorBillByIdAction(id: string) {
       return { success: false, error: "Vendor bill not found" };
     }
 
-    return { success: true, data: bill };
+    let emailLogs: unknown[] = [];
+    try {
+      if ((prisma as any).billEmailLog) {
+        emailLogs = await (prisma as any).billEmailLog.findMany({
+          where: { vendorBillId: id },
+          orderBy: { sentAt: "desc" },
+        });
+      } else {
+        emailLogs = (await prisma.$queryRawUnsafe(
+          `SELECT * FROM "bill_email_logs" WHERE "vendorBillId" = $1 ORDER BY "sentAt" DESC`,
+          id
+        )) as unknown[];
+      }
+    } catch {
+      emailLogs = [];
+    }
+
+    return { success: true, data: { ...bill, emailLogs } };
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to fetch vendor bill details" };
