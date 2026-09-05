@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   getPaymentsAction,
   getUnpaidInvoicesAction,
@@ -37,6 +38,14 @@ export default function PaymentsPage() {
   const [amount, setAmount] = React.useState("");
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(PaymentMethod.BANK);
   const [note, setNote] = React.useState("");
+
+  const documentOptions = React.useMemo(() => {
+    return unpaidDocuments.map((doc) => ({
+      value: doc.id,
+      label: `${doc.number} - ${doc.party}`,
+      subLabel: `Due: ₹${doc.amountDue.toLocaleString("en-IN")} • Total: ₹${doc.total.toLocaleString("en-IN")}`,
+    }));
+  }, [unpaidDocuments]);
 
   const loadPayments = React.useCallback(async () => {
     setLoading(true);
@@ -170,17 +179,19 @@ export default function PaymentsPage() {
                     { value: "OUTBOUND", label: "Vendor Payment (Money Out)" },
                   ]}
                 />
-                <FormSelect
-                  label={direction === "INBOUND" ? "Select Invoice" : "Select Bill"}
-                  value={selectedDocument}
-                  onValueChange={setSelectedDocument}
-                  options={unpaidDocuments.map((doc) => ({
-                    value: doc.id,
-                    label: `${doc.number} - ${doc.party} - Due: ₹${doc.amountDue.toLocaleString("en-IN")}`,
-                  }))}
-                  placeholder={unpaidDocuments.length === 0 ? "No unpaid documents" : "Select document"}
-                  required
-                />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground block">
+                    {direction === "INBOUND" ? "Select Invoice" : "Select Bill"} <span className="text-destructive">*</span>
+                  </label>
+                  <SearchableSelect
+                    value={selectedDocument}
+                    onChange={setSelectedDocument}
+                    options={documentOptions}
+                    placeholder={unpaidDocuments.length === 0 ? "No unpaid documents" : "Select document"}
+                    searchPlaceholder={`Search by ${direction === "INBOUND" ? "invoice" : "bill"} number or party...`}
+                    disabled={unpaidDocuments.length === 0}
+                  />
+                </div>
                 {selectedDocument && (
                   <div className="p-3 bg-gray-50 rounded-lg text-xs space-y-1">
                     <div className="flex justify-between">
