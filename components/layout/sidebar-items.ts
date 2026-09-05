@@ -72,12 +72,12 @@ export const navSections: NavSection[] = [
     items: [
       {
         name: "Customers",
-        href: "/contacts/customers",
+        href: "/contacts?type=CUSTOMER",
         icon: Users
       },
       {
         name: "Vendors",
-        href: "/contacts/vendors",
+        href: "/contacts?type=VENDOR",
         icon: Building
       },
       {
@@ -138,17 +138,17 @@ export const navSections: NavSection[] = [
     items: [
       {
         name: "Sales Orders",
-        href: "/sales/orders",
+        href: "/sales",
         icon: ShoppingBag
       },
       {
         name: "Customer Invoices",
-        href: "/sales/invoices",
+        href: "/invoices",
         icon: FileText
       },
       {
         name: "Invoice Payments",
-        href: "/sales/payments",
+        href: "/payments",
         icon: Coins
       },
     ],
@@ -160,17 +160,17 @@ export const navSections: NavSection[] = [
     items: [
       {
         name: "Purchase Orders",
-        href: "/purchase/orders",
+        href: "/purchases",
         icon: ShoppingCart
       },
       {
         name: "Vendor Bills",
-        href: "/purchase/bills",
+        href: "/bills",
         icon: Receipt
       },
       {
         name: "Bill Payments",
-        href: "/purchase/payments",
+        href: "/payments",
         icon: CreditCard
       },
     ],
@@ -187,7 +187,7 @@ export const navSections: NavSection[] = [
       },
       {
         name: "Budget Reports",
-        href: "/budgets/reports",
+        href: "/reports/budget-report",
         icon: BarChart3
       },
     ],
@@ -209,7 +209,7 @@ export const navSections: NavSection[] = [
       },
       {
         name: "Budget Report",
-        href: "/reports/budget",
+        href: "/reports/budget-report",
         icon: PieChart
       },
     ],

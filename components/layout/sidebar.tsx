@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getFilteredNavSections } from "./sidebar-items";
 import { UserRole } from "@prisma/client";
@@ -15,11 +15,17 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Get filtered navigation based on user role
   const navSections = React.useMemo(() => {
     return getFilteredNavSections(userRole);
   }, [userRole]);
+
+  const fullCurrentUrl = React.useMemo(() => {
+    const qs = searchParams?.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  }, [pathname, searchParams]);
 
   return (
     <>
@@ -63,7 +69,9 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                 const isActive =
                   item.href === "/dashboard"
                     ? pathname === "/dashboard" || pathname === "/"
-                    : pathname === item.href || pathname.startsWith(item.href + "/");
+                    : item.href.includes("?")
+                    ? fullCurrentUrl === item.href
+                    : pathname === item.href || (pathname.startsWith(item.href + "/") && !item.href.includes("?"));
 
                 return (
                   <Link

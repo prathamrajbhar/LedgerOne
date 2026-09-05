@@ -11,12 +11,27 @@ import { Pagination } from "@/components/ui/pagination";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { ContactType } from "@prisma/client";
 import { toast } from "sonner";
+import { useSearchParams } from "next/navigation";
 
 export default function ContactsPage() {
+  const searchParams = useSearchParams();
+  const initialType = searchParams.get("type")?.toUpperCase() || "ALL";
+
   const [viewMode, setViewMode] = React.useState<"list" | "kanban">("list");
   const [search, setSearch] = React.useState("");
-  const [typeFilter, setTypeFilter] = React.useState<string>("ALL");
+  const [typeFilter, setTypeFilter] = React.useState<string>(
+    initialType === "CUSTOMER" || initialType === "VENDOR" ? initialType : "ALL"
+  );
   const [page, setPage] = React.useState(1);
+
+  React.useEffect(() => {
+    const paramType = searchParams.get("type")?.toUpperCase();
+    if (paramType === "CUSTOMER" || paramType === "VENDOR") {
+      setTypeFilter(paramType);
+    } else if (!paramType) {
+      setTypeFilter("ALL");
+    }
+  }, [searchParams]);
 
   const [contacts, setContacts] = React.useState<ContactItem[]>([]);
   const [totalPages, setTotalPages] = React.useState(1);
