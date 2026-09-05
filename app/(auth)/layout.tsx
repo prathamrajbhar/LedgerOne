@@ -43,16 +43,9 @@ export default function AuthLayout({
             </Link>
             <div className="w-[36px] sm:w-[40px] h-[2.5px] sm:h-[3px] bg-[#167C80] rounded-full mt-1.5" />
           </div>
-
-          {/* 2. TOP-RIGHT TAGLINE */}
-          <div className="hidden sm:block text-right lg:mr-10 xl:mr-16">
-            <p className="text-[11px] sm:text-xs font-medium text-[#526477] tracking-tight">Reliable Accounts.</p>
-            <p className="text-[11px] sm:text-xs font-medium text-[#526477] tracking-tight">Stronger Businesses.</p>
-            <div className="w-[26px] sm:w-[30px] h-[2px] sm:h-[2.5px] bg-[#167C80] rounded-full ml-auto mt-1" />
-          </div>
         </header>
 
-        {/* 3 & 4 & 5. MAIN CONTENT - Perfectly centered, 0 overflow */}
+        {/* MAIN CONTENT - Perfectly centered, 0 overflow */}
         <div className="flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 xl:gap-12 items-center min-h-0 py-2 sm:py-3 lg:py-4">
           {/* Left Column: Hero Content & Feature Cards (Responsive clamp scaling) */}
           <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-center space-y-[clamp(10px,1.8vh,24px)] max-w-xl pr-2">
@@ -77,7 +70,7 @@ export default function AuthLayout({
               </p>
             </div>
 
-            {/* 4. FEATURE CARDS */}
+            {/* FEATURE CARDS */}
             <div className="grid grid-cols-4 gap-2 xl:gap-3 max-w-lg pt-0.5">
               {/* Card 1: Inventory Tracking */}
               <div className="bg-white/90 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-xl sm:rounded-2xl p-2 sm:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
@@ -126,13 +119,6 @@ export default function AuthLayout({
                   Analytics
                 </span>
               </div>
-            </div>
-
-            {/* Callout Quote */}
-            <div className="border-l-[2.5px] border-[#167C80] pl-3 py-0.5 text-[clamp(10px,1.1vh,12px)] text-[#526477] italic leading-relaxed">
-              Everything your furniture business needs,
-              <br />
-              in one powerful platform.
             </div>
           </div>
 
