@@ -38,7 +38,8 @@ export default function ContactsPage() {
 
     if (result.success && result.data) {
       // Map backend data to ContactItem format
-      const mappedContacts: ContactItem[] = result.data.contacts.map((c: any) => ({
+      const contactList = result.data as { contacts: Array<{ id: string; name: string; type: ContactType; email: string; phone?: string | null; address?: string | null }> };
+      const mappedContacts: ContactItem[] = (contactList.contacts || []).map((c) => ({
         id: c.id,
         name: c.name,
         type: c.type,

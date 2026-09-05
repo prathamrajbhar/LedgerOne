@@ -5,6 +5,7 @@ import { profitLossReportService, GenerateProfitLossParams } from "@/lib/service
 import { balanceSheetService, BalanceSheetParams } from "@/lib/services/reports/balance-sheet.service";
 import { Decimal } from "@prisma/client/runtime/library";
 import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { requireAuth } from "@/lib/auth/session";
 
 export interface CreateJournalEntryActionInput {
   journalId: string;
@@ -15,11 +16,13 @@ export interface CreateJournalEntryActionInput {
     debit: number;
     credit: number;
   }[];
-  userId: string;
 }
 
 export async function createManualJournalEntryAction(input: CreateJournalEntryActionInput) {
   try {
+    // Get user from server session (secure)
+    const session = await requireAuth();
+
     const formattedLines = input.lines.map((line) => ({
       accountId: line.accountId,
       partnerId: line.partnerId,
@@ -31,7 +34,7 @@ export async function createManualJournalEntryAction(input: CreateJournalEntryAc
       journalId: input.journalId,
       accountingDate: input.accountingDate,
       lines: formattedLines,
-      userId: input.userId,
+      userId: session.user.id,
     });
 
     return { success: true, data: entry };

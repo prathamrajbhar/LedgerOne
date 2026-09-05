@@ -200,7 +200,7 @@ export class VendorBillService {
       }
     }
 
-    const updateData: any = {
+    const updateData: Prisma.VendorBillUncheckedUpdateInput = {
       vendorId: input.vendorId,
       billDate: input.billDate,
       dueDate: input.dueDate,

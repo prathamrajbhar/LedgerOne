@@ -64,13 +64,12 @@ export default function JournalsPage() {
     try {
       const result = await getJournalsAction();
       if (result.success && result.data) {
-        setJournals(result.data);
+        setJournals(result.data as JournalItem[]);
       } else {
         toast.error(result.error || "Failed to load journals");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load journals");
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -80,10 +79,10 @@ export default function JournalsPage() {
     try {
       const result = await getSelectableAccountsAction();
       if (result.success && result.data) {
-        setAccounts(result.data);
+        setAccounts(result.data as AccountOption[]);
       }
-    } catch (error) {
-      console.error("Failed to load accounts:", error);
+    } catch {
+      // Ignored
     }
   };
 

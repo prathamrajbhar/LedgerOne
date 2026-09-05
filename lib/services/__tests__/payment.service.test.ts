@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Decimal } from "@prisma/client/runtime/library";
 import { ValidationError, NotFoundError, UnauthorizedError } from "../../utils/errors";
 
 const { mockPrisma } = vi.hoisted(() => {
@@ -21,6 +22,16 @@ const { mockPrisma } = vi.hoisted(() => {
       create: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
+    },
+    companySettings: {
+      findFirst: vi.fn(),
+    },
+    journal: {
+      findFirst: vi.fn(),
+    },
+    journalEntry: {
+      create: vi.fn(),
+      count: vi.fn().mockResolvedValue(0),
     },
     $transaction: vi.fn(),
   };
@@ -45,38 +56,20 @@ vi.mock("@prisma/client", () => {
       SUCCESS: "SUCCESS",
       FAILED: "FAILED",
     },
+    JournalEntrySource: {
+      MANUAL: "MANUAL",
+      VENDOR_BILL: "VENDOR_BILL",
+      CUSTOMER_INVOICE: "CUSTOMER_INVOICE",
+      BILL_PAYMENT: "BILL_PAYMENT",
+      INVOICE_PAYMENT: "INVOICE_PAYMENT",
+    },
+    JournalEntryStatus: {
+      DRAFT: "DRAFT",
+      POSTED: "POSTED",
+      CANCELLED: "CANCELLED",
+    },
     Prisma: {
-      Decimal: class Decimal {
-        val: number;
-        constructor(v: number | string) {
-          this.val = Number(v);
-        }
-        greaterThan(n: number | { val: number }) {
-          const comp = typeof n === "object" ? n.val : Number(n);
-          return this.val > comp;
-        }
-        add(n: number | { val: number }) {
-          const valToAdd = typeof n === "object" ? n.val : Number(n);
-          return new Decimal(this.val + valToAdd);
-        }
-        sub(n: number | { val: number }) {
-          const valToSub = typeof n === "object" ? n.val : Number(n);
-          return new Decimal(this.val - valToSub);
-        }
-        isZero() {
-          return this.val === 0;
-        }
-        lessThan(n: number | { val: number }) {
-          const comp = typeof n === "object" ? n.val : Number(n);
-          return this.val < comp;
-        }
-        toString() {
-          return String(this.val);
-        }
-        toNumber() {
-          return this.val;
-        }
-      },
+      Decimal,
     },
   };
 });
@@ -87,6 +80,16 @@ import { Prisma, PaymentMethod } from "@prisma/client";
 describe("PaymentService", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPrisma.companySettings.findFirst.mockResolvedValue({
+      debtorsAccountId: "acc_debtors",
+      creditorsAccountId: "acc_creditors",
+    });
+    mockPrisma.journal.findFirst.mockResolvedValue({
+      id: "j_bank",
+      name: "Bank Journal",
+      code: "BNK1",
+      defaultAccountId: "acc_bank",
+    });
   });
 
   describe("recordManualPayment - VendorBill", () => {

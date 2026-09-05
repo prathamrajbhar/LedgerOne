@@ -1,5 +1,4 @@
 import { PrismaClient, AccountType } from "@prisma/client";
-import { ValidationError } from "../../utils/errors";
 
 const prisma = new PrismaClient();
 

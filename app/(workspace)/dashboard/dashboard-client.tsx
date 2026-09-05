@@ -14,6 +14,15 @@ import {
   UserPlus,
   PackagePlus,
   Boxes,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Download,
+  MoreVertical,
+  ChevronRight,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -28,6 +37,15 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { Card, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import type {
   DashboardKPIs,
@@ -59,7 +77,6 @@ export function DashboardClient({
 }: DashboardClientProps) {
   const [chartPeriod, setChartPeriod] = React.useState("Last 6 Months");
   const [expensePeriod, setExpensePeriod] = React.useState("This Month");
-  const [filterType, setFilterType] = React.useState("All Types");
   const [filterCategory, setFilterCategory] = React.useState("All Categories");
   const [filterStatus, setFilterStatus] = React.useState("All Statuses");
   const [searchQuery, setSearchQuery] = React.useState("");

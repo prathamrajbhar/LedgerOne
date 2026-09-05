@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import { Pagination } from "@/components/ui/pagination";
 import { getJournalEntriesAction } from "@/app/actions/accounting.actions";
 import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { TransactionFilters } from "./_components/transaction-filters";
 import { TransactionRow } from "./_components/transaction-row";
 

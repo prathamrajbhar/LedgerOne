@@ -47,7 +47,7 @@ export function HelpAssistantWidget() {
 
       const data = await response.json();
       setMessages((prev) => [...prev, { role: "assistant", content: data.message }]);
-    } catch (error) {
+    } catch {
       // Fallback friendly offline assistant response
       let fallbackReply = "I can guide you through LedgerOne accounting workflows! ";
       const lower = text.toLowerCase();

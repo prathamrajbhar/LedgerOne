@@ -182,7 +182,7 @@ export default function AnalyticAccountsPage() {
         <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
           <p className="text-sm text-muted-foreground">No analytic accounts configured yet.</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Click "New Analytic Account" to add your first cost center or project tracker.
+            Click &quot;New Analytic Account&quot; to add your first cost center or project tracker.
           </p>
         </div>
       ) : (

@@ -363,7 +363,7 @@ export class JournalEntryService {
     const pageSize = params.pageSize || 20;
     const skip = (page - 1) * pageSize;
 
-    const where: any = {};
+    const where: Prisma.JournalEntryWhereInput = {};
 
     // Search by entry number or source document references
     if (params.search) {
@@ -412,7 +412,7 @@ export class JournalEntryService {
           },
           billPayment: {
             include: {
-              bill: {
+              vendorBill: {
                 include: {
                   vendor: true,
                 },
@@ -482,7 +482,7 @@ export class JournalEntryService {
         },
         billPayment: {
           include: {
-            bill: {
+            vendorBill: {
               include: {
                 vendor: true,
               },

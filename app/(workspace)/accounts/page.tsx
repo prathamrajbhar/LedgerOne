@@ -44,13 +44,12 @@ export default function AccountsPage() {
     try {
       const result = await getChartOfAccountsAction({ includeArchived: false });
       if (result.success && result.data) {
-        setAccounts(result.data);
+        setAccounts(result.data as AccountItem[]);
       } else {
         toast.error(result.error || "Failed to load accounts");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load accounts");
-      console.error(error);
     } finally {
       setLoading(false);
     }

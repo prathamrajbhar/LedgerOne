@@ -40,10 +40,21 @@ export default function PaymentsPage() {
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>(PaymentMethod.BANK);
   const [note, setNote] = React.useState("");
 
+  const loadPayments = React.useCallback(async () => {
+    setLoading(true);
+    const result = await getPaymentsAction();
+    if (result.success && result.data) {
+      setPayments(result.data);
+    } else {
+      toast.error(result.error || "Failed to load payments");
+    }
+    setLoading(false);
+  }, []);
+
   // Fetch payments on mount
   React.useEffect(() => {
     loadPayments();
-  }, []);
+  }, [loadPayments]);
 
   const loadUnpaidDocuments = React.useCallback(async () => {
     if (direction === "INBOUND") {

@@ -1,4 +1,10 @@
-import AWS from "aws-sdk";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ValidationError } from "../utils/errors";
 
 export interface UploadFileInput {
@@ -9,16 +15,12 @@ export interface UploadFileInput {
 }
 
 export class S3StorageClient {
-  private s3: AWS.S3 | null = null;
+  private client: S3Client | null = null;
   private bucketName: string;
 
   constructor() {
     const bucketName = process.env.AWS_S3_BUCKET_NAME;
-    if (!bucketName) {
-      this.bucketName = "";
-    } else {
-      this.bucketName = bucketName;
-    }
+    this.bucketName = bucketName || "";
   }
 
   private validateCredentials(): void {
@@ -33,8 +35,8 @@ export class S3StorageClient {
     }
   }
 
-  private getS3(): AWS.S3 {
-    if (!this.s3) {
+  private getClient(): S3Client {
+    if (!this.client) {
       this.validateCredentials();
 
       const accessKeyId = process.env.AWS_ACCESS_KEY_ID!;
@@ -44,16 +46,17 @@ export class S3StorageClient {
 
       this.bucketName = process.env.AWS_S3_BUCKET_NAME!;
 
-      this.s3 = new AWS.S3({
-        accessKeyId,
-        secretAccessKey,
+      this.client = new S3Client({
         region,
         endpoint,
-        s3ForcePathStyle: !!endpoint,
-        signatureVersion: "v4",
+        forcePathStyle: !!endpoint,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
       });
     }
-    return this.s3;
+    return this.client;
   }
 
   async uploadFile(input: UploadFileInput): Promise<string> {
@@ -61,20 +64,20 @@ export class S3StorageClient {
       throw new ValidationError("file buffer and fileName are required");
     }
 
-    const s3 = this.getS3();
+    const client = this.getClient();
     const folder = input.folder ? `${input.folder}/` : "";
     const key = `${folder}${Date.now()}-${input.fileName}`;
 
-    const params: AWS.S3.PutObjectRequest = {
+    const command = new PutObjectCommand({
       Bucket: this.bucketName,
       Key: key,
       Body: input.file,
       ContentType: input.mimeType,
-    };
+    });
 
-    await s3.upload(params).promise();
+    await client.send(command);
 
-    const region = process.env.AWS_REGION || "us-east-1";
+    const region = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || "us-east-1";
     return `https://${this.bucketName}.s3.${region}.amazonaws.com/${key}`;
   }
 
@@ -83,7 +86,7 @@ export class S3StorageClient {
       throw new ValidationError("fileUrlOrKey is required");
     }
 
-    const s3 = this.getS3();
+    const client = this.getClient();
     let key = fileUrlOrKey;
 
     if (fileUrlOrKey.startsWith("http://") || fileUrlOrKey.startsWith("https://")) {
@@ -91,12 +94,12 @@ export class S3StorageClient {
       key = url.pathname.substring(1);
     }
 
-    const params: AWS.S3.DeleteObjectRequest = {
+    const command = new DeleteObjectCommand({
       Bucket: this.bucketName,
       Key: key,
-    };
+    });
 
-    await s3.deleteObject(params).promise();
+    await client.send(command);
   }
 
   async getSignedDownloadUrl(fileKey: string, expiresSeconds: number = 3600): Promise<string> {
@@ -104,7 +107,7 @@ export class S3StorageClient {
       throw new ValidationError("fileKey is required");
     }
 
-    const s3 = this.getS3();
+    const client = this.getClient();
     let key = fileKey;
 
     if (fileKey.startsWith("http://") || fileKey.startsWith("https://")) {
@@ -112,13 +115,12 @@ export class S3StorageClient {
       key = url.pathname.substring(1);
     }
 
-    const params = {
+    const command = new GetObjectCommand({
       Bucket: this.bucketName,
       Key: key,
-      Expires: expiresSeconds,
-    };
+    });
 
-    return s3.getSignedUrlPromise("getObject", params);
+    return getSignedUrl(client, command, { expiresIn: expiresSeconds });
   }
 }
 

@@ -54,6 +54,7 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
       console.error("Failed to send welcome email:", emailError);
     }
 
+    return { success: true };
   } catch (error: unknown) {
     console.error("Sign up error:", error);
 

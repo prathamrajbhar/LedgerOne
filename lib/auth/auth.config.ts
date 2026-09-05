@@ -9,8 +9,10 @@ const prisma = new PrismaClient();
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
   providers: [
+    // Workspace login (Admin/Accountant) - uses loginId
     CredentialsProvider({
-      name: "Credentials",
+      id: "credentials",
+      name: "Workspace Login",
       credentials: {
         loginId: { label: "Login ID", type: "text" },
         password: { label: "Password", type: "password" },
@@ -26,13 +28,56 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             password: credentials.password as string,
           });
 
+          // Only allow Admin and Accountant roles
+          if (result.role === UserRole.CONTACT) {
+            return null;
+          }
+
           return {
             id: result.id,
             email: result.email,
             name: result.name,
             role: result.role,
           };
-        } catch (error) {
+        } catch {
+          return null;
+        }
+      },
+    }),
+    // Portal login (Contact) - uses email
+    CredentialsProvider({
+      id: "portal-credentials",
+      name: "Portal Login",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        try {
+          const result = await authService.authenticateContact({
+            email: credentials.email as string,
+            password: credentials.password as string,
+          });
+
+          // Only allow CONTACT role
+          if (result.role !== UserRole.CONTACT || !result.contact) {
+            return null;
+          }
+
+          return {
+            id: result.id,
+            email: result.email,
+            name: result.name,
+            role: result.role,
+            contactId: result.contact.id,
+            contactType: result.contact.type,
+            contactName: result.contact.name,
+          };
+        } catch {
           return null;
         }
       },
@@ -49,6 +94,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        // Add contact info for portal users
+        if (user.contactId) {
+          token.contactId = user.contactId;
+          token.contactType = user.contactType;
+          token.contactName = user.contactName;
+        }
       }
       return token;
     },
@@ -56,6 +107,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        // Add contact info for portal users
+        if (token.contactId) {
+          session.user.contactId = token.contactId as string;
+          session.user.contactType = token.contactType as import("@prisma/client").ContactType;
+          session.user.contactName = token.contactName as string;
+        }
       }
       return session;
     },

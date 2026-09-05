@@ -167,7 +167,7 @@ export class PurchaseOrderService {
       }
     }
 
-    const updateData: any = {
+    const updateData: Prisma.PurchaseOrderUncheckedUpdateInput = {
       vendorId: input.vendorId,
       orderDate: input.orderDate,
     };

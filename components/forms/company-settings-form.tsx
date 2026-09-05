@@ -64,7 +64,7 @@ export function CompanySettingsForm({ settings, assetAccounts, liabilityAccounts
       } else {
         toast.error(result.error || "Failed to save settings");
       }
-    } catch (error) {
+    } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setIsSaving(false);

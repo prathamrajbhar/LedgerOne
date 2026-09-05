@@ -328,8 +328,6 @@ export class PaymentService {
         console.error("[PAYMENT GATEWAY] Invalid webhook signature detected - possible security threat");
         throw new PaymentGatewayError("Invalid webhook signature");
       }
-
-      console.log("[PAYMENT GATEWAY] Webhook signature verified successfully");
     } else {
       // No webhook secret configured - log warning
       console.warn(
@@ -351,8 +349,8 @@ export class PaymentService {
 
       // Idempotency check
       if (transaction.gatewayPaymentId === input.gatewayPaymentId) {
-        // Already processed
-        return null; // Signal that this was already processed
+        // Already processed - return existing transaction
+        return transaction;
       }
 
       // Get company settings for account mappings
@@ -470,8 +468,6 @@ export class PaymentService {
           invoiceWithCustomer.amountDue.toFixed(2),
           invoiceWithCustomer.id
         );
-
-        console.log(`Payment confirmation email sent to ${invoiceWithCustomer.customer.email} for invoice ${invoiceWithCustomer.invoiceNumber}`);
       }
     } catch (emailError) {
       // Log email failure but don't throw - payment is already confirmed

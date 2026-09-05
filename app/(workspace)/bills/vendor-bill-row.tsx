@@ -7,8 +7,20 @@ import { CheckCircle } from "lucide-react";
 import { confirmBillAction } from "@/app/actions/purchase.actions";
 import { toast } from "sonner";
 
+interface VendorBillData {
+  id: string;
+  billNumber: string;
+  vendor?: { name: string } | null;
+  billDate: string | Date;
+  dueDate: string | Date;
+  status: string;
+  paymentStatus: string;
+  total: number | string;
+  amountDue: number | string;
+}
+
 interface VendorBillRowProps {
-  bill: any;
+  bill: VendorBillData;
 }
 
 export function VendorBillRow({ bill }: VendorBillRowProps) {
@@ -24,7 +36,7 @@ export function VendorBillRow({ bill }: VendorBillRowProps) {
       } else {
         toast.error(result.error || "Failed to confirm vendor bill");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setIsConfirming(false);

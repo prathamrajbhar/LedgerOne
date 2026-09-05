@@ -102,7 +102,7 @@ export function PurchaseOrderForm() {
       if (analyticAccountsResult.success && analyticAccountsResult.data) {
         setAnalyticAccounts(analyticAccountsResult.data);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load form data");
     } finally {
       setLoading(false);
@@ -211,7 +211,7 @@ export function PurchaseOrderForm() {
       } else {
         toast.error(result.error || "Failed to create purchase order");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setSubmitting(false);

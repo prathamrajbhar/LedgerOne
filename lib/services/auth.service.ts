@@ -22,6 +22,11 @@ export interface LoginInput {
   password: string;
 }
 
+export interface ContactLoginInput {
+  email: string;
+  password: string;
+}
+
 export interface CreateUserInput {
   loginId: string;
   email: string;
@@ -87,7 +92,7 @@ export class AuthService {
   }
 
   /**
-   * Login with credentials
+   * Login with credentials (for workspace users: Admin/Accountant)
    */
   async login(input: LoginInput) {
     const user = await prisma.user.findUnique({
@@ -118,6 +123,62 @@ export class AuthService {
     }
 
     // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  }
+
+  /**
+   * Contact portal login (email-based authentication)
+   */
+  async authenticateContact(input: ContactLoginInput) {
+    // Find user by email with CONTACT role
+    const user = await prisma.user.findFirst({
+      where: {
+        email: input.email,
+        role: UserRole.CONTACT,
+      },
+      select: {
+        id: true,
+        loginId: true,
+        email: true,
+        name: true,
+        role: true,
+        password: true,
+        isActive: true,
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            email: true,
+            phone: true,
+            address: true,
+            profileImage: true,
+            isArchived: true,
+          },
+        },
+      },
+    });
+
+    if (!user || !user.contact) {
+      throw new UnauthorizedError("Invalid email or password");
+    }
+
+    if (!user.isActive) {
+      throw new UnauthorizedError("Account is deactivated");
+    }
+
+    if (user.contact.isArchived) {
+      throw new UnauthorizedError("Contact account is archived");
+    }
+
+    const isValidPassword = await compare(input.password, user.password);
+
+    if (!isValidPassword) {
+      throw new UnauthorizedError("Invalid email or password");
+    }
+
+    // Return user with contact info, without password
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }

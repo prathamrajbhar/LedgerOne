@@ -35,7 +35,7 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
       } else {
         toast.error(result.error || "Failed to confirm purchase order");
       }
-    } catch (error) {
+    } catch {
       toast.error("An error occurred");
     } finally {
       setIsConfirming(false);
