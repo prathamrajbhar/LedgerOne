@@ -36,6 +36,11 @@ const config: Config = {
           foreground: "#FFFFFF",
         },
         "surface-subtle": "#F8FAFC",
+        surface: {
+          DEFAULT: "#FFFFFF",
+          subtle: "#F8FAFC",
+          foreground: "#1E293B",
+        },
         "primary-light": "#EEF5FA",
         primary: {
           DEFAULT: "#16324F",
@@ -84,6 +89,7 @@ const config: Config = {
         sm: "0 1px 3px 0 rgba(16, 24, 40, 0.08), 0 1px 2px 0 rgba(16, 24, 40, 0.04)",
         md: "0 4px 6px -1px rgba(16, 24, 40, 0.08), 0 2px 4px -2px rgba(16, 24, 40, 0.04)",
         card: "0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)",
+        dropdown: "0 10px 25px -5px rgba(16, 35, 56, 0.12), 0 8px 10px -6px rgba(16, 35, 56, 0.08)",
       },
       keyframes: {
         "accordion-down": {

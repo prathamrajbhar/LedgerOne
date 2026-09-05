@@ -32,7 +32,7 @@ export const FormTextarea = React.forwardRef<
         ref={ref}
         rows={props.rows || 3}
         className={cn(
-          "flex w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:border-navy disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-y",
+          "flex w-full rounded-lg border border-border bg-white px-3 py-2 text-sm text-foreground ring-offset-background placeholder:text-muted-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy focus-visible:border-navy disabled:cursor-not-allowed disabled:opacity-50 transition-colors resize-y",
           error && "border-destructive focus-visible:ring-destructive focus-visible:border-destructive",
           className
         )}

@@ -48,7 +48,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex items-center w-full max-w-md h-9 px-3 rounded-lg border border-border bg-surface text-xs text-muted-foreground hover:border-border-strong hover:bg-surface-subtle transition-all justify-between text-left"
+            className="flex items-center w-full max-w-md h-9 px-3 rounded-lg border border-border bg-white text-xs text-muted-foreground hover:border-border-strong hover:bg-surface-subtle transition-all justify-between text-left"
           >
             <div className="flex items-center gap-2 text-muted-foreground overflow-hidden">
               <Search className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
@@ -70,7 +70,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           {/* Financial Period Selector Dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="hidden md:flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-surface text-xs font-medium text-foreground hover:bg-surface-subtle hover:border-border-strong transition-colors">
+              <button className="hidden md:flex items-center gap-2 h-9 px-3 rounded-lg border border-border bg-white text-xs font-medium text-foreground hover:bg-surface-subtle hover:border-border-strong transition-colors">
                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                 <span>{selectedPeriod}</span>
                 <ChevronDown className="h-3 w-3 text-muted-foreground ml-1" />
@@ -97,7 +97,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           {/* Notifications Bell */}
           <Link
             href="/notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-subtle transition-colors"
+            className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-white text-muted-foreground hover:text-foreground hover:bg-surface-subtle transition-colors"
           >
             <Bell className="h-4 w-4" />
             <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-white shadow-xs">
