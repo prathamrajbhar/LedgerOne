@@ -204,6 +204,65 @@ export class ChartOfAccountsService {
 
     return journalLines === 0 && journalsUsingAsDefault === 0;
   }
+
+  async getUsageDetails(id: string) {
+    const [journalLines, journals] = await Promise.all([
+      prisma.journalEntryLine.findMany({
+        where: { accountId: id },
+        include: { journalEntry: true },
+        take: 15,
+      }),
+      prisma.journal.findMany({
+        where: { defaultAccountId: id },
+        take: 5,
+      }),
+    ]);
+
+    const dependencies = [
+      ...journalLines.map((jl) => ({
+        id: jl.journalEntryId,
+        lineId: jl.id,
+        type: "JOURNAL_ENTRY" as const,
+        typeName: "Journal Entry",
+        reference: jl.journalEntry.entryNumber,
+        date: jl.journalEntry.accountingDate.toISOString(),
+        status: jl.journalEntry.status,
+        amount: Number(Number(jl.debit) > 0 ? jl.debit : jl.credit),
+        viewUrl: "/journal-entries",
+        canDeleteDirectly: jl.journalEntry.status === "DRAFT",
+      })),
+      ...journals.map((j) => ({
+        id: j.id,
+        type: "JOURNAL_DEFAULT" as const,
+        typeName: "Journal Default Account",
+        reference: `${j.name} (${j.code})`,
+        date: new Date().toISOString(),
+        status: "CONFIGURED",
+        viewUrl: "/journals",
+        canDeleteDirectly: false,
+      })),
+    ];
+
+    return {
+      canDelete: dependencies.length === 0,
+      totalReferences: dependencies.length,
+      breakdown: {
+        journalEntries: journalLines.length,
+        defaultJournals: journals.length,
+      },
+      dependencies,
+    };
+  }
+
+  async deleteDependency(type: string, id: string, lineId?: string) {
+    if (type === "JOURNAL_ENTRY") {
+      if (lineId) {
+        await prisma.journalEntryLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.journalEntry.delete({ where: { id } });
+      }
+    }
+  }
 }
 
 export const chartOfAccountsService = new ChartOfAccountsService();

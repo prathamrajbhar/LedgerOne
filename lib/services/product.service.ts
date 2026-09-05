@@ -286,6 +286,122 @@ export class ProductService {
 
     return poLines === 0 && soLines === 0 && billLines === 0 && invoiceLines === 0;
   }
+
+  async getUsageDetails(id: string) {
+    const [poLines, soLines, billLines, invoiceLines] = await Promise.all([
+      prisma.purchaseOrderLine.findMany({
+        where: { productId: id },
+        include: { purchaseOrder: true },
+        take: 10,
+      }),
+      prisma.salesOrderLine.findMany({
+        where: { productId: id },
+        include: { salesOrder: true },
+        take: 10,
+      }),
+      prisma.vendorBillLine.findMany({
+        where: { productId: id },
+        include: { vendorBill: true },
+        take: 10,
+      }),
+      prisma.customerInvoiceLine.findMany({
+        where: { productId: id },
+        include: { invoice: true },
+        take: 10,
+      }),
+    ]);
+
+    const dependencies = [
+      ...soLines.map((l) => ({
+        id: l.salesOrderId,
+        lineId: l.id,
+        type: "SALES_ORDER" as const,
+        typeName: "Sales Order",
+        reference: l.salesOrder.soNumber,
+        date: l.salesOrder.orderDate.toISOString(),
+        status: l.salesOrder.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/sales",
+        canDeleteDirectly: l.salesOrder.status !== "CONFIRMED",
+      })),
+      ...invoiceLines.map((l) => ({
+        id: l.invoiceId,
+        lineId: l.id,
+        type: "CUSTOMER_INVOICE" as const,
+        typeName: "Customer Invoice",
+        reference: l.invoice.invoiceNumber,
+        date: l.invoice.invoiceDate.toISOString(),
+        status: l.invoice.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/invoices",
+        canDeleteDirectly: l.invoice.status === "DRAFT" || l.invoice.status === "CANCELLED",
+      })),
+      ...billLines.map((l) => ({
+        id: l.vendorBillId,
+        lineId: l.id,
+        type: "VENDOR_BILL" as const,
+        typeName: "Vendor Bill",
+        reference: l.vendorBill.billNumber,
+        date: l.vendorBill.billDate.toISOString(),
+        status: l.vendorBill.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/bills",
+        canDeleteDirectly: l.vendorBill.status === "DRAFT" || l.vendorBill.status === "CANCELLED",
+      })),
+      ...poLines.map((l) => ({
+        id: l.purchaseOrderId,
+        lineId: l.id,
+        type: "PURCHASE_ORDER" as const,
+        typeName: "Purchase Order",
+        reference: l.purchaseOrder.poNumber,
+        date: l.purchaseOrder.orderDate.toISOString(),
+        status: l.purchaseOrder.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/purchases",
+        canDeleteDirectly: l.purchaseOrder.status !== "CONFIRMED",
+      })),
+    ];
+
+    return {
+      canDelete: dependencies.length === 0,
+      totalReferences: dependencies.length,
+      breakdown: {
+        salesOrders: soLines.length,
+        invoices: invoiceLines.length,
+        vendorBills: billLines.length,
+        purchaseOrders: poLines.length,
+      },
+      dependencies,
+    };
+  }
+
+  async deleteDependency(type: string, id: string, lineId?: string) {
+    if (type === "SALES_ORDER") {
+      if (lineId) {
+        await prisma.salesOrderLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.salesOrder.delete({ where: { id } });
+      }
+    } else if (type === "CUSTOMER_INVOICE") {
+      if (lineId) {
+        await prisma.customerInvoiceLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.customerInvoice.delete({ where: { id } });
+      }
+    } else if (type === "VENDOR_BILL") {
+      if (lineId) {
+        await prisma.vendorBillLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.vendorBill.delete({ where: { id } });
+      }
+    } else if (type === "PURCHASE_ORDER") {
+      if (lineId) {
+        await prisma.purchaseOrderLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.purchaseOrder.delete({ where: { id } });
+      }
+    }
+  }
 }
 
 export const productService = new ProductService();

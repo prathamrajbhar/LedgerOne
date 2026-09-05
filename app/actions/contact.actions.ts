@@ -266,6 +266,46 @@ export async function checkCanDeleteContactAction(id: string): Promise<ContactAc
 }
 
 /**
+ * Get detailed foreign key dependency breakdown for an archived contact
+ */
+export async function getContactUsageDetailsAction(id: string): Promise<ContactActionResult<Awaited<ReturnType<typeof contactService.getUsageDetails>>>> {
+  try {
+    const details = await contactService.getUsageDetails(id);
+    return {
+      success: true,
+      data: details,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to get contact usage details";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Delete or unlink a specific blocking transaction dependency for a contact
+ */
+export async function deleteContactDependencyAction(type: string, id: string): Promise<ContactActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+    await contactService.deleteDependency(type, id);
+    revalidatePath("/contacts");
+    return {
+      success: true,
+      data: { message: "Related document removed successfully" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to remove dependency";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
  * Hard delete a contact (Administrator only, records with zero transactions)
  */
 export async function deleteContactAction(id: string): Promise<ContactActionResult> {

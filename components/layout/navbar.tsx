@@ -97,15 +97,15 @@ function getAccountingPeriods() {
 export function Navbar({
   onMenuClick,
   userRole = UserRole.ADMINISTRATOR,
-  userName = "Administrator",
-  userEmail = "admin@ledgerone.in",
+  userName,
+  userEmail,
 }: NavbarProps) {
   const periods = React.useMemo(() => getAccountingPeriods(), []);
   const [searchOpen, setSearchOpen] = React.useState(false);
   const [selectedPeriod, setSelectedPeriod] = React.useState(periods[0].range);
 
-  const displayName = userName || "Administrator";
-  const displayEmail = userEmail || "admin@ledgerone.in";
+  const displayName = userName || "User";
+  const displayEmail = userEmail || "user@ledgerone.in";
   const roleDisplay = userRole === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
 
   // Compute initials safely

@@ -121,3 +121,16 @@ export async function getInvoiceByIdAction(id: string) {
     return { success: false, error: err.message || "Failed to fetch invoice" };
   }
 }
+
+export async function downloadInvoicePDFAction(invoiceId: string) {
+  try {
+    const invoice = await customerInvoiceService.findById(invoiceId);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+    return { success: true, data: invoice };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to download invoice" };
+  }
+}

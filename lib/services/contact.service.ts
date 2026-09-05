@@ -183,6 +183,103 @@ export class ContactService {
       contact.customerInvoices.length === 0
     );
   }
+
+  async getUsageDetails(id: string) {
+    const contact = await prisma.contact.findUnique({
+      where: { id },
+      include: {
+        salesOrders: { take: 10, orderBy: { orderDate: "desc" } },
+        customerInvoices: { take: 10, orderBy: { invoiceDate: "desc" } },
+        vendorBills: { take: 10, orderBy: { billDate: "desc" } },
+        purchaseOrders: { take: 10, orderBy: { orderDate: "desc" } },
+      },
+    });
+
+    if (!contact) {
+      return {
+        canDelete: true,
+        totalReferences: 0,
+        breakdown: {
+          salesOrders: 0,
+          invoices: 0,
+          vendorBills: 0,
+          purchaseOrders: 0,
+        },
+        dependencies: [],
+      };
+    }
+
+    const dependencies = [
+      ...contact.salesOrders.map((so) => ({
+        id: so.id,
+        type: "SALES_ORDER" as const,
+        typeName: "Sales Order",
+        reference: so.soNumber,
+        date: so.orderDate.toISOString(),
+        status: so.status,
+        amount: Number(so.total),
+        viewUrl: "/sales",
+        canDeleteDirectly: so.status !== "CONFIRMED",
+      })),
+      ...contact.customerInvoices.map((inv) => ({
+        id: inv.id,
+        type: "CUSTOMER_INVOICE" as const,
+        typeName: "Customer Invoice",
+        reference: inv.invoiceNumber,
+        date: inv.invoiceDate.toISOString(),
+        status: inv.status,
+        amount: Number(inv.total),
+        viewUrl: "/invoices",
+        canDeleteDirectly: inv.status === "DRAFT" || inv.status === "CANCELLED",
+      })),
+      ...contact.vendorBills.map((bill) => ({
+        id: bill.id,
+        type: "VENDOR_BILL" as const,
+        typeName: "Vendor Bill",
+        reference: bill.billNumber,
+        date: bill.billDate.toISOString(),
+        status: bill.status,
+        amount: Number(bill.total),
+        viewUrl: "/bills",
+        canDeleteDirectly: bill.status === "DRAFT" || bill.status === "CANCELLED",
+      })),
+      ...contact.purchaseOrders.map((po) => ({
+        id: po.id,
+        type: "PURCHASE_ORDER" as const,
+        typeName: "Purchase Order",
+        reference: po.poNumber,
+        date: po.orderDate.toISOString(),
+        status: po.status,
+        amount: Number(po.total),
+        viewUrl: "/purchases",
+        canDeleteDirectly: po.status !== "CONFIRMED",
+      })),
+    ];
+
+    return {
+      canDelete: dependencies.length === 0,
+      totalReferences: dependencies.length,
+      breakdown: {
+        salesOrders: contact.salesOrders.length,
+        invoices: contact.customerInvoices.length,
+        vendorBills: contact.vendorBills.length,
+        purchaseOrders: contact.purchaseOrders.length,
+      },
+      dependencies,
+    };
+  }
+
+  async deleteDependency(type: string, id: string) {
+    if (type === "SALES_ORDER") {
+      await prisma.salesOrder.delete({ where: { id } });
+    } else if (type === "CUSTOMER_INVOICE") {
+      await prisma.customerInvoice.delete({ where: { id } });
+    } else if (type === "VENDOR_BILL") {
+      await prisma.vendorBill.delete({ where: { id } });
+    } else if (type === "PURCHASE_ORDER") {
+      await prisma.purchaseOrder.delete({ where: { id } });
+    }
+  }
 }
 
 export const contactService = new ContactService();

@@ -13,8 +13,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { archiveContactAction, restoreContactAction, deleteContactAction, checkCanDeleteContactAction } from "@/app/actions/contact.actions";
-import { DestructiveConfirmDialog, ConfirmActionType } from "@/components/ui/destructive-confirm-dialog";
+import {
+  archiveContactAction,
+  restoreContactAction,
+  deleteContactAction,
+  getContactUsageDetailsAction,
+  deleteContactDependencyAction,
+} from "@/app/actions/contact.actions";
+import {
+  DestructiveConfirmDialog,
+  ConfirmActionType,
+  UsageDetails,
+} from "@/components/ui/destructive-confirm-dialog";
 import { useSession } from "next-auth/react";
 import { UserRole } from "@prisma/client";
 
@@ -32,11 +42,12 @@ export interface ContactItem {
 
 interface ContactsTableProps {
   contacts: ContactItem[];
+  isArchivedTab?: boolean;
   onInvitePortal?: (contact: ContactItem) => void;
   onRefresh?: () => void;
 }
 
-export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsTableProps) {
+export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal, onRefresh }: ContactsTableProps) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
 
@@ -46,12 +57,14 @@ export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsT
     contact: ContactItem | null;
     isReferenced: boolean;
     checkingUsage: boolean;
+    usageDetails: UsageDetails | null;
   }>({
     open: false,
     type: "archive",
     contact: null,
     isReferenced: false,
     checkingUsage: false,
+    usageDetails: null,
   });
 
   const handleOpenDialog = async (type: ConfirmActionType, contact: ContactItem) => {
@@ -62,16 +75,24 @@ export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsT
         contact,
         isReferenced: false,
         checkingUsage: true,
+        usageDetails: null,
       });
 
-      const res = await checkCanDeleteContactAction(contact.id);
-      const canDelete = res.success && res.data?.canDelete;
-
-      setConfirmDialog((prev) => ({
-        ...prev,
-        isReferenced: !canDelete,
-        checkingUsage: false,
-      }));
+      const res = await getContactUsageDetailsAction(contact.id);
+      if (res.success && res.data) {
+        const details = res.data;
+        setConfirmDialog((prev) => ({
+          ...prev,
+          isReferenced: !details.canDelete,
+          usageDetails: details,
+          checkingUsage: false,
+        }));
+      } else {
+        setConfirmDialog((prev) => ({
+          ...prev,
+          checkingUsage: false,
+        }));
+      }
     } else {
       setConfirmDialog({
         open: true,
@@ -79,7 +100,28 @@ export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsT
         contact,
         isReferenced: false,
         checkingUsage: false,
+        usageDetails: null,
       });
+    }
+  };
+
+  const handleDeleteDependency = async (type: string, id: string, _lineId?: string) => {
+    if (!confirmDialog.contact) return;
+    const res = await deleteContactDependencyAction(type, id);
+    if (res.success) {
+      toast.success("Linked reference removed");
+      const refreshed = await getContactUsageDetailsAction(confirmDialog.contact.id);
+      if (refreshed.success && refreshed.data) {
+        const details = refreshed.data;
+        setConfirmDialog((prev) => ({
+          ...prev,
+          isReferenced: !details.canDelete,
+          usageDetails: details,
+        }));
+      }
+      onRefresh?.();
+    } else {
+      toast.error(res.error || "Failed to remove linked document");
     }
   };
 
@@ -87,7 +129,7 @@ export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsT
     if (!confirmDialog.contact) return;
     const { id, name } = confirmDialog.contact;
 
-    if (confirmDialog.type === "archive" || (confirmDialog.type === "delete" && confirmDialog.isReferenced)) {
+    if (confirmDialog.type === "archive" || (confirmDialog.type === "delete" && !isArchivedTab && confirmDialog.isReferenced)) {
       const res = await archiveContactAction(id);
       if (res.success) {
         toast.success(`Contact "${name}" archived successfully`);
@@ -257,6 +299,9 @@ export function ContactsTable({ contacts, onInvitePortal, onRefresh }: ContactsT
           recordType="Contact"
           isReferenced={confirmDialog.isReferenced}
           checkingUsage={confirmDialog.checkingUsage}
+          usageDetails={confirmDialog.usageDetails}
+          isArchivedTab={isArchivedTab}
+          onDeleteDependency={handleDeleteDependency}
           onConfirm={handleExecuteAction}
         />
       )}

@@ -273,7 +273,11 @@ export default function ContactsPage() {
       {!loading && !error && contacts.length > 0 && (
         <>
           {viewMode === "list" ? (
-            <ContactsTable contacts={contacts} onRefresh={fetchContacts} />
+            <ContactsTable
+              contacts={contacts}
+              onRefresh={fetchContacts}
+              isArchivedTab={statusFilter === "ARCHIVED"}
+            />
           ) : (
             <ContactsKanban contacts={contacts} />
           )}

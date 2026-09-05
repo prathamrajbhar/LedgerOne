@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -10,9 +11,39 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, Archive, RotateCcw, Trash2, Loader2, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  Archive,
+  RotateCcw,
+  Trash2,
+  Loader2,
+  Info,
+  ExternalLink,
+  ShieldAlert,
+  CheckCircle2,
+} from "lucide-react";
 
 export type ConfirmActionType = "archive" | "restore" | "delete";
+
+export interface LinkedDependency {
+  id: string;
+  lineId?: string;
+  type: string;
+  typeName: string;
+  reference: string;
+  date: string;
+  status: string;
+  amount?: number;
+  viewUrl: string;
+  canDeleteDirectly?: boolean;
+}
+
+export interface UsageDetails {
+  canDelete: boolean;
+  totalReferences: number;
+  breakdown?: Record<string, number>;
+  dependencies: LinkedDependency[];
+}
 
 interface DestructiveConfirmDialogProps {
   open: boolean;
@@ -20,9 +51,12 @@ interface DestructiveConfirmDialogProps {
   actionType: ConfirmActionType;
   recordName: string;
   recordType: string;
-  isReferenced?: boolean; // If record has transactions, intelligently archive instead of hard delete
+  isArchivedTab?: boolean;
+  isReferenced?: boolean;
   checkingUsage?: boolean;
+  usageDetails?: UsageDetails | null;
   onConfirm: () => Promise<void>;
+  onDeleteDependency?: (type: string, id: string, lineId?: string) => Promise<void>;
 }
 
 export function DestructiveConfirmDialog({
@@ -31,18 +65,35 @@ export function DestructiveConfirmDialog({
   actionType,
   recordName,
   recordType,
+  isArchivedTab = false,
   isReferenced = false,
   checkingUsage = false,
+  usageDetails = null,
   onConfirm,
+  onDeleteDependency,
 }: DestructiveConfirmDialogProps) {
   const [loading, setLoading] = React.useState(false);
+  const [deletingDepId, setDeletingDepId] = React.useState<string | null>(null);
 
-  // When user triggers "delete" but record is referenced in transactions,
-  // we intelligently switch to Archive with a clear explanation to protect audit trails.
-  const isAutoArchiving = actionType === "delete" && isReferenced;
+  // In Active tab, if referenced, offer to archive.
+  // In Archived tab, if referenced, show full foreign key dependency breakdown with remove buttons!
+  const isBlockedInArchive = isArchivedTab && actionType === "delete" && isReferenced;
+  const isAutoArchivingInActive = !isArchivedTab && actionType === "delete" && isReferenced;
 
   const getDialogConfig = () => {
-    if (isAutoArchiving) {
+    if (isBlockedInArchive) {
+      return {
+        title: `Cannot Delete ${recordType}: Linked Foreign Key Records Found`,
+        description: `"${recordName}" is actively referenced by documents in the database. To permanently remove this record, remove or reassign the blocking documents below:`,
+        confirmText: "Delete Permanently",
+        confirmVariant: "destructive" as const,
+        confirmClassName: "bg-rose-600 hover:bg-rose-700 text-white",
+        icon: ShieldAlert,
+        iconColor: "text-rose-600 bg-rose-50 border-rose-200",
+      };
+    }
+
+    if (isAutoArchivingInActive) {
       return {
         title: `Archive ${recordType} Instead of Deleting`,
         description: `"${recordName}" is referenced in historical transactions (orders, invoices, or journal lines). Under accounting regulations, records with transaction history cannot be permanently destroyed.`,
@@ -101,9 +152,20 @@ export function DestructiveConfirmDialog({
     }
   };
 
+  const handleDeleteDependencyItem = async (dep: LinkedDependency) => {
+    if (!onDeleteDependency) return;
+    const targetKey = dep.lineId || dep.id;
+    setDeletingDepId(targetKey);
+    try {
+      await onDeleteDependency(dep.type, dep.id, dep.lineId);
+    } finally {
+      setDeletingDepId(null);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-white p-6">
+      <DialogContent className={isBlockedInArchive ? "max-w-2xl bg-white p-6" : "max-w-md bg-white p-6"}>
         <DialogHeader className="flex flex-row items-start gap-3 space-y-0">
           <div className={`p-2.5 rounded-xl border ${config.iconColor} shrink-0`}>
             {checkingUsage ? (
@@ -122,7 +184,113 @@ export function DestructiveConfirmDialog({
           </div>
         </DialogHeader>
 
-        {isAutoArchiving && (
+        {/* Loading Usage Details */}
+        {checkingUsage && (
+          <div className="flex items-center justify-center gap-2 p-6 bg-gray-50 border border-border rounded-xl my-2">
+            <Loader2 className="h-4 w-4 animate-spin text-navy" />
+            <span className="text-xs text-muted-foreground">Checking foreign key constraints and linked documents...</span>
+          </div>
+        )}
+
+        {/* Foreign Key Dependency Breakdown Table */}
+        {!checkingUsage && isBlockedInArchive && (
+          <div className="space-y-3 my-2">
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="font-semibold text-foreground">
+                Blocking Dependencies ({usageDetails?.dependencies.length || 0})
+              </span>
+              <span className="text-[11px] text-muted-foreground">
+                Delete or unlink each row to enable permanent deletion
+              </span>
+            </div>
+
+            <div className="border border-border rounded-xl overflow-hidden max-h-64 overflow-y-auto shadow-xs">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#F9FAFB] border-b border-border text-[11px] font-semibold text-muted-foreground">
+                  <tr>
+                    <th className="py-2.5 px-3">Type</th>
+                    <th className="py-2.5 px-3">Document</th>
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3 text-right">Amount</th>
+                    <th className="py-2.5 px-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {(!usageDetails?.dependencies || usageDetails.dependencies.length === 0) ? (
+                    <tr>
+                      <td colSpan={5} className="py-6 text-center text-muted-foreground">
+                        <CheckCircle2 className="h-5 w-5 text-success inline mr-1.5" />
+                        All foreign key dependencies resolved! You can now permanently delete this record.
+                      </td>
+                    </tr>
+                  ) : (
+                    usageDetails.dependencies.map((dep) => {
+                      const itemKey = dep.lineId || dep.id;
+                      const isDeletingThis = deletingDepId === itemKey;
+
+                      return (
+                        <tr key={itemKey} className="hover:bg-primary-light/20 transition-colors">
+                          <td className="py-2 px-3 font-medium text-foreground">
+                            {dep.typeName}
+                          </td>
+                          <td className="py-2 px-3 font-mono font-semibold text-navy">
+                            {dep.reference}
+                          </td>
+                          <td className="py-2 px-3">
+                            <Badge variant="outline" className="text-[9px] py-0 px-1.5">
+                              {dep.status}
+                            </Badge>
+                          </td>
+                          <td className="py-2 px-3 text-right font-medium">
+                            {dep.amount !== undefined ? `₹${dep.amount.toLocaleString("en-IN")}` : "—"}
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <Link
+                                href={dep.viewUrl}
+                                target="_blank"
+                                className="inline-flex items-center gap-1 p-1 text-[11px] text-muted-foreground hover:text-navy hover:underline"
+                                title="Open in new tab"
+                              >
+                                View <ExternalLink className="h-3 w-3" />
+                              </Link>
+                              {onDeleteDependency && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={isDeletingThis || !dep.canDeleteDirectly}
+                                  onClick={() => handleDeleteDependencyItem(dep)}
+                                  className="h-6 px-2 text-[11px] text-destructive hover:bg-rose-50 hover:text-destructive"
+                                  title={dep.canDeleteDirectly ? "Delete this blocking document/line" : "Cannot delete locked/confirmed document directly. Please cancel it first."}
+                                >
+                                  {isDeletingThis ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Trash2 className="h-3 w-3 mr-1" />
+                                  )}
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {usageDetails?.dependencies && usageDetails.dependencies.length > 0 && (
+              <p className="text-[11px] text-muted-foreground italic px-1">
+                Tip: Confirmed orders or invoices must be cancelled/voided in their respective screens before their foreign key can be deleted.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Auto-archiving Explanation Banner (Active Tab) */}
+        {isAutoArchivingInActive && (
           <div className="flex items-start gap-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-xl text-navy text-xs mt-2">
             <Info className="h-4 w-4 shrink-0 text-navy mt-0.5" />
             <div className="space-y-1">
@@ -134,10 +302,11 @@ export function DestructiveConfirmDialog({
           </div>
         )}
 
+        {/* Safe Permanent Delete Banner (Archived or Active with 0 dependencies) */}
         {actionType === "delete" && !isReferenced && !checkingUsage && (
-          <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs mt-2">
-            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
-            <span>Zero transactions detected. Permanent deletion is safe to proceed.</span>
+          <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-900 text-xs mt-2">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <span>Zero linked transactions found. Safe to permanently delete from PostgreSQL.</span>
           </div>
         )}
 
@@ -149,22 +318,26 @@ export function DestructiveConfirmDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading || checkingUsage}
           >
-            Cancel
+            {isBlockedInArchive ? "Close" : "Cancel"}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={handleConfirm}
-            disabled={loading || checkingUsage}
-            className={`gap-1.5 ${config.confirmClassName}`}
-          >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : isAutoArchiving ? (
-              <Archive className="h-3.5 w-3.5" />
-            ) : null}
-            {config.confirmText}
-          </Button>
+
+          {/* Action button is enabled if not blocked in archive */}
+          {(!isBlockedInArchive || (usageDetails && usageDetails.dependencies.length === 0)) && (
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleConfirm}
+              disabled={loading || checkingUsage}
+              className={`gap-1.5 ${config.confirmClassName}`}
+            >
+              {loading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isAutoArchivingInActive ? (
+                <Archive className="h-3.5 w-3.5" />
+              ) : null}
+              {config.confirmText}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

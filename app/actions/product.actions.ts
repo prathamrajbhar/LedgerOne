@@ -235,7 +235,7 @@ export async function restoreProductAction(id: string): Promise<ProductActionRes
 }
 
 /**
- * Check whether a product can be hard-deleted or has linked transactions
+ * Check whether a product can be hard-deleted or has linked transactions with full breakdown
  */
 export async function checkCanDeleteProductAction(id: string): Promise<ProductActionResult<{ canDelete: boolean }>> {
   try {
@@ -246,6 +246,46 @@ export async function checkCanDeleteProductAction(id: string): Promise<ProductAc
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to check product usage";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Get detailed foreign key dependency breakdown for an archived product
+ */
+export async function getProductUsageDetailsAction(id: string): Promise<ProductActionResult<Awaited<ReturnType<typeof productService.getUsageDetails>>>> {
+  try {
+    const details = await productService.getUsageDetails(id);
+    return {
+      success: true,
+      data: details,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to get product usage details";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Delete or unlink a specific blocking transaction dependency for a product
+ */
+export async function deleteProductDependencyAction(type: string, id: string, lineId?: string): Promise<ProductActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+    await productService.deleteDependency(type, id, lineId);
+    revalidatePath("/products");
+    return {
+      success: true,
+      data: { message: "Related document line removed successfully" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to remove dependency";
     return {
       success: false,
       error: message,
