@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth.config";
 import { customerInvoiceService } from "@/lib/services/customer-invoice.service";
-import { generateInvoicePDF } from "@/lib/pdf/invoice-pdf";
+import { generateInvoicePDF, InvoiceWithRelations } from "@/lib/pdf/invoice-pdf";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   _request: NextRequest,
@@ -19,8 +20,12 @@ export async function GET(
 
     const invoiceId = params.id;
 
-    // Fetch invoice with relations
-    const invoice = await customerInvoiceService.findById(invoiceId);
+    // Fetch invoice with relations and company settings in parallel
+    const [invoice, companySettings] = await Promise.all([
+      customerInvoiceService.findById(invoiceId),
+      prisma.companySettings.findFirst(),
+    ]);
+
     if (!invoice) {
       return NextResponse.json(
         { error: "Invoice not found" },
@@ -28,8 +33,13 @@ export async function GET(
       );
     }
 
+    const invoiceWithSettings = {
+      ...invoice,
+      companySettings,
+    };
+
     // Generate PDF
-    const pdfBuffer = await generateInvoicePDF(invoice);
+    const pdfBuffer = await generateInvoicePDF(invoiceWithSettings as unknown as InvoiceWithRelations);
 
     // Return PDF as downloadable file
     return new NextResponse(pdfBuffer as unknown as BodyInit, {
