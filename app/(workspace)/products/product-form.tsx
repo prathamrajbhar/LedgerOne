@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
-import { ArrowLeft, Save, Package, Layers, IndianRupee, Sliders, Upload, Image as ImageIcon, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, Package, Layers, IndianRupee, Sliders, Upload, Image as ImageIcon, X, Loader2, Ruler } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
@@ -34,6 +34,41 @@ interface ProductFormProps {
   isEdit?: boolean;
 }
 
+function parseDimensions(raw?: string) {
+  if (!raw) return { length: "", width: "", height: "", unit: "cm" };
+  // Pattern matching: e.g. "180cm x 90cm x 75cm" or "180 x 90 x 75 cm" or "180 x 90 x 75 mm" or "72 x 36 x 30 in"
+  const unitMatch = raw.match(/(cm|mm|in|ft|m)\b/i);
+  const unit = unitMatch ? unitMatch[1].toLowerCase() : "cm";
+
+  // Extract all numbers
+  const nums = raw.match(/(\d+(\.\d+)?)/g);
+  if (nums && nums.length >= 3) {
+    return {
+      length: nums[0] || "",
+      width: nums[1] || "",
+      height: nums[2] || "",
+      unit,
+    };
+  }
+  if (nums && nums.length === 2) {
+    return {
+      length: nums[0] || "",
+      width: nums[1] || "",
+      height: "",
+      unit,
+    };
+  }
+  if (nums && nums.length === 1) {
+    return {
+      length: nums[0] || "",
+      width: "",
+      height: "",
+      unit,
+    };
+  }
+  return { length: "", width: "", height: "", unit: "cm" };
+}
+
 export function ProductForm({ initialData, categories, isEdit }: ProductFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -42,6 +77,8 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [uploadingImage, setUploadingImage] = React.useState(false);
 
+  const initialDims = parseDimensions(initialData?.dimensions);
+
   const [formData, setFormData] = React.useState({
     name: initialData?.name || "",
     type: (initialData?.type || "GOODS") as "GOODS" | "SERVICE" | "COMBO",
@@ -49,6 +86,10 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
     sku: initialData?.sku || "",
     material: initialData?.material || "",
     dimensions: initialData?.dimensions || "",
+    length: initialDims.length,
+    width: initialDims.width,
+    height: initialDims.height,
+    dimensionUnit: initialDims.unit,
     cost: initialData?.cost || "",
     salesPrice: initialData?.salesPrice || "",
     stock: initialData?.stock || "0",
@@ -145,13 +186,23 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
     setLoading(true);
 
     try {
+      // Build synthesized dimensions string from individual parameters if provided
+      let finalDimensions = formData.dimensions.trim();
+      if (formData.length || formData.width || formData.height) {
+        const parts = [];
+        if (formData.length) parts.push(`${formData.length}${formData.dimensionUnit}`);
+        if (formData.width) parts.push(`${formData.width}${formData.dimensionUnit}`);
+        if (formData.height) parts.push(`${formData.height}${formData.dimensionUnit}`);
+        finalDimensions = parts.join(" × ");
+      }
+
       const productData = {
         name: formData.name.trim(),
         type: formData.type,
         categoryId: formData.categoryId,
         sku: formData.sku.trim() || undefined,
         material: formData.material.trim() || undefined,
-        dimensions: formData.dimensions.trim() || undefined,
+        dimensions: finalDimensions || undefined,
         salesPrice: Math.max(0, parseFloat(formData.salesPrice.toString())),
         cost: Math.max(0, parseFloat(formData.cost.toString())),
         stock: Math.max(0, parseInt(formData.stock.toString(), 10) || 0),
@@ -442,20 +493,150 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormInput
-                  label="Material / Finish"
-                  value={formData.material}
-                  onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                  placeholder="e.g. Solid Teak Wood + Natural Matte PU Finish"
-                />
+              <CardContent className="p-5 sm:p-6 space-y-5">
+                <div>
+                  <FormInput
+                    label="Material / Finish"
+                    value={formData.material}
+                    onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                    placeholder="e.g. Solid Teak Wood + Natural Matte PU Finish"
+                    helperText="Primary wood species, upholstery fabric, metal grade, or paint finish."
+                  />
+                </div>
 
-                <FormInput
-                  label="Dimensions (L x W x H)"
-                  value={formData.dimensions}
-                  onChange={(e) => setFormData({ ...formData, dimensions: e.target.value })}
-                  placeholder="e.g. 180cm x 90cm x 75cm"
-                />
+                {/* Individual Dimension Parameters */}
+                <div className="p-4 rounded-xl border border-border/80 bg-[#F9FAFB]/70 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 rounded-md bg-teal/10 text-teal flex items-center justify-center">
+                        <Ruler className="h-3.5 w-3.5 text-teal" />
+                      </div>
+                      <label className="text-xs font-semibold text-foreground">
+                        Physical Dimensions (Individual Parameters)
+                      </label>
+                    </div>
+                    {/* Measurement Unit Selector */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-muted-foreground">Unit:</span>
+                      <select
+                        value={formData.dimensionUnit}
+                        onChange={(e) => {
+                          const unit = e.target.value;
+                          setFormData((prev) => {
+                            const parts = [];
+                            if (prev.length) parts.push(`${prev.length}${unit}`);
+                            if (prev.width) parts.push(`${prev.width}${unit}`);
+                            if (prev.height) parts.push(`${prev.height}${unit}`);
+                            return {
+                              ...prev,
+                              dimensionUnit: unit,
+                              dimensions: parts.join(" × "),
+                            };
+                          });
+                        }}
+                        aria-label="Dimension Unit"
+                        className="h-7 px-2 text-xs font-semibold rounded-md border border-border bg-white text-foreground focus:outline-none focus:ring-1 focus:ring-navy"
+                      >
+                        <option value="cm">cm (Centimeters)</option>
+                        <option value="mm">mm (Millimeters)</option>
+                        <option value="in">in (Inches)</option>
+                        <option value="ft">ft (Feet)</option>
+                        <option value="m">m (Meters)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <FormInput
+                      label={`Length (${formData.dimensionUnit})`}
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={formData.length}
+                      onChange={(e) => {
+                        const len = e.target.value;
+                        setFormData((prev) => {
+                          const parts = [];
+                          if (len) parts.push(`${len}${prev.dimensionUnit}`);
+                          if (prev.width) parts.push(`${prev.width}${prev.dimensionUnit}`);
+                          if (prev.height) parts.push(`${prev.height}${prev.dimensionUnit}`);
+                          return {
+                            ...prev,
+                            length: len,
+                            dimensions: parts.join(" × "),
+                          };
+                        });
+                      }}
+                      placeholder="e.g. 180"
+                    />
+
+                    <FormInput
+                      label={`Width / Depth (${formData.dimensionUnit})`}
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={formData.width}
+                      onChange={(e) => {
+                        const w = e.target.value;
+                        setFormData((prev) => {
+                          const parts = [];
+                          if (prev.length) parts.push(`${prev.length}${prev.dimensionUnit}`);
+                          if (w) parts.push(`${w}${prev.dimensionUnit}`);
+                          if (prev.height) parts.push(`${prev.height}${prev.dimensionUnit}`);
+                          return {
+                            ...prev,
+                            width: w,
+                            dimensions: parts.join(" × "),
+                          };
+                        });
+                      }}
+                      placeholder="e.g. 90"
+                    />
+
+                    <FormInput
+                      label={`Height (${formData.dimensionUnit})`}
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={formData.height}
+                      onChange={(e) => {
+                        const h = e.target.value;
+                        setFormData((prev) => {
+                          const parts = [];
+                          if (prev.length) parts.push(`${prev.length}${prev.dimensionUnit}`);
+                          if (prev.width) parts.push(`${prev.width}${prev.dimensionUnit}`);
+                          if (h) parts.push(`${h}${prev.dimensionUnit}`);
+                          return {
+                            ...prev,
+                            height: h,
+                            dimensions: parts.join(" × "),
+                          };
+                        });
+                      }}
+                      placeholder="e.g. 75"
+                    />
+                  </div>
+
+                  {/* Formatted Dimension Preview Pill */}
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-white border border-border text-xs">
+                    <span className="text-[11px] text-muted-foreground">Combined Dimension:</span>
+                    <span className="font-mono font-semibold text-foreground">
+                      {formData.length || formData.width || formData.height ? (
+                        [
+                          formData.length ? `${formData.length}${formData.dimensionUnit}` : null,
+                          formData.width ? `${formData.width}${formData.dimensionUnit}` : null,
+                          formData.height ? `${formData.height}${formData.dimensionUnit}` : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" × ")
+                      ) : (
+                        <span className="text-muted-foreground/60 italic font-sans text-[11px]">
+                          Enter L × W × H parameters above
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
