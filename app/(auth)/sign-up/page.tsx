@@ -60,7 +60,7 @@ export default function SignUpPage() {
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-            Create Account 🚀
+            Create Account
           </h2>
           <p className="text-xs text-muted-foreground leading-relaxed">
             Set up your LedgerOne workspace and manage your furniture business.
