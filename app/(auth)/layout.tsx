@@ -28,7 +28,7 @@ export default function AuthLayout({
       <div className="fixed inset-0 w-full h-full bg-white/25 lg:bg-transparent pointer-events-none z-0" />
 
       {/* Main Inner Shell - Strictly fits viewport */}
-      <div className="relative z-10 w-full h-full max-w-[1440px] mx-auto flex flex-col justify-between px-3 sm:px-6 lg:px-12 xl:px-16 overflow-hidden">
+      <div className="relative z-10 w-full h-full max-w-[1360px] mx-auto flex flex-col justify-between px-6 sm:px-12 lg:px-20 xl:px-28 overflow-hidden">
         {/* Top Header Bar */}
         <header className="w-full flex items-start justify-between flex-shrink-0 pt-1 lg:pt-2">
           {/* 1. TOP-LEFT BRANDING */}
