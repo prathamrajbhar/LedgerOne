@@ -643,7 +643,7 @@ export default function InvoicesPage() {
             className="h-9 px-3.5 bg-teal hover:bg-teal/90 text-white text-xs font-semibold gap-1.5 shadow-2xs hover:shadow-xs transition-all"
           >
             <Plus className="h-4 w-4" />
-            + Create Invoice
+            Create Invoice
           </Button>
         </div>
       </div>
