@@ -1,9 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Search, ArrowDownRight, ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { Search } from "lucide-react";
 import { PaymentMethod } from "@prisma/client";
 
 interface CustomerPaymentItem {

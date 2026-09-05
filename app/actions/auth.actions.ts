@@ -52,7 +52,8 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
 
     // Send welcome email
     try {
-      await emailService.sendWelcomeEmail(user.email, user.name || user.loginId);
+      const roleLabel = user.role === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
+      await emailService.sendWelcomeEmail(user.email, user.name || user.loginId, roleLabel);
     } catch (emailError) {
       // Log but don't fail the signup if email fails
       console.error("Failed to send welcome email:", emailError);
