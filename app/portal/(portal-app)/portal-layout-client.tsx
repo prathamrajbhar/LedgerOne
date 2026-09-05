@@ -12,6 +12,7 @@ interface PortalLayoutClientProps {
   children: React.ReactNode;
   contactName: string;
   contactType: ContactType;
+  contactAvatar?: string | null;
   mustChangePassword?: boolean;
 }
 
@@ -19,6 +20,7 @@ export default function PortalLayoutClient({
   children,
   contactName,
   contactType,
+  contactAvatar,
   mustChangePassword,
 }: PortalLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -38,6 +40,7 @@ export default function PortalLayoutClient({
         <PortalHeader
           contactName={contactName}
           contactType={contactType}
+          contactAvatar={contactAvatar}
           onMenuClick={() => setSidebarOpen(true)}
         />
 

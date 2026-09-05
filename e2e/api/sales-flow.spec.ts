@@ -50,6 +50,8 @@ test.describe("Sales & Payment E2E API Flow", () => {
       salesOrderId: "so-1",
       customerId: "cust-1",
       createdById: "user-1",
+      reminderCount: 0,
+      lastReminderSentAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       customer: {
@@ -59,6 +61,7 @@ test.describe("Sales & Payment E2E API Flow", () => {
         phone: "+1234567890",
         address: "123 Business Way",
         profileImage: null,
+        bannerUrl: null,
         userId: null,
         type: ContactType.CUSTOMER,
         isArchived: false,

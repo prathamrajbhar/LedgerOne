@@ -25,10 +25,23 @@ export default async function PortalLayout({
   const contactName = session.user.contactName || session.user.name || "User";
   const mustChangePassword = Boolean(session.user.mustChangePassword);
 
+  let contactAvatar: string | null = null;
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const contact = await prisma.contact.findUnique({
+      where: { id: session.user.contactId },
+      select: { profileImage: true },
+    });
+    contactAvatar = contact?.profileImage || null;
+  } catch {
+    contactAvatar = null;
+  }
+
   return (
     <PortalLayoutClient
       contactName={contactName}
       contactType={contactType}
+      contactAvatar={contactAvatar}
       mustChangePassword={mustChangePassword}
     >
       {children}

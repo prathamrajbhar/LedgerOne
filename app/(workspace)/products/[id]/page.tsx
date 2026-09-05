@@ -57,6 +57,31 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         }
       />
 
+      {/* Product Image Banner (if available) */}
+      {product.image && (
+        <Card className="p-4 bg-white border-border shadow-card overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-center gap-5">
+            <div className="relative h-44 w-44 sm:h-36 sm:w-36 rounded-xl overflow-hidden border border-border bg-muted/20 flex-shrink-0 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            </div>
+            <div className="space-y-1.5 text-center sm:text-left">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-teal bg-teal-light px-2.5 py-0.5 rounded-full border border-teal/10">
+                Official Catalog Asset
+              </span>
+              <h2 className="text-lg font-bold text-foreground">{product.name}</h2>
+              <p className="text-xs text-muted-foreground">
+                High-resolution product showcase media stored in S3 object storage for this SKU.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card className="p-4 bg-white shadow-card">

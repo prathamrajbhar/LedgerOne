@@ -27,6 +27,8 @@ model User {
   password          String
   role              UserRole
   name              String?
+  avatarUrl         String?
+  bannerUrl         String?
   isActive          Boolean   @default(true)
   mustChangePassword Boolean  @default(false)
   resetToken        String?   @unique
@@ -67,6 +69,7 @@ model Contact {
   phone           String?
   address         String?     @db.Text
   profileImage    String?
+  bannerUrl       String?
   isArchived      Boolean     @default(false)
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

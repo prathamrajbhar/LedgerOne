@@ -12,6 +12,8 @@ export interface PortalProfileData {
   phone: string | null;
   address: string | null;
   type: string;
+  profileImage?: string | null;
+  bannerUrl?: string | null;
   createdAt: string;
   user: {
     id: string;

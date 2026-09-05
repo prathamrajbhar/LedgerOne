@@ -10,6 +10,8 @@ export interface UserProfileData {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string | null;
+  bannerUrl?: string | null;
   loginId: string;
   role: UserRole;
   isActive: boolean;
@@ -21,6 +23,8 @@ export interface UserProfileData {
     type: string;
     phone?: string | null;
     address?: string | null;
+    profileImage?: string | null;
+    bannerUrl?: string | null;
   } | null;
 }
 
@@ -49,6 +53,7 @@ export async function getUserProfileAction(): Promise<{
               type: true,
               phone: true,
               address: true,
+              profileImage: true,
             },
           },
         },
@@ -71,6 +76,7 @@ export async function getUserProfileAction(): Promise<{
               type: true,
               phone: true,
               address: true,
+              profileImage: true,
             },
           },
         },
@@ -89,6 +95,7 @@ export async function getUserProfileAction(): Promise<{
               type: true,
               phone: true,
               address: true,
+              profileImage: true,
             },
           },
         },
@@ -108,6 +115,8 @@ export async function getUserProfileAction(): Promise<{
         id: user.id,
         name: user.name || user.loginId,
         email: user.email,
+        avatarUrl: ((user as unknown as { avatarUrl?: string | null }).avatarUrl) || user.contact?.profileImage || null,
+        bannerUrl: ((user as unknown as { bannerUrl?: string | null }).bannerUrl) || (user.contact as unknown as { bannerUrl?: string | null })?.bannerUrl || null,
         loginId: user.loginId,
         role: user.role,
         isActive: user.isActive,

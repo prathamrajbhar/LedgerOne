@@ -31,9 +31,20 @@ export function ProductsKanban({ products }: ProductsKanbanProps) {
           <div>
             <div className="flex items-start justify-between gap-2">
               <div className="flex items-center gap-2.5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-light text-teal font-bold text-xs border border-teal/10 flex-shrink-0">
-                  <Package className="h-5 w-5" />
-                </div>
+                {item.image ? (
+                  <div className="relative h-11 w-11 rounded-lg overflow-hidden border border-border bg-white flex-shrink-0 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-teal-light text-teal font-bold text-xs border border-teal/10 flex-shrink-0">
+                    <Package className="h-5 w-5" />
+                  </div>
+                )}
                 <div>
                   <Badge variant="outline" className="text-[9px] bg-[#F6F7F9]">
                     {item.category}

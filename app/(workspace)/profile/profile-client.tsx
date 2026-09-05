@@ -20,6 +20,8 @@ import {
   FileSpreadsheet,
   Layers,
   ArrowUpRight,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +33,9 @@ import {
   updatePasswordAction,
 } from "@/app/actions/profile.actions";
 
+import { BannerSelectorModal } from "@/components/profile/banner-selector-modal";
+import { Sparkles } from "lucide-react";
+
 interface ProfileClientProps {
   initialProfile: UserProfileData;
 }
@@ -39,7 +44,40 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
   // Profile form state
   const [name, setName] = useState(initialProfile.name);
   const [email, setEmail] = useState(initialProfile.email);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(initialProfile.avatarUrl || null);
+  const [bannerUrl, setBannerUrl] = useState<string | null>(initialProfile.bannerUrl || null);
+  const [bannerModalOpen, setBannerModalOpen] = useState(false);
+  const [bannerSaving, setBannerSaving] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  const handleSelectBanner = async (newBannerUrl: string) => {
+    setBannerSaving(true);
+    try {
+      const res = await fetch("/api/profile/banner", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bannerUrl: newBannerUrl,
+          targetType: "user",
+          targetId: initialProfile.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update banner");
+      }
+
+      setBannerUrl(newBannerUrl);
+      toast.success("Profile banner updated successfully!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update banner");
+    } finally {
+      setBannerSaving(false);
+    }
+  };
 
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("");
@@ -62,6 +100,54 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
         .toUpperCase()
         .slice(0, 2)
     : name.slice(0, 2).toUpperCase() || "U";
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file (JPEG, PNG, WEBP, GIF).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image file size must be less than 5MB.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("targetType", "user");
+    formData.append("targetId", initialProfile.id);
+
+    setPhotoUploading(true);
+    const toastId = toast.loading("Uploading profile photo to S3 storage...");
+
+    try {
+      const response = await fetch("/api/profile/photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to upload photo");
+      }
+
+      setAvatarUrl(data.url);
+      toast.success("Profile photo uploaded to S3 successfully!", { id: toastId });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to upload photo to S3", {
+        id: toastId,
+      });
+    } finally {
+      setPhotoUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,8 +231,27 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
 
       {/* Top Profile Summary Card */}
       <Card className="border border-border bg-white shadow-card rounded-2xl overflow-hidden">
-        <div className="h-28 bg-gradient-to-r from-navy via-[#1F456E] to-teal relative">
-          <div className="absolute top-4 right-4 flex items-center gap-2">
+        <div className="h-28 relative overflow-hidden bg-gradient-to-r from-navy via-[#1F456E] to-teal group">
+          {bannerUrl && (
+            <img
+              src={bannerUrl}
+              alt="Profile Banner"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+
+          {/* Top Right Controls */}
+          <div className="absolute top-3 right-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBannerModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition-colors shadow-xs cursor-pointer"
+              title="Change header banner"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-teal" />
+              <span>Change Banner</span>
+            </button>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-navy backdrop-blur-none shadow-xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-teal" />
               Active Workspace User
@@ -157,11 +262,64 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
         <CardContent className="px-6 pb-6 pt-0 relative">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 mb-4">
             <div className="flex items-end gap-4">
-              <div className="h-24 w-24 rounded-2xl bg-white p-1 border-2 border-white shadow-md flex-shrink-0">
-                <div className="h-full w-full rounded-xl bg-navy text-white flex items-center justify-center text-2xl font-bold tracking-tight">
-                  {initials}
+              {/* Profile Photo Avatar with Upload Icon */}
+              <div className="relative group">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handlePhotoUpload}
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                />
+                <div className="h-24 w-24 rounded-2xl bg-white p-1 border-2 border-white shadow-md flex-shrink-0 relative overflow-hidden">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={name}
+                      className="h-full w-full rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="h-full w-full rounded-xl bg-navy text-white flex items-center justify-center text-2xl font-bold tracking-tight">
+                      {initials}
+                    </div>
+                  )}
+
+                  {/* Hover Overlay */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={photoUploading}
+                    className="absolute inset-1 rounded-xl bg-navy/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer"
+                    title="Change profile photo"
+                  >
+                    {photoUploading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Camera className="h-5 w-5 mb-0.5" />
+                        <span className="text-[9px] font-semibold">Upload</span>
+                      </>
+                    )}
+                  </button>
                 </div>
+
+                {/* Floating Add/Change Photo Button */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={photoUploading}
+                  className="absolute -bottom-1.5 -right-1.5 h-7 w-7 rounded-full bg-teal text-white shadow-md border-2 border-white flex items-center justify-center hover:bg-teal-hover transition-transform active:scale-95 cursor-pointer z-10"
+                  title="Upload profile photo"
+                  aria-label="Upload profile photo"
+                >
+                  {photoUploading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5" />
+                  )}
+                </button>
               </div>
+
               <div className="mb-1">
                 <h2 className="text-xl font-bold text-foreground leading-tight">{name}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
@@ -522,6 +680,14 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
           </div>
         </div>
       )}
+      {/* Banner Selector Modal with 15 Top S3 Presets */}
+      <BannerSelectorModal
+        open={bannerModalOpen}
+        onOpenChange={setBannerModalOpen}
+        currentBannerUrl={bannerUrl}
+        onSelectBanner={handleSelectBanner}
+        loading={bannerSaving}
+      />
     </div>
   );
 }

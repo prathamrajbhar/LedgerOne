@@ -43,6 +43,7 @@ export interface FurnitureProductItem {
   reorderPoint: number;
   status: "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
   isArchived?: boolean;
+  image?: string | null;
 }
 
 interface ProductsTableProps {
@@ -145,6 +146,8 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       } else {
         toast.error(res.error || "Failed to archive product");
       }
+      setConfirmDialog((prev) => ({ ...prev, open: false }));
+      return;
     } else if (confirmDialog.type === "restore") {
       const res = await restoreProductAction(id);
       if (res.success) {
@@ -153,14 +156,28 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       } else {
         toast.error(res.error || "Failed to restore product");
       }
-    } else if (confirmDialog.type === "delete") {
-      const res = await deleteProductAction(id);
-      if (res.success) {
-        toast.success(`Product "${name}" deleted permanently`);
-        router.refresh();
-      } else {
-        toast.error(res.error || "Failed to delete product");
-      }
+      setConfirmDialog((prev) => ({ ...prev, open: false }));
+      return;
+    } 
+
+    // Permanent delete
+    const res = await deleteProductAction(id);
+    if (res.success) {
+      toast.success(`Product "${name}" permanently deleted`);
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to delete product");
+    }
+    setConfirmDialog((prev) => ({ ...prev, open: false }));
+  };
+
+  const handleRestore = async (id: string, name: string) => {
+    const res = await restoreProductAction(id);
+    if (res.success) {
+      toast.success(`Product "${name}" restored to active catalog`);
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to restore product");
     }
   };
 
@@ -195,9 +212,20 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
                 >
                   <td className="py-3.5 px-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-teal-light text-teal font-bold text-xs border border-teal/10 flex-shrink-0">
-                        <Package className="h-4 w-4" />
-                      </div>
+                      {item.image ? (
+                        <div className="relative h-10 w-10 rounded-lg overflow-hidden border border-border bg-white flex-shrink-0 shadow-sm">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-light text-teal font-bold text-xs border border-teal/10 flex-shrink-0">
+                          <Package className="h-4 w-4" />
+                        </div>
+                      )}
                       <div>
                         <Link
                           href={`/products/${item.id}`}

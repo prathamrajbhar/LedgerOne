@@ -52,6 +52,8 @@ export default async function PortalProfilePage() {
     phone: contact.phone,
     address: contact.address,
     type: contact.type,
+    profileImage: contact.profileImage,
+    bannerUrl: (contact as unknown as { bannerUrl?: string | null })?.bannerUrl || null,
     createdAt: contact.createdAt.toISOString(),
     user: contact.user
       ? {

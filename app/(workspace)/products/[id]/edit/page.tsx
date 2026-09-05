@@ -39,6 +39,7 @@ export default async function EditProductPage({ params }: { params: { id: string
     salesPrice: Number(product.salesPrice),
     stock: product.stock,
     reorderPoint: product.reorderPoint,
+    image: product.image || "",
   };
 
   return <ProductForm initialData={initialData} categories={categories} isEdit />;

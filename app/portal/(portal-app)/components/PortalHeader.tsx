@@ -17,12 +17,14 @@ import { ContactType } from "@prisma/client";
 interface PortalHeaderProps {
   contactName: string;
   contactType: ContactType;
+  contactAvatar?: string | null;
   onMenuClick?: () => void;
 }
 
 export default function PortalHeader({
   contactName,
   contactType,
+  contactAvatar,
   onMenuClick,
 }: PortalHeaderProps) {
   const handleLogout = async () => {
@@ -69,7 +71,15 @@ export default function PortalHeader({
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2.5 pl-1.5 pr-2 py-1 rounded-lg hover:bg-surface-subtle transition-colors text-left">
               <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-navy text-white text-xs font-semibold overflow-hidden border border-border">
-                <span>{initials}</span>
+                {contactAvatar ? (
+                  <img
+                    src={contactAvatar}
+                    alt={displayName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span>{initials}</span>
+                )}
               </div>
               <div className="hidden sm:flex flex-col">
                 <span className="text-xs font-semibold text-foreground leading-tight">
