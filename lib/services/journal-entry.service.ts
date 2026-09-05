@@ -218,8 +218,8 @@ export class JournalEntryService {
   }
 
   private async generateEntryNumber(): Promise<string> {
-    // TODO: Get prefix from CompanySettings
-    const prefix = "JE";
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.jeNumberPrefix || "JE";
     const count = await prisma.journalEntry.count();
     return `${prefix}${String(count + 1).padStart(6, "0")}`;
   }
