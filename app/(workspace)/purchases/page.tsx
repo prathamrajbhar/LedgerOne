@@ -57,7 +57,14 @@ export default async function PurchasesPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {purchaseOrders.map((po) => (
-                <PurchaseOrderRow key={po.id} po={po} />
+                <PurchaseOrderRow
+                  key={po.id}
+                  po={{
+                    ...po,
+                    total: Number(po.total),
+                    orderDate: po.orderDate instanceof Date ? po.orderDate.toISOString() : String(po.orderDate),
+                  }}
+                />
               ))}
             </tbody>
           </table>

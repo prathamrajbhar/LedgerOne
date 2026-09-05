@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
-import { PageHeader } from "@/components/ui/page-header";
 import { ArrowLeft, Save, Package, Layers, IndianRupee, Sliders } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";

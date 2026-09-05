@@ -52,23 +52,25 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
 
   // Auto-expand section that contains the active route
   React.useEffect(() => {
-    const newOpenState: Record<string, boolean> = { ...openSections };
-    let hasActive = false;
+    setOpenSections((prev) => {
+      const next = { ...prev };
+      let hasActive = false;
 
-    navSections.forEach((section) => {
-      const hasActiveChild = section.items.some((item) => isItemActive(item));
-      if (hasActiveChild) {
-        newOpenState[section.title] = true;
-        hasActive = true;
+      navSections.forEach((section) => {
+        const hasActiveChild = section.items.some((item) => isItemActive(item));
+        if (hasActiveChild) {
+          next[section.title] = true;
+          hasActive = true;
+        }
+      });
+
+      if (!hasActive && Object.keys(next).length === 0) {
+        next["Overview"] = true;
       }
+
+      return next;
     });
-
-    if (!hasActive && Object.keys(newOpenState).length === 0) {
-      newOpenState["Overview"] = true;
-    }
-
-    setOpenSections(newOpenState);
-  }, [pathname, fullCurrentUrl, navSections, isItemActive]);
+  }, [navSections, isItemActive]);
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) => ({

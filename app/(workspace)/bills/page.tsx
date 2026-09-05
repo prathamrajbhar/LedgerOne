@@ -60,7 +60,17 @@ export default async function VendorBillsPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {vendorBills.map((bill) => (
-                <VendorBillRow key={bill.id} bill={bill} />
+                <VendorBillRow
+                  key={bill.id}
+                  bill={{
+                    ...bill,
+                    total: Number(bill.total),
+                    amountPaid: Number(bill.amountPaid),
+                    amountDue: Number(bill.amountDue),
+                    billDate: bill.billDate instanceof Date ? bill.billDate.toISOString() : String(bill.billDate),
+                    dueDate: bill.dueDate instanceof Date ? bill.dueDate.toISOString() : String(bill.dueDate),
+                  }}
+                />
               ))}
             </tbody>
           </table>
