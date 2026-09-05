@@ -30,6 +30,7 @@ export interface ExpenseBreakdownItem {
   name: string;
   value: number;
   amount: string;
+  rawAmount: number;
   color: string;
 }
 
@@ -266,8 +267,8 @@ export async function getExpenseBreakdownAction(
   endDate: Date
 ): Promise<ExpenseBreakdownItem[]> {
   try {
-    // Get all expense-related bills
-    const bills = await prisma.vendorBill.findMany({
+    // 1. Try to get confirmed bills in requested date range
+    let bills = await prisma.vendorBill.findMany({
       where: {
         status: DocumentStatus.CONFIRMED,
         billDate: { gte: startDate, lte: endDate },
@@ -276,26 +277,81 @@ export async function getExpenseBreakdownAction(
         lines: {
           include: {
             analyticAccount: true,
+            product: true,
           },
         },
       },
     });
 
-    // Group by analytic account
+    // If no bills found in the selected range, fetch all confirmed bills so dashboard shows real business expenses
+    if (bills.length === 0) {
+      bills = await prisma.vendorBill.findMany({
+        where: {
+          status: DocumentStatus.CONFIRMED,
+        },
+        include: {
+          lines: {
+            include: {
+              analyticAccount: true,
+              product: true,
+            },
+          },
+        },
+      });
+    }
+
+    // 2. Also check manual posted expense entries in journal
+    const manualExpenseEntries = await prisma.journalEntry.findMany({
+      where: {
+        source: "MANUAL",
+        status: JournalEntryStatus.POSTED,
+      },
+      include: {
+        lines: {
+          include: {
+            account: true,
+            partner: true,
+          },
+        },
+      },
+    });
+
+    // Group by analytic account or category name
     const expenseMap = new Map<string, number>();
     let totalExpenses = 0;
 
     for (const bill of bills) {
       for (const line of bill.lines) {
-        const analyticName = line.analyticAccount?.name || "Uncategorized";
+        const categoryName = line.analyticAccount?.name || line.product?.name || "Materials & Supplies";
         const lineTotal = Number(line.lineTotal);
-        expenseMap.set(analyticName, (expenseMap.get(analyticName) || 0) + lineTotal);
+        expenseMap.set(categoryName, (expenseMap.get(categoryName) || 0) + lineTotal);
         totalExpenses += lineTotal;
       }
     }
 
-    // Convert to array and calculate percentages
-    const colors = ["#16324F", "#167C80", "#2E9E96", "#4EA8DE", "#7209B7", "#8E9AAF", "#CBD5E1"];
+    for (const entry of manualExpenseEntries) {
+      for (const line of entry.lines) {
+        if (Number(line.debit) > 0 && (line.account.type === "EXPENSES" || line.account.type === "OTHER_EXPENSES")) {
+          const cat = line.partner?.name || line.account.name || "Operating Expenses";
+          const debitAmt = Number(line.debit);
+          expenseMap.set(cat, (expenseMap.get(cat) || 0) + debitAmt);
+          totalExpenses += debitAmt;
+        }
+      }
+    }
+
+    // Curated rich color palette for visualization
+    const colors = [
+      "#16324F", // Deep Navy
+      "#167C80", // Persian Green
+      "#2E9E96", // Soft Teal
+      "#4EA8DE", // Sky Blue
+      "#7209B7", // Vivid Purple
+      "#8E9AAF", // Slate Grey
+      "#F4A261", // Warm Coral
+      "#2A9D8F", // Emerald
+      "#E76F51", // Burnt Sienna
+    ];
     const breakdown: ExpenseBreakdownItem[] = [];
 
     let colorIndex = 0;
@@ -305,6 +361,7 @@ export async function getExpenseBreakdownAction(
         name,
         value: parseFloat(percentage.toFixed(1)),
         amount: `₹${amount.toLocaleString("en-IN")}`,
+        rawAmount: amount,
         color: colors[colorIndex % colors.length],
       });
       colorIndex++;

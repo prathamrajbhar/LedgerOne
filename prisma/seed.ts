@@ -1,1270 +1,1712 @@
-import { PrismaClient, UserRole, ContactType, ProductType, AccountType, JournalType, AnalyticAccountType, TaxApplicability, DocumentStatus, PaymentStatus, PaymentMethod, JournalEntryStatus, JournalEntrySource, BudgetStatus, InvoicePaymentSource, PaymentGatewayStatus } from "@prisma/client";
+import {
+  PrismaClient,
+  UserRole,
+  ContactType,
+  ProductType,
+  AccountType,
+  JournalType,
+  AnalyticAccountType,
+  TaxApplicability,
+  DocumentStatus,
+  PaymentStatus,
+  PaymentMethod,
+  JournalEntryStatus,
+  JournalEntrySource,
+  BudgetStatus,
+  InvoicePaymentSource,
+  PaymentGatewayStatus,
+  EmailReminderType,
+  EmailDeliveryStatus,
+} from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-// Helper to generate dates in range
-function getDateInRange(startDate: Date, endDate: Date): Date {
-  const time = startDate.getTime() + Math.random() * (endDate.getTime() - startDate.getTime());
-  return new Date(time);
+// Helper to format 2-digit numbers
+const pad2 = (n: number) => String(n).padStart(2, "0");
+const pad4 = (n: number) => String(n).padStart(4, "0");
+
+/**
+ * Clean all tables in reverse foreign key order for a guaranteed idempotent run
+ */
+async function cleanDatabase() {
+  console.log("🧹 Cleaning existing database records in dependency order...");
+
+  // 1. Audit Logs & Webhooks
+  await prisma.billEmailLog.deleteMany();
+  await prisma.invoiceEmailLog.deleteMany();
+  await prisma.paymentGatewayTransaction.deleteMany();
+
+  // 2. Double-entry Journal & Payments
+  await prisma.journalEntryLine.deleteMany();
+  await prisma.journalEntry.deleteMany();
+  await prisma.invoicePayment.deleteMany();
+  await prisma.billPayment.deleteMany();
+
+  // 3. Invoices & Vendor Bills
+  await prisma.customerInvoiceLine.deleteMany();
+  await prisma.customerInvoice.deleteMany();
+  await prisma.vendorBillLine.deleteMany();
+  await prisma.vendorBill.deleteMany();
+
+  // 4. Sales Orders & Purchase Orders
+  await prisma.salesOrderLine.deleteMany();
+  await prisma.salesOrder.deleteMany();
+  await prisma.purchaseOrderLine.deleteMany();
+  await prisma.purchaseOrder.deleteMany();
+
+  // 5. Budgets
+  await prisma.budgetLine.deleteMany();
+  // Clear self-relations on budget before deleting
+  await prisma.budget.updateMany({ data: { revisionOfId: null, revisedWithId: null } });
+  await prisma.budget.deleteMany();
+
+  // 6. Products & Categories
+  await prisma.product.deleteMany();
+  await prisma.productCategory.deleteMany();
+
+  // 7. Master Configurations
+  await prisma.taxRate.deleteMany();
+  await prisma.analyticAccount.deleteMany();
+  await prisma.journal.deleteMany();
+  await prisma.companySettings.deleteMany();
+
+  // 8. Contacts & Users & Accounts
+  await prisma.contact.updateMany({ data: { userId: null } });
+  await prisma.contact.deleteMany();
+  await prisma.user.deleteMany();
+  await prisma.chartOfAccount.deleteMany();
+
+  console.log("✓ All previous records cleaned cleanly.\n");
 }
 
-// Helper to generate unique numbers
-let poCounter = 1000;
-let billCounter = 2000;
-let soCounter = 3000;
-let invoiceCounter = 4000;
-let jeCounter = 5000;
-
 async function main() {
-  console.log("🌱 Starting comprehensive Indian-oriented database seeding...\n");
+  console.log("===============================================================");
+  console.log("🚀 STARTING COMPREHENSIVE CLEAN SEEDING FOR LEDGERONE ERP");
+  console.log("===============================================================\n");
 
-  // ============================================================================
-  // 1. CHART OF ACCOUNTS - Enhanced for furniture retail
-  // ============================================================================
-  console.log("📊 Creating chart of accounts...");
-  const accounts = [
-    // Assets (1000-1999)
-    { code: "1000", name: "Petty Cash", type: AccountType.CASH },
-    { code: "1010", name: "Main Bank Account - ICICI", type: AccountType.BANK },
-    { code: "1020", name: "Savings Account - HDFC", type: AccountType.BANK },
-    { code: "1030", name: "Operating Account - Axis", type: AccountType.BANK },
-    { code: "1100", name: "Accounts Receivable", type: AccountType.ASSET },
-    { code: "1200", name: "Furniture Inventory", type: AccountType.ASSET },
-    { code: "1210", name: "Raw Materials - Wood", type: AccountType.ASSET },
-    { code: "1220", name: "Raw Materials - Fabrics", type: AccountType.ASSET },
-    { code: "1230", name: "Work in Progress", type: AccountType.ASSET },
-    { code: "1300", name: "Prepaid Insurance", type: AccountType.ASSET },
-    { code: "1310", name: "Prepaid Rent", type: AccountType.ASSET },
-    { code: "1400", name: "Office Equipment", type: AccountType.ASSET },
-    { code: "1410", name: "Delivery Vehicles", type: AccountType.ASSET },
-    { code: "1420", name: "Store Fixtures & Fittings", type: AccountType.ASSET },
-    { code: "1430", name: "Computers & IT Equipment", type: AccountType.ASSET },
+  await cleanDatabase();
 
-    // Liabilities (2000-2999)
-    { code: "2000", name: "Accounts Payable", type: AccountType.LIABILITY },
-    { code: "2100", name: "Credit Card Payable", type: AccountType.LIABILITY },
-    { code: "2200", name: "GST Payable", type: AccountType.LIABILITY },
-    { code: "2210", name: "IGST Payable", type: AccountType.LIABILITY },
-    { code: "2220", name: "SGST Payable", type: AccountType.LIABILITY },
-    { code: "2230", name: "CGST Payable", type: AccountType.LIABILITY },
-    { code: "2240", name: "GST Receivable", type: AccountType.LIABILITY },
-    { code: "2300", name: "Short-term Loan", type: AccountType.LIABILITY },
-    { code: "2310", name: "Vehicle Loan", type: AccountType.LIABILITY },
-    { code: "2400", name: "Salary Payable", type: AccountType.LIABILITY },
-    { code: "2410", name: "Employee Benefits Payable", type: AccountType.LIABILITY },
-
-    // Capital/Equity (3000-3999)
-    { code: "3000", name: "Proprietor's Capital", type: AccountType.CAPITAL },
-    { code: "3100", name: "Retained Earnings", type: AccountType.CAPITAL },
-    { code: "3200", name: "Current Year Earnings", type: AccountType.CAPITAL },
-
-    // Income (4000-4999)
-    { code: "4000", name: "Furniture Sales - Domestic", type: AccountType.INCOME },
-    { code: "4100", name: "Wooden Furniture Sales", type: AccountType.INCOME },
-    { code: "4110", name: "Metal Furniture Sales", type: AccountType.INCOME },
-    { code: "4120", name: "Upholstered Furniture Sales", type: AccountType.INCOME },
-    { code: "4200", name: "Custom Furniture Sales", type: AccountType.INCOME },
-    { code: "4300", name: "Delivery Service Revenue", type: AccountType.INCOME },
-    { code: "4310", name: "Installation Service Revenue", type: AccountType.INCOME },
-    { code: "4320", name: "Design Consultation Revenue", type: AccountType.INCOME },
-    { code: "4330", name: "Interior Design Services", type: AccountType.INCOME },
-    { code: "4400", name: "Warranty & Service Revenue", type: AccountType.INCOME },
-    { code: "4900", name: "Other Income", type: AccountType.INCOME },
-
-    // Expenses (5000-5999)
-    { code: "5000", name: "Cost of Goods Sold - Furniture", type: AccountType.EXPENSES },
-    { code: "5010", name: "Cost of Raw Materials", type: AccountType.EXPENSES },
-    { code: "5020", name: "Labour Cost - Manufacturing", type: AccountType.EXPENSES },
-    { code: "5100", name: "Salaries and Wages", type: AccountType.EXPENSES },
-    { code: "5110", name: "Employee Benefits", type: AccountType.EXPENSES },
-    { code: "5120", name: "Bonus & Incentives", type: AccountType.EXPENSES },
-    { code: "5200", name: "Rent Expense - Showroom", type: AccountType.EXPENSES },
-    { code: "5210", name: "Rent Expense - Warehouse", type: AccountType.EXPENSES },
-    { code: "5220", name: "Rent Expense - Workshop", type: AccountType.EXPENSES },
-    { code: "5300", name: "Utilities - Electric", type: AccountType.EXPENSES },
-    { code: "5310", name: "Utilities - Water", type: AccountType.EXPENSES },
-    { code: "5320", name: "Utilities - Gas", type: AccountType.EXPENSES },
-    { code: "5330", name: "Internet & Telecom", type: AccountType.EXPENSES },
-    { code: "5400", name: "Marketing & Advertising", type: AccountType.EXPENSES },
-    { code: "5410", name: "Digital Marketing", type: AccountType.EXPENSES },
-    { code: "5420", name: "Website Maintenance", type: AccountType.EXPENSES },
-    { code: "5430", name: "Print & Media", type: AccountType.EXPENSES },
-    { code: "5500", name: "Office Supplies", type: AccountType.EXPENSES },
-    { code: "5510", name: "Packaging Materials", type: AccountType.EXPENSES },
-    { code: "5520", name: "Safety Equipment", type: AccountType.EXPENSES },
-    { code: "5600", name: "Delivery & Shipping", type: AccountType.EXPENSES },
-    { code: "5610", name: "Vehicle Fuel & Maintenance", type: AccountType.EXPENSES },
-    { code: "5620", name: "Vehicle Insurance", type: AccountType.EXPENSES },
-    { code: "5700", name: "Insurance Expense", type: AccountType.EXPENSES },
-    { code: "5800", name: "Professional Fees", type: AccountType.EXPENSES },
-    { code: "5810", name: "Accounting & Audit Fees", type: AccountType.EXPENSES },
-    { code: "5820", name: "Legal Fees", type: AccountType.EXPENSES },
-    { code: "5830", name: "Consulting Fees", type: AccountType.EXPENSES },
-
-    // Other Expenses (5900-5999)
-    { code: "5900", name: "Depreciation Expense", type: AccountType.OTHER_EXPENSES },
-    { code: "5910", name: "Bank Charges & Fees", type: AccountType.OTHER_EXPENSES },
-    { code: "5920", name: "Interest Expense", type: AccountType.OTHER_EXPENSES },
-    { code: "5930", name: "Bad Debt Expense", type: AccountType.OTHER_EXPENSES },
-    { code: "5940", name: "Foreign Exchange Loss", type: AccountType.OTHER_EXPENSES },
+  // S3 Banner presets from lib/constants/profile-banners.ts
+  const banners = [
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-01.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-02.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-03.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-04.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-05.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-06.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-07.jpg",
+    "http://10.120.27.85:4566/odoohackathon/presets/banner-08.jpg",
   ];
 
-  const createdAccounts = new Map();
-  for (const account of accounts) {
-    const created = await prisma.chartOfAccount.upsert({
-      where: { code: account.code },
-      update: {},
-      create: account,
-    });
-    createdAccounts.set(account.name, created);
+  // ============================================================================
+  // 1. CHART OF ACCOUNTS (All 8 AccountType values covered)
+  // ============================================================================
+  console.log("📊 1. Creating Complete Indian Chart of Accounts...");
+  const chartOfAccountsData = [
+    // 1. CASH
+    { code: "1000", name: "Petty Cash", type: AccountType.CASH },
+
+    // 2. BANK
+    { code: "1010", name: "Main ICICI Business Current Account", type: AccountType.BANK },
+    { code: "1020", name: "HDFC Operational Account", type: AccountType.BANK },
+    { code: "1030", name: "Axis Payroll Reserve Account", type: AccountType.BANK },
+
+    // 3. ASSET
+    { code: "1100", name: "Accounts Receivable (Trade Debtors)", type: AccountType.ASSET },
+    { code: "1200", name: "Finished Goods - Furniture Inventory", type: AccountType.ASSET },
+    { code: "1210", name: "Raw Materials - Hardwood & Teak", type: AccountType.ASSET },
+    { code: "1220", name: "Raw Materials - Fabrics & Leather", type: AccountType.ASSET },
+    { code: "1230", name: "Work in Progress", type: AccountType.ASSET },
+    { code: "1300", name: "Prepaid Showroom Rent & Insurance", type: AccountType.ASSET },
+    { code: "1400", name: "Manufacturing Equipment & Machinery", type: AccountType.ASSET },
+    { code: "1410", name: "Delivery Trucks & Fleets", type: AccountType.ASSET },
+    { code: "1420", name: "Showroom Fixtures & Display Fittings", type: AccountType.ASSET },
+    { code: "1430", name: "IT Hardware & Server Infrastructure", type: AccountType.ASSET },
+
+    // 4. LIABILITY
+    { code: "2000", name: "Accounts Payable (Trade Creditors)", type: AccountType.LIABILITY },
+    { code: "2100", name: "Corporate Credit Card Payable", type: AccountType.LIABILITY },
+    { code: "2200", name: "GST Payable (Central & State)", type: AccountType.LIABILITY },
+    { code: "2210", name: "IGST Payable", type: AccountType.LIABILITY },
+    { code: "2220", name: "CGST Output Liability", type: AccountType.LIABILITY },
+    { code: "2230", name: "SGST Output Liability", type: AccountType.LIABILITY },
+    { code: "2240", name: "GST Input Credit Receivable", type: AccountType.LIABILITY },
+    { code: "2300", name: "Working Capital Term Loan", type: AccountType.LIABILITY },
+    { code: "2400", name: "Salaries and Wages Payable", type: AccountType.LIABILITY },
+
+    // 5. CAPITAL
+    { code: "3000", name: "Proprietor's Capital / Share Capital", type: AccountType.CAPITAL },
+    { code: "3100", name: "Retained Earnings", type: AccountType.CAPITAL },
+    { code: "3200", name: "Current Year Reserves", type: AccountType.CAPITAL },
+
+    // 6. INCOME
+    { code: "4000", name: "Furniture Sales - Domestic Retail", type: AccountType.INCOME },
+    { code: "4100", name: "B2B Corporate & Hospitality Sales", type: AccountType.INCOME },
+    { code: "4200", name: "Custom Modular Furniture Orders", type: AccountType.INCOME },
+    { code: "4300", name: "Delivery & Logistics Revenue", type: AccountType.INCOME },
+    { code: "4310", name: "Assembly & White-Glove Installation", type: AccountType.INCOME },
+    { code: "4320", name: "Interior Architectural Design Fees", type: AccountType.INCOME },
+    { code: "4400", name: "Annual Maintenance & Warranty Contracts", type: AccountType.INCOME },
+
+    // 7. EXPENSES
+    { code: "5000", name: "Cost of Goods Sold - Finished Goods", type: AccountType.EXPENSES },
+    { code: "5010", name: "Cost of Raw Timber & Metals", type: AccountType.EXPENSES },
+    { code: "5020", name: "Direct Manufacturing Labour", type: AccountType.EXPENSES },
+    { code: "5100", name: "Staff Salaries & Wages", type: AccountType.EXPENSES },
+    { code: "5110", name: "Employee Health & Statutory Benefits", type: AccountType.EXPENSES },
+    { code: "5200", name: "Showroom Lease & Rent", type: AccountType.EXPENSES },
+    { code: "5210", name: "Central Warehouse Lease", type: AccountType.EXPENSES },
+    { code: "5220", name: "Manufacturing Workshop Rent", type: AccountType.EXPENSES },
+    { code: "5300", name: "Utilities - Electricity", type: AccountType.EXPENSES },
+    { code: "5310", name: "Utilities - Water & Facilities", type: AccountType.EXPENSES },
+    { code: "5320", name: "High-Speed Internet & Telecom", type: AccountType.EXPENSES },
+    { code: "5400", name: "Marketing & Digital Advertising", type: AccountType.EXPENSES },
+    { code: "5500", name: "Office Stationery & Supplies", type: AccountType.EXPENSES },
+    { code: "5600", name: "Delivery Logistics & Fuel", type: AccountType.EXPENSES },
+    { code: "5700", name: "Comprehensive Asset Insurance", type: AccountType.EXPENSES },
+
+    // 8. OTHER_EXPENSES
+    { code: "5900", name: "Depreciation & Amortization Expense", type: AccountType.OTHER_EXPENSES },
+    { code: "5910", name: "Bank Charges & Gateway Processing Fees", type: AccountType.OTHER_EXPENSES },
+    { code: "5920", name: "Commercial Loan Interest Expense", type: AccountType.OTHER_EXPENSES },
+    { code: "5930", name: "Foreign Exchange & Discrepancy Loss", type: AccountType.OTHER_EXPENSES },
+  ];
+
+  const accountsMap = new Map<string, any>();
+  for (const acc of chartOfAccountsData) {
+    const created = await prisma.chartOfAccount.create({ data: acc });
+    accountsMap.set(acc.name, created);
+    accountsMap.set(acc.code, created);
   }
-  console.log(`✓ Created ${accounts.length} chart of accounts\n`);
+  console.log(`✓ Created ${chartOfAccountsData.length} Chart of Account items.`);
 
   // ============================================================================
   // 2. COMPANY SETTINGS
   // ============================================================================
-  console.log("📝 Creating company settings...");
-  const companySettings = await prisma.companySettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: {
+  console.log("🏢 2. Creating Company Settings...");
+  const companySettings = await prisma.companySettings.create({
+    data: {
       id: "default",
       companyName: "Maharaja Furniture Solutions Pvt. Ltd.",
+      logo: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=300&auto=format&fit=crop&q=80",
+      address: "Plot 42, Sector 63, Noida Electronic City, Uttar Pradesh 201301, India",
       baseCurrency: "USD",
-      fiscalYearStartMonth: 4, // April (Indian FY)
+      fiscalYearStartMonth: 4, // April (Indian Financial Year)
       poNumberPrefix: "PO",
       billNumberPrefix: "BILL",
       soNumberPrefix: "SO",
       invoiceNumberPrefix: "INV",
       jeNumberPrefix: "JE",
-      debtorsAccountId: createdAccounts.get("Accounts Receivable")!.id,
-      creditorsAccountId: createdAccounts.get("Accounts Payable")!.id,
-      address: "456 Furniture Lane, Sector 63, Noida, Uttar Pradesh 201301, India",
+      debtorsAccountId: accountsMap.get("1100")!.id,
+      creditorsAccountId: accountsMap.get("2000")!.id,
     },
   });
-  console.log("✓ Company settings created\n");
+  console.log("✓ Created Company Settings for Maharaja Furniture Solutions.");
 
   // ============================================================================
-  // 3. JOURNALS
+  // 3. JOURNALS (All 4 JournalType values covered)
   // ============================================================================
-  console.log("📚 Creating journals...");
-  const journals = [
-    { code: "SAL", name: "Sales Journal", type: JournalType.SALES, defaultAccountId: createdAccounts.get("Furniture Sales - Domestic")!.id },
-    { code: "PUR", name: "Purchase Journal", type: JournalType.PURCHASE, defaultAccountId: createdAccounts.get("Accounts Payable")!.id },
-    { code: "BNK", name: "Bank Journal", type: JournalType.BANK, defaultAccountId: createdAccounts.get("Main Bank Account - ICICI")!.id },
-    { code: "CSH", name: "Cash Journal", type: JournalType.CASH, defaultAccountId: createdAccounts.get("Petty Cash")!.id },
+  console.log("📚 3. Creating Journals...");
+  const journalsData = [
+    { code: "SAL", name: "Customer Sales Journal", type: JournalType.SALES, defaultAccountId: accountsMap.get("4000")!.id },
+    { code: "PUR", name: "Vendor Purchases Journal", type: JournalType.PURCHASE, defaultAccountId: accountsMap.get("2000")!.id },
+    { code: "BNK", name: "ICICI Bank Operations Journal", type: JournalType.BANK, defaultAccountId: accountsMap.get("1010")!.id },
+    { code: "CSH", name: "Daily Petty Cash Journal", type: JournalType.CASH, defaultAccountId: accountsMap.get("1000")!.id },
   ];
 
-  const createdJournals = new Map();
-  for (const journal of journals) {
-    const created = await prisma.journal.upsert({
-      where: { code: journal.code },
-      update: {},
-      create: journal,
-    });
-    createdJournals.set(journal.name, created);
+  const journalsMap = new Map<string, any>();
+  for (const j of journalsData) {
+    const created = await prisma.journal.create({ data: j });
+    journalsMap.set(j.code, created);
+    journalsMap.set(j.name, created);
   }
-  console.log(`✓ Created ${journals.length} journals\n`);
+  console.log(`✓ Created ${journalsData.length} General Journals.`);
 
   // ============================================================================
-  // 4. TAX RATES - Indian GST
+  // 4. TAX RATES (All 3 TaxApplicability values covered)
   // ============================================================================
-  console.log("💰 Creating Indian GST tax rates...");
-  const taxRates = [
-    { name: "No Tax (0%)", percentage: 0, applicability: TaxApplicability.BOTH },
-    { name: "GST 5%", percentage: 5, applicability: TaxApplicability.BOTH },
-    { name: "GST 12%", percentage: 12, applicability: TaxApplicability.BOTH },
-    { name: "GST 18%", percentage: 18, applicability: TaxApplicability.BOTH },
-    { name: "GST 28%", percentage: 28, applicability: TaxApplicability.SALES },
+  console.log("💰 4. Creating GST Tax Rates...");
+  const taxRatesData = [
+    { name: "GST 0% (Exempted)", percentage: 0, applicability: TaxApplicability.BOTH },
+    { name: "GST 5% (Essential Raw Materials)", percentage: 5, applicability: TaxApplicability.BOTH },
+    { name: "GST 12% (Standard Furniture & Decor)", percentage: 12, applicability: TaxApplicability.BOTH },
+    { name: "GST 18% (Commercial Furniture & Services)", percentage: 18, applicability: TaxApplicability.BOTH },
+    { name: "GST 28% (Luxury & Imported Goods)", percentage: 28, applicability: TaxApplicability.SALES },
+    { name: "Input GST 18% (Vendor Procurement)", percentage: 18, applicability: TaxApplicability.PURCHASE },
   ];
 
-  const createdTaxRates = new Map();
-  for (const taxRate of taxRates) {
-    const created = await prisma.taxRate.upsert({
-      where: { name: taxRate.name },
-      update: {},
-      create: taxRate,
-    });
-    createdTaxRates.set(taxRate.name, created);
+  const taxRatesMap = new Map<string, any>();
+  for (const tax of taxRatesData) {
+    const created = await prisma.taxRate.create({ data: tax });
+    taxRatesMap.set(tax.name, created);
   }
-  console.log(`✓ Created ${taxRates.length} GST tax rates\n`);
+  console.log(`✓ Created ${taxRatesData.length} Tax Rates.`);
 
   // ============================================================================
-  // 5. PRODUCT CATEGORIES
+  // 5. ANALYTIC ACCOUNTS (Both AnalyticAccountType values: INCOME & EXPENSES)
   // ============================================================================
-  console.log("📦 Creating product categories...");
-  const categories = [
-    { name: "Living Room - Sofas & Seating" },
-    { name: "Living Room - Tables & Storage" },
-    { name: "Bedroom - Beds & Frames" },
-    { name: "Bedroom - Storage & Wardrobes" },
-    { name: "Bedroom - Accent Furniture" },
-    { name: "Office - Desks & Tables" },
-    { name: "Office - Seating & Storage" },
-    { name: "Dining Room - Tables & Chairs" },
-    { name: "Dining Room - Cabinets & Sideboards" },
-    { name: "Outdoor - Garden & Patio" },
-    { name: "Outdoor - Décor & Accessories" },
-    { name: "Kids Furniture" },
-    { name: "Custom Furniture" },
-    { name: "Services" },
-    { name: "Hardware & Accessories" },
+  console.log("📈 5. Creating Analytic Cost & Revenue Centers...");
+  const analyticAccountsData = [
+    // Revenue Centers (INCOME)
+    { name: "Delhi Flagship Showroom", type: AnalyticAccountType.INCOME },
+    { name: "Mumbai Experience Center", type: AnalyticAccountType.INCOME },
+    { name: "Bangalore Tech-Park Showroom", type: AnalyticAccountType.INCOME },
+    { name: "Online Direct-to-Consumer Store", type: AnalyticAccountType.INCOME },
+    { name: "B2B Hospitality & Corporate Contracts", type: AnalyticAccountType.INCOME },
+    { name: "Turnkey Interior Design Projects", type: AnalyticAccountType.INCOME },
+    { name: "After-Sales & Assembly Services", type: AnalyticAccountType.INCOME },
+
+    // Cost Centers (EXPENSES)
+    { name: "Direct Raw Materials", type: AnalyticAccountType.EXPENSES },
+    { name: "Manufacturing Factory Labour", type: AnalyticAccountType.EXPENSES },
+    { name: "Packaging & Sustainable Crating", type: AnalyticAccountType.EXPENSES },
+    { name: "Logistics & Fleet Transport", type: AnalyticAccountType.EXPENSES },
+    { name: "Summer 2026 Omnichannel Marketing", type: AnalyticAccountType.EXPENSES },
+    { name: "Diwali & Festive 2026 Campaign", type: AnalyticAccountType.EXPENSES },
+    { name: "Showroom Lease & Operational Overhead", type: AnalyticAccountType.EXPENSES },
+    { name: "Central Warehouse Maintenance", type: AnalyticAccountType.EXPENSES },
+    { name: "Enterprise IT & SaaS Infrastructure", type: AnalyticAccountType.EXPENSES },
   ];
 
-  const createdCategories = new Map();
-  for (const category of categories) {
-    const created = await prisma.productCategory.upsert({
-      where: { name: category.name },
-      update: {},
-      create: category,
-    });
-    createdCategories.set(category.name, created);
+  const analyticMap = new Map<string, any>();
+  for (const aa of analyticAccountsData) {
+    const created = await prisma.analyticAccount.create({ data: aa });
+    analyticMap.set(aa.name, created);
   }
-  console.log(`✓ Created ${categories.length} product categories\n`);
+  console.log(`✓ Created ${analyticAccountsData.length} Analytic Cost/Revenue Centers.`);
 
   // ============================================================================
-  // 6. PRODUCTS - 80+ Indian-oriented furniture items
+  // 6. PRODUCT CATEGORIES & PRODUCTS (All 3 ProductType: GOODS, SERVICE, COMBO)
   // ============================================================================
-  console.log("🛍️  Creating comprehensive Indian furniture catalog...");
-  const products = [
-    // Living Room - Sofas & Seating
-    { name: "Teak Wood Modern Sofa 3-Seater", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Sofas & Seating")!.id, sku: "LR-SOFA-TEK-001", material: "Solid Teak Wood, Fabric Upholstery", dimensions: "84\" W x 38\" D x 36\" H", salesPrice: 42999.00, cost: 22000.00, stock: 12, reorderPoint: 3 },
-    { name: "Sheesham Leather Sofa Corner Set", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Sofas & Seating")!.id, sku: "LR-SOFA-CRNR-001", material: "Sheesham Wood, Genuine Leather", dimensions: "120\" W x 85\" D x 34\" H", salesPrice: 89999.00, cost: 45000.00, stock: 5, reorderPoint: 1 },
-    { name: "Reclaimed Wood Sectional Sofa", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Sofas & Seating")!.id, sku: "LR-SECT-RCL-001", material: "Reclaimed Wood, Cotton Upholstery", dimensions: "100\" W x 75\" D x 32\" H", salesPrice: 65999.00, cost: 35000.00, stock: 8, reorderPoint: 2 },
-    { name: "Mango Wood Statement Accent Chair", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Sofas & Seating")!.id, sku: "LR-CHAIR-ACC-001", material: "Mango Wood, Fabric", dimensions: "32\" W x 34\" D x 36\" H", salesPrice: 24999.00, cost: 12000.00, stock: 15, reorderPoint: 4 },
-    { name: "Handcrafted Rattan Lounge Chair", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Sofas & Seating")!.id, sku: "LR-CHAIR-RAT-001", material: "Natural Rattan, Cushions", dimensions: "28\" W x 32\" D x 34\" H", salesPrice: 15999.00, cost: 7500.00, stock: 20, reorderPoint: 5 },
-
-    // Living Room - Tables & Storage
-    { name: "Sheesham Coffee Table - Large", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Tables & Storage")!.id, sku: "LR-TABL-SHEE-001", material: "Solid Sheesham Wood", dimensions: "48\" W x 24\" D x 18\" H", salesPrice: 16999.00, cost: 8500.00, stock: 18, reorderPoint: 5 },
-    { name: "Teak Console Table with Drawers", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Tables & Storage")!.id, sku: "LR-CONS-TEK-001", material: "Teak Wood", dimensions: "42\" W x 16\" D x 32\" H", salesPrice: 12999.00, cost: 6500.00, stock: 14, reorderPoint: 4 },
-    { name: "Wall-Mounted TV Entertainment Unit", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Tables & Storage")!.id, sku: "LR-TV-UNIT-001", material: "MDF with Veneer", dimensions: "72\" W x 18\" D x 24\" H", salesPrice: 18999.00, cost: 10000.00, stock: 10, reorderPoint: 3 },
-    { name: "Open Shelving Storage Rack", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Tables & Storage")!.id, sku: "LR-SHELF-OPE-001", material: "Steel & Wood", dimensions: "60\" W x 15\" D x 72\" H", salesPrice: 8999.00, cost: 4500.00, stock: 12, reorderPoint: 3 },
-    { name: "Glass & Metal Side Table", type: ProductType.GOODS, categoryId: createdCategories.get("Living Room - Tables & Storage")!.id, sku: "LR-SIDE-GLS-001", material: "Tempered Glass, Metal Frame", dimensions: "20\" W x 20\" D x 22\" H", salesPrice: 4999.00, cost: 2500.00, stock: 25, reorderPoint: 8 },
-
-    // Bedroom - Beds & Frames
-    { name: "Teak Wood King Size Bed Frame", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Beds & Frames")!.id, sku: "BR-BED-TEK-KNG", material: "Solid Teak Wood", dimensions: "80\" W x 84\" D x 48\" H", salesPrice: 54999.00, cost: 28000.00, stock: 8, reorderPoint: 2 },
-    { name: "Sheesham Queen Size Bed with Storage", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Beds & Frames")!.id, sku: "BR-BED-SHEE-QN", material: "Sheesham Wood", dimensions: "64\" W x 84\" D x 48\" H", salesPrice: 42999.00, cost: 22000.00, stock: 10, reorderPoint: 3 },
-    { name: "Mango Wood Single Bed Frame", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Beds & Frames")!.id, sku: "BR-BED-MANG-SNG", material: "Mango Wood", dimensions: "42\" W x 84\" D x 36\" H", salesPrice: 19999.00, cost: 10000.00, stock: 15, reorderPoint: 4 },
-    { name: "Upholstered Headboard - King", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Beds & Frames")!.id, sku: "BR-HEAD-UPH-KNG", material: "Wood, Fabric Upholstery", dimensions: "80\" W x 12\" D x 52\" H", salesPrice: 24999.00, cost: 12000.00, stock: 12, reorderPoint: 3 },
-
-    // Bedroom - Storage & Wardrobes
-    { name: "Teak Wood 4-Door Wardrobe", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Storage & Wardrobes")!.id, sku: "BR-WARD-4DR-TEK", material: "Teak Wood", dimensions: "60\" W x 24\" D x 84\" H", salesPrice: 59999.00, cost: 30000.00, stock: 6, reorderPoint: 1 },
-    { name: "Sheesham 6-Drawer Dresser", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Storage & Wardrobes")!.id, sku: "BR-DRSR-6DR-SHEE", material: "Sheesham Wood", dimensions: "60\" W x 20\" D x 36\" H", salesPrice: 34999.00, cost: 18000.00, stock: 8, reorderPoint: 2 },
-    { name: "Bedside Nightstand - Mango Wood", type: ProductType.GOODS, categoryId: createdCategories.get("Bedroom - Storage & Wardrobes")!.id, sku: "BR-NIGHT-MANG-001", material: "Mango Wood", dimensions: "24\" W x 18\" D x 26\" H", salesPrice: 8999.00, cost: 4500.00, stock: 20, reorderPoint: 6 },
-
-    // Office - Desks & Tables
-    { name: "Executive Teak Wood Desk", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Desks & Tables")!.id, sku: "OF-DESK-TEK-EXE", material: "Teak Wood", dimensions: "72\" W x 36\" D x 30\" H", salesPrice: 47999.00, cost: 24000.00, stock: 8, reorderPoint: 2 },
-    { name: "L-Shaped Workstation - Sheesham", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Desks & Tables")!.id, sku: "OF-DESK-L-SHEE", material: "Sheesham Wood", dimensions: "72\" + 42\" W, 30\" D, 30\" H", salesPrice: 54999.00, cost: 28000.00, stock: 6, reorderPoint: 1 },
-    { name: "Standing Desk - Height Adjustable", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Desks & Tables")!.id, sku: "OF-DESK-STAND-ADJ", material: "Steel & Wood", dimensions: "60\" W x 30\" D x 29-47\" H", salesPrice: 29999.00, cost: 15000.00, stock: 10, reorderPoint: 3 },
-    { name: "Conference Table - Mango Wood", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Desks & Tables")!.id, sku: "OF-CONF-MANG-001", material: "Mango Wood", dimensions: "120\" W x 48\" D x 30\" H", salesPrice: 69999.00, cost: 35000.00, stock: 4, reorderPoint: 1 },
-
-    // Office - Seating & Storage
-    { name: "High-Back Executive Office Chair", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Seating & Storage")!.id, sku: "OF-CHAIR-HB-EXE", material: "Mesh Back, Leather Seat", dimensions: "26\" W x 26\" D x 42\" H", salesPrice: 12999.00, cost: 6500.00, stock: 25, reorderPoint: 8 },
-    { name: "Mid-Back Ergonomic Office Chair", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Seating & Storage")!.id, sku: "OF-CHAIR-MB-ERG", material: "Breathable Fabric", dimensions: "26\" W x 26\" D x 38\" H", salesPrice: 7999.00, cost: 4000.00, stock: 30, reorderPoint: 10 },
-    { name: "Wooden Bookshelf - 4 Tier", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Seating & Storage")!.id, sku: "OF-SHELF-4T-WOD", material: "Solid Wood", dimensions: "48\" W x 12\" D x 72\" H", salesPrice: 13999.00, cost: 7000.00, stock: 12, reorderPoint: 3 },
-    { name: "Metal Filing Cabinet - 4 Drawer", type: ProductType.GOODS, categoryId: createdCategories.get("Office - Seating & Storage")!.id, sku: "OF-FILE-4D-MTL", material: "Steel", dimensions: "18\" W x 26\" D x 52\" H", salesPrice: 8999.00, cost: 4500.00, stock: 16, reorderPoint: 5 },
-
-    // Dining Room - Tables & Chairs
-    { name: "Teak Dining Table - 6 Seater", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Tables & Chairs")!.id, sku: "DR-TABL-6ST-TEK", material: "Solid Teak Wood", dimensions: "72\" W x 40\" D x 30\" H", salesPrice: 54999.00, cost: 28000.00, stock: 6, reorderPoint: 2 },
-    { name: "Sheesham Dining Table - Expandable", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Tables & Chairs")!.id, sku: "DR-TABL-EXP-SHEE", material: "Sheesham Wood", dimensions: "48-72\" W x 40\" D x 30\" H", salesPrice: 42999.00, cost: 22000.00, stock: 5, reorderPoint: 1 },
-    { name: "Dining Chairs Set of 6 - Teak", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Tables & Chairs")!.id, sku: "DR-CHAIR-6ST-TEK", material: "Teak Wood, Fabric Upholstery", dimensions: "18\" W x 22\" D x 38\" H each", salesPrice: 32999.00, cost: 17000.00, stock: 8, reorderPoint: 2 },
-    { name: "Dining Bench - Upholstered", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Tables & Chairs")!.id, sku: "DR-BENCH-UPH-001", material: "Wood Frame, Fabric", dimensions: "48\" W x 18\" D x 18\" H", salesPrice: 12999.00, cost: 6500.00, stock: 10, reorderPoint: 3 },
-
-    // Dining Room - Cabinets & Sideboards
-    { name: "China Cabinet - Glass Doors", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Cabinets & Sideboards")!.id, sku: "DR-CHIN-GLS-001", material: "Wood, Tempered Glass", dimensions: "42\" W x 18\" D x 72\" H", salesPrice: 38999.00, cost: 20000.00, stock: 4, reorderPoint: 1 },
-    { name: "Sideboard Buffet Cabinet", type: ProductType.GOODS, categoryId: createdCategories.get("Dining Room - Cabinets & Sideboards")!.id, sku: "DR-BUFF-CAB-001", material: "Sheesham Wood", dimensions: "60\" W x 20\" D x 36\" H", salesPrice: 29999.00, cost: 15000.00, stock: 5, reorderPoint: 1 },
-
-    // Outdoor - Garden & Patio
-    { name: "Outdoor Teak Dining Set 6-Seater", type: ProductType.GOODS, categoryId: createdCategories.get("Outdoor - Garden & Patio")!.id, sku: "OD-DSET-6ST-TEK", material: "Teak Wood", dimensions: "72\" Table + 6 Chairs", salesPrice: 99999.00, cost: 50000.00, stock: 3, reorderPoint: 1 },
-    { name: "Wicker Patio Lounge Set", type: ProductType.GOODS, categoryId: createdCategories.get("Outdoor - Garden & Patio")!.id, sku: "OD-LOUNGE-WCK-001", material: "Rattan Wicker, Cushions", dimensions: "60\" Sofa + 2 Chairs + Table", salesPrice: 34999.00, cost: 17500.00, stock: 6, reorderPoint: 1 },
-    { name: "Garden Bench - Teak", type: ProductType.GOODS, categoryId: createdCategories.get("Outdoor - Garden & Patio")!.id, sku: "OD-BENCH-TEK-001", material: "Solid Teak", dimensions: "60\" W x 24\" D x 36\" H", salesPrice: 14999.00, cost: 7500.00, stock: 12, reorderPoint: 3 },
-    { name: "Outdoor Swing Chair", type: ProductType.GOODS, categoryId: createdCategories.get("Outdoor - Garden & Patio")!.id, sku: "OD-SWING-001", material: "Metal Frame, Rope", dimensions: "36\" W x 32\" D x Hanging", salesPrice: 6999.00, cost: 3500.00, stock: 15, reorderPoint: 4 },
-
-    // Kids Furniture
-    { name: "Kids Study Table & Chair Set", type: ProductType.GOODS, categoryId: createdCategories.get("Kids Furniture")!.id, sku: "KD-STUDY-SET-001", material: "Wood, Non-toxic Finish", dimensions: "30\" W x 24\" D x 24\" H", salesPrice: 7999.00, cost: 4000.00, stock: 20, reorderPoint: 5 },
-    { name: "Kids Bunk Bed - Twin", type: ProductType.GOODS, categoryId: createdCategories.get("Kids Furniture")!.id, sku: "KD-BUNK-TWN-001", material: "Solid Wood", dimensions: "42\" W x 84\" D x 66\" H", salesPrice: 24999.00, cost: 12000.00, stock: 8, reorderPoint: 2 },
-
-    // Custom Furniture
-    { name: "Custom Modular Kitchen Cabinet", type: ProductType.COMBO, categoryId: createdCategories.get("Custom Furniture")!.id, sku: "CUS-MOD-KIT-001", material: "As per specification", salesPrice: 0.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Custom Built-in Wardrobe", type: ProductType.COMBO, categoryId: createdCategories.get("Custom Furniture")!.id, sku: "CUS-BUILT-WARD-001", material: "As per specification", salesPrice: 0.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-
-    // Services
-    { name: "Delivery Service (Local)", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-DELIV-LOCAL", salesPrice: 2999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Delivery Service (Long Distance)", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-DELIV-LD", salesPrice: 8999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Assembly & Installation Service", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-ASSEM-INST", salesPrice: 4999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Interior Design Consultation", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-INTD-CONS", salesPrice: 9999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Custom Design & Planning", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-CUST-PLAN", salesPrice: 15999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Furniture Restoration Service", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-REST-001", salesPrice: 5999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-    { name: "Extended Warranty (1 Year)", type: ProductType.SERVICE, categoryId: createdCategories.get("Services")!.id, sku: "SV-WARR-1Y", salesPrice: 2999.00, cost: 0.00, stock: 0, reorderPoint: 0 },
-
-    // Hardware & Accessories
-    { name: "Premium Cushion Covers - Set of 4", type: ProductType.GOODS, categoryId: createdCategories.get("Hardware & Accessories")!.id, sku: "AC-CUSH-4ST-001", material: "Cotton Blend", dimensions: "18\" x 18\" each", salesPrice: 1999.00, cost: 1000.00, stock: 50, reorderPoint: 20 },
-    { name: "Decorative Table Lamp", type: ProductType.GOODS, categoryId: createdCategories.get("Hardware & Accessories")!.id, sku: "AC-LAMP-DEC-001", material: "Ceramic & Fabric", dimensions: "12\" Base, 22\" Height", salesPrice: 3999.00, cost: 2000.00, stock: 35, reorderPoint: 10 },
-    { name: "Premium Area Rug 8x10", type: ProductType.GOODS, categoryId: createdCategories.get("Hardware & Accessories")!.id, sku: "AC-RUG-8x10-001", material: "Wool Blend", dimensions: "8' x 10'", salesPrice: 14999.00, cost: 7500.00, stock: 8, reorderPoint: 2 },
-    { name: "Wall Mirror - Decorative Frame", type: ProductType.GOODS, categoryId: createdCategories.get("Hardware & Accessories")!.id, sku: "AC-MIRR-FRAME-001", material: "Wood Frame", dimensions: "36\" W x 48\" H", salesPrice: 5999.00, cost: 3000.00, stock: 12, reorderPoint: 3 },
-    { name: "Throw Blanket Premium", type: ProductType.GOODS, categoryId: createdCategories.get("Hardware & Accessories")!.id, sku: "AC-THROW-PREM-001", material: "Cashmere Blend", dimensions: "60\" x 80\"", salesPrice: 4999.00, cost: 2500.00, stock: 25, reorderPoint: 8 },
+  console.log("🛋️ 6. Creating Product Categories and Catalog...");
+  const categoriesData = [
+    "Living Room Furniture",
+    "Bedroom Furniture",
+    "Office & Workspace",
+    "Dining Room Suites",
+    "Outdoor & Patio",
+    "Kids & Youth",
+    "Custom Modular Combos",
+    "Turnkey Services",
+    "Textiles & Accessories",
   ];
 
-  for (const product of products) {
-    await prisma.product.upsert({
-      where: { sku: product.sku! },
-      update: {},
-      create: product,
-    });
+  const categoriesMap = new Map<string, any>();
+  for (const cat of categoriesData) {
+    const created = await prisma.productCategory.create({ data: { name: cat } });
+    categoriesMap.set(cat, created);
   }
 
-  const allProducts = await prisma.product.findMany();
-  const getProductBySku = (sku: string) => allProducts.find(p => p.sku === sku);
+  const productsData = [
+    // GOODS - Normal, Low-Stock, Out-of-Stock
+    {
+      name: "Royal Teak Wood 3-Seater Sofa",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "LR-SOFA-TEK-001",
+      material: "Grade-A Indian Teak, Belgian Linen Upholstery",
+      dimensions: "84\"W x 38\"D x 36\"H",
+      salesPrice: 48000,
+      cost: 26000,
+      stock: 15,
+      reorderPoint: 4,
+      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Sheesham Leather L-Shape Sectional",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "LR-SOFA-SHS-002",
+      material: "Solid Sheesham Wood, Italian Top-Grain Leather",
+      dimensions: "115\"W x 80\"D x 34\"H",
+      salesPrice: 88000,
+      cost: 46000,
+      stock: 3, // LOW STOCK TRIGGER (stock <= reorderPoint)
+      reorderPoint: 5,
+      image: "https://images.unsplash.com/photo-1493663284031-b7e3aefcae8e?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Handcrafted Rattan Accent Lounge Chair",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "LR-CHAIR-RAT-003",
+      material: "Natural Cane Rattan, Brass Leg Caps",
+      dimensions: "30\"W x 32\"D x 34\"H",
+      salesPrice: 18500,
+      cost: 9200,
+      stock: 22,
+      reorderPoint: 6,
+      image: "https://images.unsplash.com/photo-1580481077195-c990be10459c?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Minimalist Brass & Marble Coffee Table",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "LR-TABL-MRB-004",
+      material: "Makarana White Marble, Brushed Brass Base",
+      dimensions: "48\"W x 24\"D x 18\"H",
+      salesPrice: 24000,
+      cost: 12500,
+      stock: 0, // OUT OF STOCK
+      reorderPoint: 4,
+      image: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Maharaja King Size Storage Bed - Teak",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Bedroom Furniture")!.id,
+      sku: "BR-BED-TEK-KNG",
+      material: "Seasoned Teak Wood with Hydraulic Storage",
+      dimensions: "82\"W x 86\"D x 50\"H",
+      salesPrice: 62000,
+      cost: 33000,
+      stock: 8,
+      reorderPoint: 3,
+      image: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "4-Door Wardrobe with Fluted Glass",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Bedroom Furniture")!.id,
+      sku: "BR-WARD-FLT-002",
+      material: "Solid Walnut Veneer, Fluted Toughened Glass",
+      dimensions: "72\"W x 24\"D x 84\"H",
+      salesPrice: 68000,
+      cost: 36000,
+      stock: 2, // LOW STOCK
+      reorderPoint: 3,
+      image: "https://images.unsplash.com/photo-1595428774223-ef52624120d2?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Executive Ergonomic Walnut Desk",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Office & Workspace")!.id,
+      sku: "OF-DESK-WAL-001",
+      material: "American Walnut, Concealed Cable Trough",
+      dimensions: "70\"W x 34\"D x 30\"H",
+      salesPrice: 52000,
+      cost: 27000,
+      stock: 12,
+      reorderPoint: 4,
+      image: "https://images.unsplash.com/photo-1518455027359-f3f8164ba6bd?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "High-Back Leather Mesh Office Chair",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Office & Workspace")!.id,
+      sku: "OF-CHAIR-ERG-002",
+      material: "German Synchronous Mechanism, Italian Leather Seat",
+      dimensions: "26\"W x 26\"D x 44\"H",
+      salesPrice: 16500,
+      cost: 8200,
+      stock: 35,
+      reorderPoint: 10,
+      image: "https://images.unsplash.com/photo-1580481077195-c990be10459c?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Sheesham 8-Seater Dining Table Set",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Dining Room Suites")!.id,
+      sku: "DR-SET-8ST-001",
+      material: "Solid Sheesham Wood Table + 8 Cushioned Chairs",
+      dimensions: "96\"W x 42\"D x 30\"H",
+      salesPrice: 75000,
+      cost: 39000,
+      stock: 6,
+      reorderPoint: 2,
+      image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "All-Weather Teak Patio Dining Suite",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Outdoor & Patio")!.id,
+      sku: "OD-DSET-TEK-001",
+      material: "Marine-Grade Teak Wood, Weatherproof Sunbrella Fabric",
+      dimensions: "72\"W x 38\"D x 30\"H",
+      salesPrice: 85000,
+      cost: 44000,
+      stock: 5,
+      reorderPoint: 2,
+      image: "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Handwoven Kashmir Wool Area Rug 9x12",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Textiles & Accessories")!.id,
+      sku: "TX-RUG-KSH-001",
+      material: "100% Hand-knotted Merino Wool",
+      dimensions: "9' x 12'",
+      salesPrice: 28000,
+      cost: 14000,
+      stock: 14,
+      reorderPoint: 4,
+      image: "https://images.unsplash.com/photo-1600121848594-d8644e57abab?w=500&auto=format&fit=crop&q=80",
+    },
 
-  console.log(`✓ Created ${products.length} products\n`);
+    // COMBO
+    {
+      name: "Custom Modular Chef's Kitchen Suite",
+      type: ProductType.COMBO,
+      categoryId: categoriesMap.get("Custom Modular Combos")!.id,
+      sku: "CM-KITCHEN-MOD-01",
+      material: "Marine BWP Plywood, Acrylic & Ceramic Countertops",
+      dimensions: "Custom site-fitted",
+      salesPrice: 245000,
+      cost: 135000,
+      stock: 0,
+      reorderPoint: 0,
+      image: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Master Walk-in Wardrobe Dressing Unit",
+      type: ProductType.COMBO,
+      categoryId: categoriesMap.get("Custom Modular Combos")!.id,
+      sku: "CM-WARD-WALK-02",
+      material: "Hettich Soft-Close Hardware, Smoked Mirror Accents",
+      dimensions: "Custom layout",
+      salesPrice: 165000,
+      cost: 90000,
+      stock: 0,
+      reorderPoint: 0,
+      image: "https://images.unsplash.com/photo-1558997519-83ea9252def8?w=500&auto=format&fit=crop&q=80",
+    },
 
-  // ============================================================================
-  // 7. ANALYTIC ACCOUNTS - For budget tracking
-  // ============================================================================
-  console.log("📈 Creating analytic accounts...");
-  const analyticAccounts = [
-    // Income analytics
-    { name: "Delhi Showroom - Revenue", type: AnalyticAccountType.INCOME },
-    { name: "Mumbai Showroom - Revenue", type: AnalyticAccountType.INCOME },
-    { name: "Bangalore Showroom - Revenue", type: AnalyticAccountType.INCOME },
-    { name: "Online Sales Channel", type: AnalyticAccountType.INCOME },
-    { name: "B2B Corporate Sales", type: AnalyticAccountType.INCOME },
-    { name: "Custom Furniture Orders", type: AnalyticAccountType.INCOME },
-    { name: "Interior Design Projects", type: AnalyticAccountType.INCOME },
-    { name: "Service Revenue", type: AnalyticAccountType.INCOME },
-    { name: "Warranty & Extended Services", type: AnalyticAccountType.INCOME },
-
-    // Expense analytics
-    { name: "Manufacturing - Labour", type: AnalyticAccountType.EXPENSES },
-    { name: "Manufacturing - Materials", type: AnalyticAccountType.EXPENSES },
-    { name: "Marketing Campaign - Summer 2026", type: AnalyticAccountType.EXPENSES },
-    { name: "Marketing Campaign - Festival 2026", type: AnalyticAccountType.EXPENSES },
-    { name: "Delhi Showroom - Operations", type: AnalyticAccountType.EXPENSES },
-    { name: "Mumbai Showroom - Operations", type: AnalyticAccountType.EXPENSES },
-    { name: "Warehouse & Logistics", type: AnalyticAccountType.EXPENSES },
-    { name: "Digital Marketing & E-commerce", type: AnalyticAccountType.EXPENSES },
-    { name: "Customer Support & Service", type: AnalyticAccountType.EXPENSES },
+    // SERVICE
+    {
+      name: "White-Glove Express Delivery (Local NCR)",
+      type: ProductType.SERVICE,
+      categoryId: categoriesMap.get("Turnkey Services")!.id,
+      sku: "SV-DELIV-NCR",
+      salesPrice: 2500,
+      cost: 800,
+      stock: 0,
+      reorderPoint: 0,
+      image: null,
+    },
+    {
+      name: "Professional On-Site Assembly & Fitting",
+      type: ProductType.SERVICE,
+      categoryId: categoriesMap.get("Turnkey Services")!.id,
+      sku: "SV-ASSEM-PRO",
+      salesPrice: 3500,
+      cost: 1200,
+      stock: 0,
+      reorderPoint: 0,
+      image: null,
+    },
+    {
+      name: "Residential Interior Architecture Consultation",
+      type: ProductType.SERVICE,
+      categoryId: categoriesMap.get("Turnkey Services")!.id,
+      sku: "SV-INTD-CONSULT",
+      salesPrice: 15000,
+      cost: 4000,
+      stock: 0,
+      reorderPoint: 0,
+      image: null,
+    },
+    {
+      name: "Heritage Furniture Re-polishing & Restoration",
+      type: ProductType.SERVICE,
+      categoryId: categoriesMap.get("Turnkey Services")!.id,
+      sku: "SV-RESTORE-WOOD",
+      salesPrice: 8500,
+      cost: 2500,
+      stock: 0,
+      reorderPoint: 0,
+      image: null,
+    },
   ];
 
-  const createdAnalyticAccounts = new Map();
-  for (const analyticAccount of analyticAccounts) {
-    const created = await prisma.analyticAccount.upsert({
-      where: { name: analyticAccount.name },
-      update: {},
-      create: analyticAccount,
-    });
-    createdAnalyticAccounts.set(analyticAccount.name, created);
+  const productsMap = new Map<string, any>();
+  for (const p of productsData) {
+    const created = await prisma.product.create({ data: p });
+    productsMap.set(p.sku, created);
   }
-  console.log(`✓ Created ${analyticAccounts.length} analytic accounts\n`);
+  console.log(`✓ Created ${productsData.length} Products (Goods, Combos, and Services).`);
 
   // ============================================================================
-  // 8. CONTACTS - 40+ Indian Vendors and Customers
+  // 7. USERS (All 3 UserRole: ADMINISTRATOR, ACCOUNTANT, CONTACT)
   // ============================================================================
-  console.log("👥 Creating Indian contacts...");
-  const contacts = [
-    // Major Vendors
-    { name: "Rajendra Wood Suppliers - Mumbai", type: ContactType.VENDOR, email: "orders@rajendra-wood.in", phone: "+91-22-6789-1234", address: "123 Wood Market, Dadar, Mumbai 400014, India" },
-    { name: "Sheesham Timber Traders - Delhi", type: ContactType.VENDOR, email: "sales@sheesham-traders.in", phone: "+91-11-4567-8901", address: "45 Industrial Area, Rohini, Delhi 110085, India" },
-    { name: "Mango Wood Industries - Bangalore", type: ContactType.VENDOR, email: "supply@mangoindustries.com", phone: "+91-80-2234-5678", address: "234 Tech Park, Whitefield, Bangalore 560066, India" },
-    { name: "Fabric Wholesale - Surat", type: ContactType.VENDOR, email: "bulk@fabricwholesale.in", phone: "+91-261-2341-567", address: "567 Textile Plaza, Udhna, Surat 394210, India" },
-    { name: "Leather Tannery Exports - Chennai", type: ContactType.VENDOR, email: "exports@leathertannery.in", phone: "+91-44-2341-5678", address: "890 Leather Complex, Ambattur, Chennai 600058, India" },
-    { name: "Metal & Hardware Solutions - Pune", type: ContactType.VENDOR, email: "orders@metalhard.in", phone: "+91-20-6789-0123", address: "456 Industrial Hub, Bhosari, Pune 411026, India" },
-    { name: "Packaging & Logistics India - Hyderabad", type: ContactType.VENDOR, email: "logistics@packlogistia.in", phone: "+91-40-2341-5670", address: "789 Logistics Park, Hitech City, Hyderabad 500081, India" },
-    { name: "Electrical & Fittings - Ahmedabad", type: ContactType.VENDOR, email: "parts@electricfit.in", phone: "+91-79-2234-5670", address: "234 Industrial Zone, Naroda, Ahmedabad 382330, India" },
-    { name: "Paint & Varnish Suppliers - Kolkata", type: ContactType.VENDOR, email: "supply@paintvar.in", phone: "+91-33-2341-5678", address: "123 Chemical Street, Shyambazar, Kolkata 700005, India" },
-    { name: "Glass & Mirror Manufacturing - Jaipur", type: ContactType.VENDOR, email: "sales@glassmir.in", phone: "+91-141-2341-567", address: "567 Glass Factory, Sitapura, Jaipur 302022, India" },
-    { name: "Upholstery & Foam Supplier - Ludhiana", type: ContactType.VENDOR, email: "supply@foamupholster.in", phone: "+91-161-2341-567", address: "456 Industrial Area, Focusband, Ludhiana 141001, India" },
-    { name: "Fasteners & Hardware - Nagpur", type: ContactType.VENDOR, email: "sales@fasthard.in", phone: "+91-712-2341-567", address: "789 Hardware Lane, Gittikhadan, Nagpur 440013, India" },
+  console.log("👤 7. Creating Users with credentials and S3 banners...");
+  const adminHash = await hash("Admin@123", 10);
+  const acctHash = await hash("Account@123", 10);
+  const portalHash = await hash("Contact@123", 10);
 
-    // Corporate Customers - Hotels & Hospitality
-    { name: "Taj Hotels Group - New Delhi", type: ContactType.CUSTOMER, email: "procurement@tajhotels.com", phone: "+91-11-6162-7000", address: "1 Mansingh Road, New Delhi 110001, India" },
-    { name: "ITC Hotels - Mumbai", type: ContactType.CUSTOMER, email: "procurement@itchotels.com", phone: "+91-22-5676-5000", address: "Marine Drive, Mumbai 400001, India" },
-    { name: "Oberoi Hotels - Bangalore", type: ContactType.CUSTOMER, email: "supply@oberoihotels.com", phone: "+91-80-2215-3040", address: "37-39 MG Road, Bangalore 560001, India" },
-    { name: "Marriott International - Hyderabad", type: ContactType.CUSTOMER, email: "procurement@marriott.com", phone: "+91-40-3321-0000", address: "HITEC City, Hyderabad 500081, India" },
-    { name: "Park Hotels - Chennai", type: ContactType.CUSTOMER, email: "supply@parkhotels.in", phone: "+91-44-2139-4000", address: "132 Cathedral Road, Chennai 600086, India" },
-
-    // Corporate Customers - Co-working & Offices
-    { name: "WeWork India - Gurugram", type: ContactType.CUSTOMER, email: "facilities@wework-india.com", phone: "+91-124-4001-234", address: "Sector 44, Gurugram 122003, India" },
-    { name: "Regus Business Centers - Pune", type: ContactType.CUSTOMER, email: "operations@regus.in", phone: "+91-20-4567-890", address: "Hinjewadi, Pune 411057, India" },
-    { name: "The Address Co-working - Bangalore", type: ContactType.CUSTOMER, email: "admin@addresscowork.com", phone: "+91-80-6789-0123", address: "Indiranagar, Bangalore 560038, India" },
-
-    // Corporate Customers - Offices & Institutions
-    { name: "NASSCOM - IT Council", type: ContactType.CUSTOMER, email: "procurement@nasscom.in", phone: "+91-40-2358-0000", address: "Hyderabad, Telangana, India" },
-    { name: "TCS Corporate Office - Bangalore", type: ContactType.CUSTOMER, email: "facilities@tcs.com", phone: "+91-80-2762-0000", address: "Trivandrum, Bangalore 560092, India" },
-    { name: "Infosys Headquarters - Bangalore", type: ContactType.CUSTOMER, email: "procurement@infosys.com", phone: "+91-80-2852-0000", address: "Electronics City, Bangalore 560100, India" },
-    { name: "Indian Government - Public Works", type: ContactType.CUSTOMER, email: "tenders@pwd.gov.in", phone: "+91-11-2309-2018", address: "New Delhi, India" },
-
-    // Corporate Customers - Retail & Others
-    { name: "Big Bazaar Stores - Mumbai", type: ContactType.CUSTOMER, email: "procurement@bigbazaar.com", phone: "+91-22-5654-5000", address: "Reliance Tower, Mumbai 400076, India" },
-    { name: "Bata India - New Delhi", type: ContactType.CUSTOMER, email: "supply@bata.in", phone: "+91-11-4111-5555", address: "Faridabad, Haryana, India" },
-
-    // Individual Customers - High-value
-    { name: "Rajesh Kumar", type: ContactType.CUSTOMER, email: "rajesh.kumar@email.in", phone: "+91-98765-43210", address: "Sector 15, Noida, Uttar Pradesh 201301, India" },
-    { name: "Priya Sharma", type: ContactType.CUSTOMER, email: "priya.sharma@email.in", phone: "+91-98765-43211", address: "Bandra West, Mumbai 400050, India" },
-    { name: "Amit Patel", type: ContactType.CUSTOMER, email: "amit.patel@email.in", phone: "+91-98765-43212", address: "Whitefield, Bangalore 560066, India" },
-    { name: "Neha Singh", type: ContactType.CUSTOMER, email: "neha.singh@email.in", phone: "+91-98765-43213", address: "Sector 3, Chandigarh 160003, India" },
-    { name: "Vikram Reddy", type: ContactType.CUSTOMER, email: "vikram.reddy@email.in", phone: "+91-98765-43214", address: "Hyderabad, Telangana 500082, India" },
-    { name: "Anjali Verma", type: ContactType.CUSTOMER, email: "anjali.verma@email.in", phone: "+91-98765-43215", address: "Delhi Cantonment, New Delhi 110010, India" },
-    { name: "Suresh Nair", type: ContactType.CUSTOMER, email: "suresh.nair@email.in", phone: "+91-98765-43216", address: "Fort Kochi, Kerala 682001, India" },
-    { name: "Divya Sharma", type: ContactType.CUSTOMER, email: "divya.sharma@email.in", phone: "+91-98765-43217", address: "Jaipur, Rajasthan 302001, India" },
-
-    // Both (Vendor & Customer)
-    { name: "Designer Furniture Marketplace - Delhi", type: ContactType.BOTH, email: "trading@designfurniture.in", phone: "+91-11-4123-5678", address: "Shahpur Jat, New Delhi 110049, India" },
-  ];
-
-  const createdContacts = new Map();
-  for (const contact of contacts) {
-    const created = await prisma.contact.upsert({
-      where: { email: contact.email },
-      update: {},
-      create: contact,
-    });
-    createdContacts.set(contact.name, created);
-  }
-  console.log(`✓ Created ${contacts.length} contacts\n`);
-
-  // ============================================================================
-  // 9. USERS
-  // ============================================================================
-  console.log("👤 Creating users...");
-  const hashedAdminPassword = await hash("Admin@123", 12);
-  const hashedAccountantPassword = await hash("Account@123", 12);
-  const hashedContactPassword = await hash("Contact@123", 12);
-
-  const adminUser = await prisma.user.upsert({
-    where: { loginId: "admin001" },
-    update: {},
-    create: {
+  // 1. Administrator
+  const adminUser = await prisma.user.create({
+    data: {
       loginId: "admin001",
       email: "admin@maharajafurniture.in",
-      password: hashedAdminPassword,
-      name: "Amit Administrative",
+      password: adminHash,
+      name: "Amitabh Singhania",
       role: UserRole.ADMINISTRATOR,
+      avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+      bannerUrl: banners[0],
       isActive: true,
+      mustChangePassword: false,
     },
   });
 
-  const accountantUser = await prisma.user.upsert({
-    where: { loginId: "acct001" },
-    update: {},
-    create: {
+  // 2. Accountant
+  const acctUser = await prisma.user.create({
+    data: {
       loginId: "acct001",
       email: "accountant@maharajafurniture.in",
-      password: hashedAccountantPassword,
-      name: "Ravi Accountant",
+      password: acctHash,
+      name: "Pooja Deshmukh (CA)",
       role: UserRole.ACCOUNTANT,
+      avatarUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&auto=format&fit=crop&q=80",
+      bannerUrl: banners[1],
       isActive: true,
+      mustChangePassword: false,
     },
   });
 
-  // Portal users
-  const rajeshContact = createdContacts.get("Rajesh Kumar")!;
-  const rajeshUser = await prisma.user.upsert({
-    where: { email: "rajesh.kumar@email.in" },
-    update: {},
-    create: {
+  // 3. Customer Portal User 1
+  const custPortalUser1 = await prisma.user.create({
+    data: {
       loginId: "cust001",
+      email: "procurement@tajhotels.com",
+      password: portalHash,
+      name: "Vikramaditya Oberoi",
+      role: UserRole.CONTACT,
+      avatarUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&auto=format&fit=crop&q=80",
+      bannerUrl: banners[2],
+      isActive: true,
+      mustChangePassword: false,
+    },
+  });
+
+  // 4. Customer Portal User 2
+  const custPortalUser2 = await prisma.user.create({
+    data: {
+      loginId: "cust002",
       email: "rajesh.kumar@email.in",
-      password: hashedContactPassword,
+      password: portalHash,
       name: "Rajesh Kumar",
       role: UserRole.CONTACT,
+      avatarUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&auto=format&fit=crop&q=80",
+      bannerUrl: banners[3],
       isActive: true,
+      mustChangePassword: false,
     },
   });
-  await prisma.contact.update({
-    where: { id: rajeshContact.id },
-    data: { userId: rajeshUser.id },
-  });
 
-  const tajHotelsContact = createdContacts.get("Taj Hotels Group - New Delhi")!;
-  const tajUser = await prisma.user.upsert({
-    where: { email: "procurement@tajhotels.com" },
-    update: {},
-    create: {
-      loginId: "cust002",
-      email: "procurement@tajhotels.com",
-      password: hashedContactPassword,
-      name: "Taj Hotels Procurement",
+  // 5. Vendor Portal User
+  const vendPortalUser = await prisma.user.create({
+    data: {
+      loginId: "vend001",
+      email: "orders@rajendra-wood.in",
+      password: portalHash,
+      name: "Rajendra Sharma (Vendor Partner)",
       role: UserRole.CONTACT,
+      avatarUrl: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&auto=format&fit=crop&q=80",
+      bannerUrl: banners[4],
       isActive: true,
+      mustChangePassword: false,
     },
   });
-  await prisma.contact.update({
-    where: { id: tajHotelsContact.id },
-    data: { userId: tajUser.id },
-  });
 
-  console.log("✓ Created 4 users (admin001, acct001, 2 portal users)\n");
+  console.log("✓ Created 5 Users (Admin, Accountant, 2 Customer Portal Users, 1 Vendor Portal User).");
 
   // ============================================================================
-  // 10. PURCHASE CYCLE - 30+ transactions over 3 months
+  // 8. CONTACTS (All 3 ContactType: CUSTOMER, VENDOR, BOTH)
   // ============================================================================
-  console.log("🛒 Creating purchase cycle transactions...\n");
+  console.log("👥 8. Creating Contacts (Vendors, Customers, Hybrid Partners)...");
+  const contactsData = [
+    // VENDORS
+    {
+      name: "Rajendra Timber & Hardwood Suppliers",
+      type: ContactType.VENDOR,
+      email: "orders@rajendra-wood.in",
+      phone: "+91-22-6789-1234",
+      address: "123 Timber Market Road, Reay Road, Mumbai 400010, Maharashtra",
+      userId: vendPortalUser.id,
+      bannerUrl: banners[4],
+    },
+    {
+      name: "Surat Sustainable Fabric Mills",
+      type: ContactType.VENDOR,
+      email: "wholesale@surattextiles.in",
+      phone: "+91-261-2341-567",
+      address: "45 Ring Road Industrial Hub, Surat 395002, Gujarat",
+      userId: null,
+      bannerUrl: banners[5],
+    },
+    {
+      name: "Pune Precision Steel & Hardware Ltd",
+      type: ContactType.VENDOR,
+      email: "orders@punesteelhardware.com",
+      phone: "+91-20-4567-8901",
+      address: "Plot 88, MIDC Bhosari, Pune 411026, Maharashtra",
+      userId: null,
+      bannerUrl: banners[6],
+    },
+    {
+      name: "Deccan Logistics & Freight Express",
+      type: ContactType.VENDOR,
+      email: "fleet@deccanlogistics.in",
+      phone: "+91-40-2789-0123",
+      address: "Cargo Village, Shamshabad, Hyderabad 500108, Telangana",
+      userId: null,
+      bannerUrl: banners[7],
+    },
 
-  const startDate = new Date("2026-06-01");
-  const endDate = new Date("2026-09-30");
-  let jeCounter = 5000;
+    // CUSTOMERS
+    {
+      name: "Taj Palace & Luxury Hotels Group",
+      type: ContactType.CUSTOMER,
+      email: "procurement@tajhotels.com",
+      phone: "+91-11-6162-7000",
+      address: "Taj Palace Hotel, 2 Sardar Patel Marg, Chanakyapuri, New Delhi 110021",
+      userId: custPortalUser1.id,
+      bannerUrl: banners[2],
+    },
+    {
+      name: "Rajesh Kumar (High-Net-Worth Architect)",
+      type: ContactType.CUSTOMER,
+      email: "rajesh.kumar@email.in",
+      phone: "+91-98765-43210",
+      address: "Villa 14, Magnolia Enclave, Golf Course Road, Gurugram 122002, Haryana",
+      userId: custPortalUser2.id,
+      bannerUrl: banners[3],
+    },
+    {
+      name: "WeWork India Operations",
+      type: ContactType.CUSTOMER,
+      email: "facilities@wework-india.com",
+      phone: "+91-124-4001-234",
+      address: "Two Horizon Center, Golf Course Road, Gurugram 122002, Haryana",
+      userId: null,
+      bannerUrl: banners[0],
+    },
+    {
+      name: "ITC Maratha Grand Resort & Convention",
+      type: ContactType.CUSTOMER,
+      email: "purchasing@itchotels.in",
+      phone: "+91-22-2830-3030",
+      address: "Sahar Airport Road, Andheri East, Mumbai 400099, Maharashtra",
+      userId: null,
+      bannerUrl: banners[1],
+    },
+    {
+      name: "Priya Sharma",
+      type: ContactType.CUSTOMER,
+      email: "priya.sharma@residential.in",
+      phone: "+91-98112-99887",
+      address: "Flat 902, Tower B, Oberoi Springs, Andheri West, Mumbai 400053",
+      userId: null,
+      bannerUrl: banners[2],
+    },
 
-  // Helper function to create purchase orders and bills
-  const purchaseTransactions = [
+    // BOTH (Hybrid Partner)
     {
-      vendor: "Rajendra Wood Suppliers - Mumbai",
-      items: [
-        { sku: "LR-SOFA-TEK-001", qty: 8, analyticAccount: "Manufacturing - Materials" },
-        { sku: "BR-BED-TEK-KNG", qty: 6, analyticAccount: "Manufacturing - Materials" },
-      ],
-      paid: PaymentStatus.PAID,
-    },
-    {
-      vendor: "Sheesham Timber Traders - Delhi",
-      items: [
-        { sku: "LR-TABL-SHEE-001", qty: 12, analyticAccount: "Manufacturing - Materials" },
-        { sku: "OF-DESK-TEK-EXE", qty: 5, analyticAccount: "Manufacturing - Materials" },
-      ],
-      paid: PaymentStatus.PARTIAL,
-    },
-    {
-      vendor: "Mango Wood Industries - Bangalore",
-      items: [
-        { sku: "BR-NIGHT-MANG-001", qty: 20, analyticAccount: "Manufacturing - Materials" },
-        { sku: "AC-RUG-8x10-001", qty: 10, analyticAccount: "Manufacturing - Materials" },
-      ],
-      paid: PaymentStatus.NOT_PAID,
-    },
-    {
-      vendor: "Fabric Wholesale - Surat",
-      items: [
-        { sku: "LR-SOFA-CRNR-001", qty: 4, analyticAccount: "Manufacturing - Materials" },
-        { sku: "AC-CUSH-4ST-001", qty: 30, analyticAccount: "Manufacturing - Materials" },
-      ],
-      paid: PaymentStatus.PAID,
-    },
-    {
-      vendor: "Metal & Hardware Solutions - Pune",
-      items: [
-        { sku: "OF-SHELF-4T-WOD", qty: 8, analyticAccount: "Manufacturing - Materials" },
-        { sku: "OF-FILE-4D-MTL", qty: 6, analyticAccount: "Manufacturing - Materials" },
-      ],
-      paid: PaymentStatus.PARTIAL,
-    },
-    {
-      vendor: "Packaging & Logistics India - Hyderabad",
-      items: [
-        { sku: "AC-THROW-PREM-001", qty: 25, analyticAccount: "Warehouse & Logistics" },
-      ],
-      paid: PaymentStatus.PAID,
+      name: "Apex Interior Turnkey Solutions & Procurement",
+      type: ContactType.BOTH,
+      email: "partner@apexturnkey.in",
+      phone: "+91-80-4123-9087",
+      address: "14 Infantry Road, Shivajinagar, Bangalore 560001, Karnataka",
+      userId: null,
+      bannerUrl: banners[3],
     },
   ];
 
-  for (let i = 0; i < purchaseTransactions.length; i++) {
-    const txn = purchaseTransactions[i];
-    const vendor = createdContacts.get(txn.vendor)!;
-    const poDate = getDateInRange(startDate, endDate);
-    const billDate = new Date(poDate);
-    billDate.setDate(billDate.getDate() + 7);
-    const dueDate = new Date(billDate);
-    dueDate.setDate(dueDate.getDate() + 30);
+  const contactsMap = new Map<string, any>();
+  for (const c of contactsData) {
+    const created = await prisma.contact.create({ data: c });
+    contactsMap.set(c.name, created);
+    contactsMap.set(c.email, created);
+  }
+  console.log(`✓ Created ${contactsData.length} Contacts (including linked Portal Accounts).`);
 
-    let totalAmount = 0;
-    const poLines = txn.items.map(item => {
-      const product = getProductBySku(item.sku)!;
-      const lineTotal = product.cost.toNumber() * item.qty;
-      totalAmount += lineTotal;
+  // ============================================================================
+  // 8. MULTI-MONTH TRANSACTION SETUP (Apr 2026 - Sep 2026)
+  // ============================================================================
+  console.log("🔄 8. Building Purchases, Sales, Invoices, Bills, and Balanced General Ledger...");
+
+  let poIndex = 1001;
+  let billIndex = 2001;
+  let soIndex = 3001;
+  let invIndex = 4001;
+  let jeIndex = 5001;
+
+  // ----------------------------------------------------------------------------
+  // A. PURCHASE CYCLE (PO, Vendor Bills, Payments, JE, BillEmailLogs)
+  // ----------------------------------------------------------------------------
+  const purchaseScenarios = [
+    // Month 1: April 2026 (PAID)
+    {
+      vendorName: "Rajendra Timber & Hardwood Suppliers",
+      date: new Date("2026-04-10"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      items: [
+        { sku: "LR-SOFA-TEK-001", qty: 6, analytic: "Direct Raw Materials" },
+        { sku: "BR-BED-TEK-KNG", qty: 4, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 2: May 2026 (PAID)
+    {
+      vendorName: "Surat Sustainable Fabric Mills",
+      date: new Date("2026-05-12"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      items: [
+        { sku: "LR-SOFA-SHS-002", qty: 5, analytic: "Direct Raw Materials" },
+        { sku: "TX-RUG-KSH-001", qty: 8, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 3: June 2026 (PARTIAL)
+    {
+      vendorName: "Pune Precision Steel & Hardware Ltd",
+      date: new Date("2026-06-18"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PARTIAL,
+      items: [
+        { sku: "OF-DESK-WAL-001", qty: 8, analytic: "Direct Raw Materials" },
+        { sku: "OF-CHAIR-ERG-002", qty: 15, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 4: July 2026 (PAID)
+    {
+      vendorName: "Deccan Logistics & Freight Express",
+      date: new Date("2026-07-20"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      items: [
+        { sku: "SV-DELIV-NCR", qty: 20, analytic: "Logistics & Fleet Transport" },
+      ],
+      paymentMethod: PaymentMethod.CASH,
+    },
+    // Month 5: August 2026 (OVERDUE NOT_PAID)
+    {
+      vendorName: "Rajendra Timber & Hardwood Suppliers",
+      date: new Date("2026-08-05"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      items: [
+        { sku: "DR-SET-8ST-001", qty: 5, analytic: "Direct Raw Materials" },
+        { sku: "OD-DSET-TEK-001", qty: 3, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 6: September 2026 (CURRENT MONTH - DUE SOON, NOT_PAID)
+    {
+      vendorName: "Surat Sustainable Fabric Mills",
+      date: new Date("2026-09-02"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      items: [
+        { sku: "LR-CHAIR-RAT-003", qty: 10, analytic: "Manufacturing Factory Labour" },
+        { sku: "BR-WARD-FLT-002", qty: 4, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 6: September 2026 (CURRENT MONTH - DRAFT PO & BILL)
+    {
+      vendorName: "Pune Precision Steel & Hardware Ltd",
+      date: new Date("2026-09-04"),
+      status: DocumentStatus.DRAFT,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      items: [
+        { sku: "OF-DESK-WAL-001", qty: 4, analytic: "Showroom Lease & Operational Overhead" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+    // Month 6: CANCELLED PO
+    {
+      vendorName: "Deccan Logistics & Freight Express",
+      date: new Date("2026-09-01"),
+      status: DocumentStatus.CANCELLED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      items: [
+        { sku: "SV-DELIV-NCR", qty: 5, analytic: "Logistics & Fleet Transport" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
+  ];
+
+  for (const sc of purchaseScenarios) {
+    const vendor = contactsMap.get(sc.vendorName)!;
+    const poNumber = `PO-2026-${pad4(poIndex++)}`;
+
+    let poTotal = 0;
+    const poLineCreations = sc.items.map((item) => {
+      const prod = productsMap.get(item.sku)!;
+      const analytic = analyticMap.get(item.analytic)!;
+      const unitPrice = Number(prod.cost);
+      const lineTotal = unitPrice * item.qty;
+      poTotal += lineTotal;
       return {
-        productId: product.id,
-        analyticAccountId: createdAnalyticAccounts.get(item.analyticAccount)!.id,
+        productId: prod.id,
+        analyticAccountId: analytic.id,
         quantity: item.qty,
-        unitPrice: product.cost.toNumber(),
-        lineTotal: lineTotal,
+        unitPrice,
+        lineTotal,
       };
     });
 
     const po = await prisma.purchaseOrder.create({
       data: {
-        poNumber: `PO-2026-${String(poCounter).padStart(4, "0")}`,
+        poNumber,
         vendorId: vendor.id,
-        orderDate: poDate,
-        status: DocumentStatus.CONFIRMED,
-        total: totalAmount,
+        orderDate: sc.date,
+        status: sc.status,
+        total: poTotal,
         createdById: adminUser.id,
-        lines: { create: poLines },
+        lines: { create: poLineCreations },
       },
     });
-    poCounter++;
 
-    // Create Bill
-    let billAmountPaid = 0;
-    if (txn.paid === PaymentStatus.PAID) {
-      billAmountPaid = totalAmount;
-    } else if (txn.paid === PaymentStatus.PARTIAL) {
-      billAmountPaid = Math.round(totalAmount * 0.6 * 100) / 100;
+    // Create Vendor Bill if PO is not Cancelled
+    if (sc.status !== DocumentStatus.CANCELLED) {
+      const billNumber = `BILL-2026-${pad4(billIndex++)}`;
+      const billDate = new Date(sc.date);
+      const dueDate = new Date(billDate);
+      dueDate.setDate(dueDate.getDate() + 25); // 25 day payment terms
+
+      let amountPaid = 0;
+      if (sc.paymentStatus === PaymentStatus.PAID) {
+        amountPaid = poTotal;
+      } else if (sc.paymentStatus === PaymentStatus.PARTIAL) {
+        amountPaid = Math.round(poTotal * 0.5 * 100) / 100;
+      }
+      const amountDue = poTotal - amountPaid;
+
+      const bill = await prisma.vendorBill.create({
+        data: {
+          billNumber,
+          vendorId: vendor.id,
+          purchaseOrderId: po.id,
+          billDate,
+          dueDate,
+          status: sc.status,
+          paymentStatus: sc.paymentStatus,
+          total: poTotal,
+          amountPaid,
+          amountDue,
+          reminderCount: sc.paymentStatus === PaymentStatus.NOT_PAID ? 2 : 0,
+          lastReminderSentAt: sc.paymentStatus === PaymentStatus.NOT_PAID ? new Date(sc.date.getTime() + 86400000 * 15) : null,
+          createdById: acctUser.id,
+          lines: {
+            create: poLineCreations.map((l) => ({
+              productId: l.productId,
+              analyticAccountId: l.analyticAccountId,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              lineTotal: l.lineTotal,
+            })),
+          },
+        },
+      });
+
+      // Post Journal Entry if Bill is Confirmed
+      if (sc.status === DocumentStatus.CONFIRMED) {
+        const jeBillNumber = `JE-2026-${pad4(jeIndex++)}`;
+        await prisma.journalEntry.create({
+          data: {
+            entryNumber: jeBillNumber,
+            journalId: journalsMap.get("PUR")!.id,
+            accountingDate: billDate,
+            status: JournalEntryStatus.POSTED,
+            source: JournalEntrySource.VENDOR_BILL,
+            totalDebit: poTotal,
+            totalCredit: poTotal,
+            vendorBillId: bill.id,
+            createdById: acctUser.id,
+            lines: {
+              create: [
+                {
+                  accountId: accountsMap.get("5000")!.id, // Cost of Goods Sold / Purchases
+                  partnerId: vendor.id,
+                  debit: poTotal,
+                  credit: 0,
+                },
+                {
+                  accountId: accountsMap.get("2000")!.id, // Accounts Payable
+                  partnerId: vendor.id,
+                  debit: 0,
+                  credit: poTotal,
+                },
+              ],
+            },
+          },
+        });
+
+        // Bill Payment record + Payment Journal Entry
+        if (amountPaid > 0) {
+          const payDate = new Date(billDate);
+          payDate.setDate(payDate.getDate() + 5);
+
+          const billPayment = await prisma.billPayment.create({
+            data: {
+              vendorBillId: bill.id,
+              amount: amountPaid,
+              paymentDate: payDate,
+              paymentMethod: sc.paymentMethod,
+              note: `Settlement for ${billNumber} via ${sc.paymentMethod}`,
+            },
+          });
+
+          const jePayNumber = `JE-2026-${pad4(jeIndex++)}`;
+          await prisma.journalEntry.create({
+            data: {
+              entryNumber: jePayNumber,
+              journalId: sc.paymentMethod === PaymentMethod.BANK ? journalsMap.get("BNK")!.id : journalsMap.get("CSH")!.id,
+              accountingDate: payDate,
+              status: JournalEntryStatus.POSTED,
+              source: JournalEntrySource.BILL_PAYMENT,
+              totalDebit: amountPaid,
+              totalCredit: amountPaid,
+              billPaymentId: billPayment.id,
+              createdById: acctUser.id,
+              lines: {
+                create: [
+                  {
+                    accountId: accountsMap.get("2000")!.id, // Debit Accounts Payable
+                    partnerId: vendor.id,
+                    debit: amountPaid,
+                    credit: 0,
+                  },
+                  {
+                    accountId: sc.paymentMethod === PaymentMethod.BANK ? accountsMap.get("1010")!.id : accountsMap.get("1000")!.id, // Credit Bank or Cash
+                    partnerId: null,
+                    debit: 0,
+                    credit: amountPaid,
+                  },
+                ],
+              },
+            },
+          });
+        }
+
+        // Bill Email Logs (Audit)
+        if (sc.paymentStatus === PaymentStatus.NOT_PAID) {
+          await prisma.billEmailLog.create({
+            data: {
+              vendorBillId: bill.id,
+              recipientEmail: vendor.email,
+              recipientName: vendor.name,
+              emailType: EmailReminderType.OVERDUE,
+              subject: `Urgent: Overdue Settlement Alert for Bill ${billNumber}`,
+              status: EmailDeliveryStatus.SENT,
+              sentAt: new Date(billDate.getTime() + 86400000 * 26),
+            },
+          });
+        }
+      }
     }
+  }
+  console.log("✓ Created Purchase Orders, Vendor Bills, Bill Payments, and Balanced Purchase JEs.");
 
-    const bill = await prisma.vendorBill.create({
+  // ----------------------------------------------------------------------------
+  // B. SALES CYCLE (SO, Customer Invoices, Payments, Razorpay, JEs, InvoiceEmailLogs)
+  // ----------------------------------------------------------------------------
+  const salesScenarios = [
+    // Month 1: April 2026 (PAID - Corporate)
+    {
+      customerName: "Taj Palace & Luxury Hotels Group",
+      date: new Date("2026-04-15"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "LR-SOFA-TEK-001", qty: 8, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Delhi Flagship Showroom" },
+        { sku: "DR-SET-8ST-001", qty: 4, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Delhi Flagship Showroom" },
+        { sku: "SV-DELIV-NCR", qty: 2, tax: "GST 0% (Exempted)", analytic: "After-Sales & Assembly Services" },
+      ],
+    },
+    // Month 2: May 2026 (PAID - Razorpay Gateway)
+    {
+      customerName: "Rajesh Kumar (High-Net-Worth Architect)",
+      date: new Date("2026-05-18"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      paymentSource: InvoicePaymentSource.GATEWAY,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "BR-BED-TEK-KNG", qty: 2, tax: "GST 12% (Standard Furniture & Decor)", analytic: "Online Direct-to-Consumer Store" },
+        { sku: "TX-RUG-KSH-001", qty: 2, tax: "GST 5% (Essential Raw Materials)", analytic: "Online Direct-to-Consumer Store" },
+        { sku: "SV-ASSEM-PRO", qty: 1, tax: "GST 0% (Exempted)", analytic: "After-Sales & Assembly Services" },
+      ],
+    },
+    // Month 3: June 2026 (PARTIAL - WeWork)
+    {
+      customerName: "WeWork India Operations",
+      date: new Date("2026-06-20"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PARTIAL,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "OF-DESK-WAL-001", qty: 10, tax: "GST 18% (Commercial Furniture & Services)", analytic: "B2B Hospitality & Corporate Contracts" },
+        { sku: "OF-CHAIR-ERG-002", qty: 20, tax: "GST 18% (Commercial Furniture & Services)", analytic: "B2B Hospitality & Corporate Contracts" },
+      ],
+    },
+    // Month 4: July 2026 (PAID - ITC Hotels)
+    {
+      customerName: "ITC Maratha Grand Resort & Convention",
+      date: new Date("2026-07-22"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "LR-SOFA-SHS-002", qty: 4, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Mumbai Experience Center" },
+        { sku: "OD-DSET-TEK-001", qty: 4, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Mumbai Experience Center" },
+        { sku: "SV-INTD-CONSULT", qty: 1, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Turnkey Interior Design Projects" },
+      ],
+    },
+    // Month 5: August 2026 (OVERDUE NOT_PAID - Priya Sharma)
+    {
+      customerName: "Priya Sharma",
+      date: new Date("2026-08-08"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "LR-CHAIR-RAT-003", qty: 2, tax: "GST 12% (Standard Furniture & Decor)", analytic: "Mumbai Experience Center" },
+        { sku: "BR-WARD-FLT-002", qty: 1, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Mumbai Experience Center" },
+      ],
+    },
+    // Month 6: September 2026 (CURRENT MONTH - Apex Turnkey, DUE SOON NOT_PAID)
+    {
+      customerName: "Apex Interior Turnkey Solutions & Procurement",
+      date: new Date("2026-09-01"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "CM-KITCHEN-MOD-01", qty: 1, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Turnkey Interior Design Projects" },
+        { sku: "LR-SOFA-TEK-001", qty: 3, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Bangalore Tech-Park Showroom" },
+      ],
+    },
+    // Month 6: September 2026 (CURRENT MONTH - PAID via Gateway Rajesh Kumar)
+    {
+      customerName: "Rajesh Kumar (High-Net-Worth Architect)",
+      date: new Date("2026-09-03"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      paymentSource: InvoicePaymentSource.GATEWAY,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "LR-CHAIR-RAT-003", qty: 2, tax: "GST 12% (Standard Furniture & Decor)", analytic: "Delhi Flagship Showroom" },
+        { sku: "TX-RUG-KSH-001", qty: 1, tax: "GST 5% (Essential Raw Materials)", analytic: "Delhi Flagship Showroom" },
+      ],
+    },
+    // Month 6: DRAFT Sales Order
+    {
+      customerName: "WeWork India Operations",
+      date: new Date("2026-09-05"),
+      status: DocumentStatus.DRAFT,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "OF-CHAIR-ERG-002", qty: 10, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Delhi Flagship Showroom" },
+      ],
+    },
+    // Month 6: CANCELLED Sales Order
+    {
+      customerName: "Priya Sharma",
+      date: new Date("2026-09-02"),
+      status: DocumentStatus.CANCELLED,
+      paymentStatus: PaymentStatus.NOT_PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "BR-BED-TEK-KNG", qty: 1, tax: "GST 12% (Standard Furniture & Decor)", analytic: "Delhi Flagship Showroom" },
+      ],
+    },
+  ];
+
+  for (const sc of salesScenarios) {
+    const customer = contactsMap.get(sc.customerName)!;
+    const soNumber = `SO-2026-${pad4(soIndex++)}`;
+
+    let subtotal = 0;
+    let taxTotal = 0;
+
+    const soLineCreations = sc.items.map((item) => {
+      const prod = productsMap.get(item.sku)!;
+      const taxRate = taxRatesMap.get(item.tax);
+      const analytic = analyticMap.get(item.analytic)!;
+      const unitPrice = Number(prod.salesPrice);
+      const lineTotal = unitPrice * item.qty;
+      const taxAmount = taxRate ? (lineTotal * Number(taxRate.percentage)) / 100 : 0;
+
+      subtotal += lineTotal;
+      taxTotal += taxAmount;
+
+      return {
+        productId: prod.id,
+        analyticAccountId: analytic.id,
+        taxRateId: taxRate ? taxRate.id : null,
+        quantity: item.qty,
+        unitPrice,
+        lineTotal,
+        taxAmount,
+      };
+    });
+
+    const invoiceTotal = Math.round((subtotal + taxTotal) * 100) / 100;
+
+    const so = await prisma.salesOrder.create({
       data: {
-        billNumber: `BILL-2026-${String(billCounter).padStart(4, "0")}`,
-        vendorId: vendor.id,
-        purchaseOrderId: po.id,
-        billDate: billDate,
-        dueDate: dueDate,
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: txn.paid,
-        total: totalAmount,
-        amountPaid: billAmountPaid,
-        amountDue: totalAmount - billAmountPaid,
-        createdById: accountantUser.id,
-        lines: { create: txn.items.map(item => {
-          const product = getProductBySku(item.sku)!;
-          const lineTotal = product.cost.toNumber() * item.qty;
-          return {
-            productId: product.id,
-            analyticAccountId: createdAnalyticAccounts.get("Manufacturing - Materials")!.id,
-            quantity: item.qty,
-            unitPrice: product.cost.toNumber(),
-            lineTotal: lineTotal,
-          };
-        })},
+        soNumber,
+        customerId: customer.id,
+        orderDate: sc.date,
+        status: sc.status,
+        total: invoiceTotal,
+        createdById: adminUser.id,
+        lines: { create: soLineCreations },
       },
     });
-    billCounter++;
 
-    // Auto Journal Entry for Bill
-    const jeBill = await prisma.journalEntry.create({
+    // Create Invoice if SO is not Cancelled
+    if (sc.status !== DocumentStatus.CANCELLED) {
+      const invoiceNumber = `INV-2026-${pad4(invIndex++)}`;
+      const invDate = new Date(sc.date);
+      const dueDate = new Date(invDate);
+      dueDate.setDate(dueDate.getDate() + 15); // 15 day payment terms
+
+      let amountPaid = 0;
+      if (sc.paymentStatus === PaymentStatus.PAID) {
+        amountPaid = invoiceTotal;
+      } else if (sc.paymentStatus === PaymentStatus.PARTIAL) {
+        amountPaid = Math.round(invoiceTotal * 0.6 * 100) / 100;
+      }
+      const amountDue = Math.round((invoiceTotal - amountPaid) * 100) / 100;
+
+      const invoice = await prisma.customerInvoice.create({
+        data: {
+          invoiceNumber,
+          customerId: customer.id,
+          salesOrderId: so.id,
+          invoiceReference: `REF-${invoiceNumber}`,
+          invoiceDate: invDate,
+          dueDate,
+          status: sc.status,
+          paymentStatus: sc.paymentStatus,
+          total: invoiceTotal,
+          amountPaid,
+          amountDue,
+          reminderCount: sc.paymentStatus === PaymentStatus.NOT_PAID ? 1 : 0,
+          lastReminderSentAt: sc.paymentStatus === PaymentStatus.NOT_PAID ? new Date(invDate.getTime() + 86400000 * 10) : null,
+          createdById: adminUser.id,
+          lines: {
+            create: soLineCreations.map((l) => ({
+              productId: l.productId,
+              analyticAccountId: l.analyticAccountId,
+              taxRateId: l.taxRateId,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              lineTotal: l.lineTotal,
+              taxAmount: l.taxAmount,
+            })),
+          },
+        },
+      });
+
+      // Post General Ledger Entry for Confirmed Invoice
+      if (sc.status === DocumentStatus.CONFIRMED) {
+        const jeInvNumber = `JE-2026-${pad4(jeIndex++)}`;
+        await prisma.journalEntry.create({
+          data: {
+            entryNumber: jeInvNumber,
+            journalId: journalsMap.get("SAL")!.id,
+            accountingDate: invDate,
+            status: JournalEntryStatus.POSTED,
+            source: JournalEntrySource.CUSTOMER_INVOICE,
+            totalDebit: invoiceTotal,
+            totalCredit: invoiceTotal,
+            invoiceId: invoice.id,
+            createdById: acctUser.id,
+            lines: {
+              create: [
+                {
+                  accountId: accountsMap.get("1100")!.id, // Debit Accounts Receivable
+                  partnerId: customer.id,
+                  debit: invoiceTotal,
+                  credit: 0,
+                },
+                {
+                  accountId: accountsMap.get("4000")!.id, // Credit Sales Income
+                  partnerId: customer.id,
+                  debit: 0,
+                  credit: subtotal,
+                },
+                {
+                  accountId: accountsMap.get("2200")!.id, // Credit GST Output Liability
+                  partnerId: null,
+                  debit: 0,
+                  credit: taxTotal,
+                },
+              ],
+            },
+          },
+        });
+
+        // Payment Handling: Manual vs Razorpay Gateway
+        if (amountPaid > 0) {
+          const payDate = new Date(invDate);
+          payDate.setDate(payDate.getDate() + 2);
+
+          let gatewayTxId: string | null = null;
+          if (sc.paymentSource === InvoicePaymentSource.GATEWAY) {
+            const gw = await prisma.paymentGatewayTransaction.create({
+              data: {
+                invoiceId: invoice.id,
+                gatewayOrderId: `order_rzp_${Date.now()}_${invIndex}`,
+                gatewayPaymentId: `pay_rzp_${Date.now()}_${invIndex}`,
+                amount: amountPaid,
+                status: PaymentGatewayStatus.SUCCESS,
+                paymentMethod: "Razorpay Card & UPI",
+                webhookVerifiedAt: payDate,
+              },
+            });
+            gatewayTxId = gw.id;
+          }
+
+          const invoicePayment = await prisma.invoicePayment.create({
+            data: {
+              invoiceId: invoice.id,
+              amount: amountPaid,
+              paymentDate: payDate,
+              paymentMethod: sc.paymentMethod,
+              source: sc.paymentSource,
+              gatewayTransactionId: gatewayTxId,
+              note: `Payment receipt for ${invoiceNumber} via ${sc.paymentSource}`,
+            },
+          });
+
+          // Balanced Payment Journal Entry
+          const jePayNumber = `JE-2026-${pad4(jeIndex++)}`;
+          await prisma.journalEntry.create({
+            data: {
+              entryNumber: jePayNumber,
+              journalId: journalsMap.get("BNK")!.id,
+              accountingDate: payDate,
+              status: JournalEntryStatus.POSTED,
+              source: JournalEntrySource.INVOICE_PAYMENT,
+              totalDebit: amountPaid,
+              totalCredit: amountPaid,
+              invoicePaymentId: invoicePayment.id,
+              createdById: acctUser.id,
+              lines: {
+                create: [
+                  {
+                    accountId: accountsMap.get("1010")!.id, // Debit Bank
+                    partnerId: null,
+                    debit: amountPaid,
+                    credit: 0,
+                  },
+                  {
+                    accountId: accountsMap.get("1100")!.id, // Credit Accounts Receivable
+                    partnerId: customer.id,
+                    debit: 0,
+                    credit: amountPaid,
+                  },
+                ],
+              },
+            },
+          });
+        }
+
+        // Email Reminders & Logs
+        if (sc.paymentStatus === PaymentStatus.NOT_PAID) {
+          await prisma.invoiceEmailLog.create({
+            data: {
+              invoiceId: invoice.id,
+              recipientEmail: customer.email,
+              recipientName: customer.name,
+              emailType: EmailReminderType.DUE_SOON,
+              subject: `Reminder: Invoice ${invoiceNumber} from Maharaja Furniture`,
+              status: EmailDeliveryStatus.SENT,
+              sentAt: new Date(invDate.getTime() + 86400000 * 10),
+            },
+          });
+        }
+      }
+    }
+  }
+
+  // Also create a Failed Gateway Transaction attempt to cover PaymentGatewayStatus.FAILED
+  const firstInvoice = await prisma.customerInvoice.findFirst({
+    where: { paymentStatus: PaymentStatus.NOT_PAID },
+  });
+  if (firstInvoice) {
+    await prisma.paymentGatewayTransaction.create({
       data: {
-        entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-        journalId: createdJournals.get("Purchase Journal")!.id,
-        accountingDate: billDate,
+        invoiceId: firstInvoice.id,
+        gatewayOrderId: `order_fail_${Date.now()}`,
+        gatewayPaymentId: null,
+        amount: Number(firstInvoice.amountDue),
+        status: PaymentGatewayStatus.FAILED,
+        paymentMethod: "NetBanking SBI",
+        webhookVerifiedAt: new Date(),
+        failureReason: "Payment cancelled by customer at bank gateway redirect",
+      },
+    });
+
+    // Failed email log to cover EmailDeliveryStatus.FAILED
+    await prisma.invoiceEmailLog.create({
+      data: {
+        invoiceId: firstInvoice.id,
+        recipientEmail: "bounced@invalid-domain-test.in",
+        recipientName: "Test Bounced Recipient",
+        emailType: EmailReminderType.MANUAL,
+        subject: `Notice: Payment processing update for ${firstInvoice.invoiceNumber}`,
+        status: EmailDeliveryStatus.FAILED,
+        errorMessage: "SMTP 550: Mailbox does not exist or host unreachable",
+        sentAt: new Date(),
+      },
+    });
+  }
+
+  console.log("✓ Created Sales Orders, Customer Invoices, Payments, Razorpay Transactions, and Balanced Sales JEs.");
+
+  // ============================================================================
+  // 9. MANUAL GENERAL LEDGER ENTRIES (Opening Balances, Rent, Salaries, Depreciation)
+  // ============================================================================
+  console.log("📒 9. Posting Double-Entry Manual Adjustment Journal Entries...");
+
+  // 1. Opening Balance (April 1, 2026)
+  await prisma.journalEntry.create({
+    data: {
+      entryNumber: `JE-2026-${pad4(jeIndex++)}`,
+      journalId: journalsMap.get("BNK")!.id,
+      accountingDate: new Date("2026-04-01"),
+      status: JournalEntryStatus.POSTED,
+      source: JournalEntrySource.MANUAL,
+      totalDebit: 10000000,
+      totalCredit: 10000000,
+      createdById: adminUser.id,
+      lines: {
+        create: [
+          { accountId: accountsMap.get("1010")!.id, debit: 6000000, credit: 0 }, // ICICI Current Account
+          { accountId: accountsMap.get("1020")!.id, debit: 2500000, credit: 0 }, // HDFC Savings
+          { accountId: accountsMap.get("1000")!.id, debit: 500000, credit: 0 },  // Petty Cash
+          { accountId: accountsMap.get("1200")!.id, debit: 1000000, credit: 0 }, // Initial Inventory
+          { accountId: accountsMap.get("3000")!.id, debit: 0, credit: 10000000 }, // Proprietor's Capital
+        ],
+      },
+    },
+  });
+
+  // 2. Monthly Salaries (April, May, June, July, August, September)
+  const salaryMonths = [
+    { date: new Date("2026-04-30"), amount: 480000 },
+    { date: new Date("2026-05-31"), amount: 485000 },
+    { date: new Date("2026-06-30"), amount: 490000 },
+    { date: new Date("2026-07-31"), amount: 495000 },
+    { date: new Date("2026-08-31"), amount: 510000 },
+    { date: new Date("2026-09-04"), amount: 510000 },
+  ];
+
+  for (const sm of salaryMonths) {
+    await prisma.journalEntry.create({
+      data: {
+        entryNumber: `JE-2026-${pad4(jeIndex++)}`,
+        journalId: journalsMap.get("BNK")!.id,
+        accountingDate: sm.date,
         status: JournalEntryStatus.POSTED,
-        source: JournalEntrySource.VENDOR_BILL,
-        totalDebit: totalAmount,
-        totalCredit: totalAmount,
-        vendorBillId: bill.id,
-        createdById: accountantUser.id,
+        source: JournalEntrySource.MANUAL,
+        totalDebit: sm.amount,
+        totalCredit: sm.amount,
+        createdById: acctUser.id,
         lines: {
           create: [
-            {
-              accountId: createdAccounts.get("Cost of Goods Sold - Furniture")!.id,
-              partnerId: vendor.id,
-              debit: totalAmount,
-              credit: 0,
-            },
-            {
-              accountId: createdAccounts.get("Accounts Payable")!.id,
-              partnerId: vendor.id,
-              debit: 0,
-              credit: totalAmount,
-            },
+            { accountId: accountsMap.get("5100")!.id, debit: sm.amount, credit: 0 },
+            { accountId: accountsMap.get("1010")!.id, debit: 0, credit: sm.amount },
           ],
         },
       },
     });
-    jeCounter++;
-
-    // Payment Journal Entry if paid
-    if (billAmountPaid > 0) {
-      const paymentDate = new Date(billDate);
-      paymentDate.setDate(paymentDate.getDate() + 5);
-
-      await prisma.billPayment.create({
-        data: {
-          vendorBillId: bill.id,
-          amount: billAmountPaid,
-          paymentDate: paymentDate,
-          paymentMethod: i % 2 === 0 ? PaymentMethod.BANK : PaymentMethod.CASH,
-        },
-      });
-
-      await prisma.journalEntry.create({
-        data: {
-          entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-          journalId: createdJournals.get("Bank Journal")!.id,
-          accountingDate: paymentDate,
-          status: JournalEntryStatus.POSTED,
-          source: JournalEntrySource.BILL_PAYMENT,
-          totalDebit: billAmountPaid,
-          totalCredit: billAmountPaid,
-          createdById: accountantUser.id,
-          lines: {
-            create: [
-              {
-                accountId: createdAccounts.get("Accounts Payable")!.id,
-                partnerId: vendor.id,
-                debit: billAmountPaid,
-                credit: 0,
-              },
-              {
-                accountId: i % 2 === 0 ? createdAccounts.get("Main Bank Account - ICICI")!.id : createdAccounts.get("Petty Cash")!.id,
-                debit: 0,
-                credit: billAmountPaid,
-              },
-            ],
-          },
-        },
-      });
-      jeCounter++;
-    }
   }
 
-  console.log("✓ Created 6 purchase order cycles with bills and payments\n");
-
-  // ============================================================================
-  // 11. SALES CYCLE - 40+ transactions
-  // ============================================================================
-  console.log("💰 Creating sales cycle transactions...\n");
-
-  const salesTransactions = [
-    {
-      customer: "Taj Hotels Group - New Delhi",
-      items: [
-        { sku: "LR-SOFA-TEK-001", qty: 8, taxRate: "GST 18%", analyticAccount: "Delhi Showroom - Revenue" },
-        { sku: "DR-TABL-6ST-TEK", qty: 4, taxRate: "GST 18%", analyticAccount: "Delhi Showroom - Revenue" },
-        { sku: "SV-DELIV-LOCAL", qty: 1, taxRate: "No Tax (0%)", analyticAccount: "Service Revenue" },
-        { sku: "SV-ASSEM-INST", qty: 1, taxRate: "No Tax (0%)", analyticAccount: "Service Revenue" },
-      ],
-      paid: PaymentStatus.PAID,
-      paymentSource: InvoicePaymentSource.GATEWAY,
-    },
-    {
-      customer: "ITC Hotels - Mumbai",
-      items: [
-        { sku: "OF-DESK-TEK-EXE", qty: 6, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-        { sku: "OF-CHAIR-HB-EXE", qty: 12, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-        { sku: "SV-INTD-CONS", qty: 1, taxRate: "No Tax (0%)", analyticAccount: "Interior Design Projects" },
-      ],
-      paid: PaymentStatus.PAID,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
-    {
-      customer: "Oberoi Hotels - Bangalore",
-      items: [
-        { sku: "BR-BED-TEK-KNG", qty: 10, taxRate: "GST 18%", analyticAccount: "Bangalore Showroom - Revenue" },
-        { sku: "BR-NIGHT-MANG-001", qty: 10, analyticAccount: "Bangalore Showroom - Revenue" },
-      ],
-      paid: PaymentStatus.PARTIAL,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
-    {
-      customer: "Rajesh Kumar",
-      items: [
-        { sku: "BR-BED-SHEE-QN", qty: 1, taxRate: "GST 12%", analyticAccount: "Online Sales Channel" },
-        { sku: "AC-RUG-8x10-001", qty: 1, taxRate: "GST 5%", analyticAccount: "Online Sales Channel" },
-        { sku: "SV-DELIV-LOCAL", qty: 1, taxRate: "No Tax (0%)", analyticAccount: "Service Revenue" },
-      ],
-      paid: PaymentStatus.PAID,
-      paymentSource: InvoicePaymentSource.GATEWAY,
-    },
-    {
-      customer: "WeWork India - Gurugram",
-      items: [
-        { sku: "OF-DESK-L-SHEE", qty: 5, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-        { sku: "OF-CHAIR-MB-ERG", qty: 15, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-      ],
-      paid: PaymentStatus.PARTIAL,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
-    {
-      customer: "Priya Sharma",
-      items: [
-        { sku: "LR-SOFA-TEK-001", qty: 1, taxRate: "GST 18%", analyticAccount: "Online Sales Channel" },
-        { sku: "LR-TABL-SHEE-001", qty: 1, taxRate: "GST 12%", analyticAccount: "Online Sales Channel" },
-        { sku: "AC-LAMP-DEC-001", qty: 2, taxRate: "GST 5%", analyticAccount: "Online Sales Channel" },
-      ],
-      paid: PaymentStatus.PAID,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
-    {
-      customer: "Marriott International - Hyderabad",
-      items: [
-        { sku: "LR-SECT-RCL-001", qty: 5, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-        { sku: "DR-TABL-6ST-TEK", qty: 3, taxRate: "GST 18%", analyticAccount: "B2B Corporate Sales" },
-      ],
-      paid: PaymentStatus.NOT_PAID,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
-    {
-      customer: "Amit Patel",
-      items: [
-        { sku: "OF-DESK-TEK-EXE", qty: 1, taxRate: "GST 18%", analyticAccount: "Online Sales Channel" },
-        { sku: "SV-INTD-CONS", qty: 1, taxRate: "No Tax (0%)", analyticAccount: "Interior Design Projects" },
-      ],
-      paid: PaymentStatus.NOT_PAID,
-      paymentSource: InvoicePaymentSource.MANUAL,
-    },
+  // 3. Showroom & Warehouse Rent (Monthly)
+  const rentMonths = [
+    { date: new Date("2026-04-05"), amount: 280000 },
+    { date: new Date("2026-05-05"), amount: 280000 },
+    { date: new Date("2026-06-05"), amount: 280000 },
+    { date: new Date("2026-07-05"), amount: 280000 },
+    { date: new Date("2026-08-05"), amount: 280000 },
+    { date: new Date("2026-09-02"), amount: 280000 },
   ];
 
-  for (let i = 0; i < salesTransactions.length; i++) {
-    const txn = salesTransactions[i];
-    const customer = createdContacts.get(txn.customer)!;
-    const soDate = getDateInRange(startDate, endDate);
-    const invoiceDate = new Date(soDate);
-    invoiceDate.setDate(invoiceDate.getDate() + 3);
-    const dueDate = new Date(invoiceDate);
-    dueDate.setDate(dueDate.getDate() + 15);
-
-    let totalAmount = 0;
-    const soLines = txn.items.map(item => {
-      const product = getProductBySku(item.sku);
-      if (!product) throw new Error(`Product not found: ${item.sku}`);
-
-      const taxRate = createdTaxRates.get(item.taxRate);
-      const taxPercent = taxRate ? taxRate.percentage.toNumber() : 0;
-      const lineTotal = product.salesPrice.toNumber() * item.qty;
-      const taxAmount = (lineTotal * taxPercent) / 100;
-      totalAmount += lineTotal + taxAmount;
-
-      const analyticAccount = createdAnalyticAccounts.get(item.analyticAccount);
-      if (!analyticAccount) throw new Error(`Analytic account not found: ${item.analyticAccount}`);
-
-      return {
-        productId: product.id,
-        analyticAccountId: analyticAccount.id,
-        taxRateId: taxRate?.id,
-        quantity: item.qty,
-        unitPrice: product.salesPrice.toNumber(),
-        lineTotal: lineTotal,
-        taxAmount: taxAmount,
-      };
-    });
-
-    const so = await prisma.salesOrder.create({
+  for (const rm of rentMonths) {
+    await prisma.journalEntry.create({
       data: {
-        soNumber: `SO-2026-${String(soCounter).padStart(4, "0")}`,
-        customerId: customer.id,
-        orderDate: soDate,
-        status: DocumentStatus.CONFIRMED,
-        total: Math.round(totalAmount * 100) / 100,
-        createdById: adminUser.id,
-        lines: { create: soLines },
-      },
-    });
-    soCounter++;
-
-    // Create Invoice
-    let invoiceAmountPaid = 0;
-    const invoiceTotal = Math.round(totalAmount * 100) / 100;
-    let paymentStatus = txn.paid;
-
-    if (txn.paid === PaymentStatus.PAID) {
-      invoiceAmountPaid = invoiceTotal;
-    } else if (txn.paid === PaymentStatus.PARTIAL) {
-      invoiceAmountPaid = Math.round(invoiceTotal * 0.7 * 100) / 100;
-    }
-
-    const invoice = await prisma.customerInvoice.create({
-      data: {
-        invoiceNumber: `INV-2026-${String(invoiceCounter).padStart(4, "0")}`,
-        customerId: customer.id,
-        salesOrderId: so.id,
-        invoiceDate: invoiceDate,
-        dueDate: dueDate,
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: paymentStatus,
-        total: invoiceTotal,
-        amountPaid: invoiceAmountPaid,
-        amountDue: invoiceTotal - invoiceAmountPaid,
-        createdById: adminUser.id,
-        lines: { create: txn.items.map(item => {
-          const product = getProductBySku(item.sku);
-          if (!product) throw new Error(`Product not found in invoice: ${item.sku}`);
-          const taxRate = createdTaxRates.get(item.taxRate);
-          const analyticAccount = createdAnalyticAccounts.get(item.analyticAccount);
-          if (!analyticAccount) throw new Error(`Analytic account not found in invoice: ${item.analyticAccount}`);
-          const taxPercent = taxRate ? taxRate.percentage.toNumber() : 0;
-          const lineTotal = product.salesPrice.toNumber() * item.qty;
-          const taxAmount = (lineTotal * taxPercent) / 100;
-          return {
-            productId: product.id,
-            analyticAccountId: analyticAccount.id,
-            taxRateId: taxRate?.id,
-            quantity: item.qty,
-            unitPrice: product.salesPrice.toNumber(),
-            lineTotal: lineTotal,
-            taxAmount: taxAmount,
-          };
-        })},
-      },
-    });
-    invoiceCounter++;
-
-    // Auto Journal Entry for Invoice
-    let creditTotal = 0;
-    const jeInvoiceLines: any[] = [
-      {
-        accountId: createdAccounts.get("Accounts Receivable")!.id,
-        partnerId: customer.id,
-        debit: invoiceTotal,
-        credit: 0,
-      },
-    ];
-
-    // Group by account and sum
-    const accountGroups = new Map<string, number>();
-    for (const line of txn.items) {
-      const product = getProductBySku(line.sku)!;
-      const isSale = product.type !== ProductType.SERVICE;
-      let accountName = "";
-
-      if (product.sku?.includes("SV-DELIV")) accountName = "Delivery Service Revenue";
-      else if (product.sku?.includes("SV-ASSEM")) accountName = "Installation Service Revenue";
-      else if (product.sku?.includes("SV-INTD")) accountName = "Interior Design Services";
-      else if (product.sku?.includes("SV-CUST")) accountName = "Custom Furniture Sales";
-      else accountName = "Furniture Sales - Domestic";
-
-      const taxRate = createdTaxRates.get(line.taxRate);
-      const taxPercent = taxRate ? taxRate.percentage.toNumber() : 0;
-      const lineTotal = product.salesPrice.toNumber() * line.qty;
-      const taxAmount = (lineTotal * taxPercent) / 100;
-
-      const current = accountGroups.get(accountName) || 0;
-      accountGroups.set(accountName, current + lineTotal);
-      creditTotal += lineTotal + taxAmount;
-    }
-
-    for (const [accountName, amount] of accountGroups) {
-      jeInvoiceLines.push({
-        accountId: createdAccounts.get(accountName)!.id,
-        debit: 0,
-        credit: amount,
-      });
-    }
-
-    // Add GST line
-    jeInvoiceLines.push({
-      accountId: createdAccounts.get("GST Payable")!.id,
-      debit: 0,
-      credit: invoiceTotal - creditTotal,
-    });
-
-    const jeInvoice = await prisma.journalEntry.create({
-      data: {
-        entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-        journalId: createdJournals.get("Sales Journal")!.id,
-        accountingDate: invoiceDate,
+        entryNumber: `JE-2026-${pad4(jeIndex++)}`,
+        journalId: journalsMap.get("BNK")!.id,
+        accountingDate: rm.date,
         status: JournalEntryStatus.POSTED,
-        source: JournalEntrySource.CUSTOMER_INVOICE,
-        totalDebit: invoiceTotal,
-        totalCredit: invoiceTotal,
-        invoiceId: invoice.id,
-        createdById: adminUser.id,
-        lines: { create: jeInvoiceLines },
+        source: JournalEntrySource.MANUAL,
+        totalDebit: rm.amount,
+        totalCredit: rm.amount,
+        createdById: acctUser.id,
+        lines: {
+          create: [
+            { accountId: accountsMap.get("5200")!.id, debit: 160000, credit: 0 }, // Showroom Rent
+            { accountId: accountsMap.get("5210")!.id, debit: 120000, credit: 0 }, // Warehouse Rent
+            { accountId: accountsMap.get("1010")!.id, debit: 0, credit: rm.amount },
+          ],
+        },
       },
     });
-    jeCounter++;
-
-    // Payment & Gateway Transaction if paid
-    if (invoiceAmountPaid > 0) {
-      const paymentDate = new Date(invoiceDate);
-      paymentDate.setDate(paymentDate.getDate() + 3);
-
-      if (txn.paymentSource === InvoicePaymentSource.GATEWAY) {
-        const gatewayTx = await prisma.paymentGatewayTransaction.create({
-          data: {
-            invoiceId: invoice.id,
-            gatewayOrderId: `order_rzp_${Date.now()}`,
-            gatewayPaymentId: `pay_rzp_${Date.now()}`,
-            amount: invoiceAmountPaid,
-            status: PaymentGatewayStatus.SUCCESS,
-            paymentMethod: "card",
-            webhookVerifiedAt: new Date(),
-          },
-        });
-
-        await prisma.invoicePayment.create({
-          data: {
-            invoiceId: invoice.id,
-            amount: invoiceAmountPaid,
-            paymentDate: paymentDate,
-            paymentMethod: PaymentMethod.BANK,
-            source: InvoicePaymentSource.GATEWAY,
-            gatewayTransactionId: gatewayTx.id,
-            note: "Razorpay Gateway Payment",
-          },
-        });
-      } else {
-        await prisma.invoicePayment.create({
-          data: {
-            invoiceId: invoice.id,
-            amount: invoiceAmountPaid,
-            paymentDate: paymentDate,
-            paymentMethod: i % 3 === 0 ? PaymentMethod.CASH : PaymentMethod.BANK,
-            source: InvoicePaymentSource.MANUAL,
-            note: "Manual payment",
-          },
-        });
-      }
-
-      // Auto Journal Entry for Payment
-      const jeyInvoicePayment = await prisma.journalEntry.create({
-        data: {
-          entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-          journalId: createdJournals.get("Bank Journal")!.id,
-          accountingDate: paymentDate,
-          status: JournalEntryStatus.POSTED,
-          source: JournalEntrySource.INVOICE_PAYMENT,
-          totalDebit: invoiceAmountPaid,
-          totalCredit: invoiceAmountPaid,
-          createdById: adminUser.id,
-          lines: {
-            create: [
-              {
-                accountId: i % 3 === 0 ? createdAccounts.get("Petty Cash")!.id : createdAccounts.get("Main Bank Account - ICICI")!.id,
-                debit: invoiceAmountPaid,
-                credit: 0,
-              },
-              {
-                accountId: createdAccounts.get("Accounts Receivable")!.id,
-                partnerId: customer.id,
-                debit: 0,
-                credit: invoiceAmountPaid,
-              },
-            ],
-          },
-        },
-      });
-      jeCounter++;
-    }
   }
 
-  console.log("✓ Created 8 sales order cycles with invoices and payments\n");
-
-  // ============================================================================
-  // 12. MANUAL JOURNAL ENTRIES
-  // ============================================================================
-  console.log("📒 Creating manual journal entries...");
-
-  // Opening balance
+  // 4. Depreciation Adjustment (June 30 & August 31)
   await prisma.journalEntry.create({
     data: {
-      entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-      journalId: createdJournals.get("Bank Journal")!.id,
-      accountingDate: new Date("2026-04-01"),
-      status: JournalEntryStatus.POSTED,
-      source: JournalEntrySource.MANUAL,
-      totalDebit: 5000000,
-      totalCredit: 5000000,
-      createdById: adminUser.id,
-      lines: {
-        create: [
-          { accountId: createdAccounts.get("Main Bank Account - ICICI")!.id, debit: 3000000, credit: 0 },
-          { accountId: createdAccounts.get("Savings Account - HDFC")!.id, debit: 1500000, credit: 0 },
-          { accountId: createdAccounts.get("Petty Cash")!.id, debit: 250000, credit: 0 },
-          { accountId: createdAccounts.get("Furniture Inventory")!.id, debit: 250000, credit: 0 },
-          { accountId: createdAccounts.get("Proprietor's Capital")!.id, debit: 0, credit: 5000000 },
-        ],
-      },
-    },
-  });
-  jeCounter++;
-
-  // Monthly salaries (June)
-  await prisma.journalEntry.create({
-    data: {
-      entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-      journalId: createdJournals.get("Bank Journal")!.id,
+      entryNumber: `JE-2026-${pad4(jeIndex++)}`,
+      journalId: journalsMap.get("BNK")!.id,
       accountingDate: new Date("2026-06-30"),
       status: JournalEntryStatus.POSTED,
       source: JournalEntrySource.MANUAL,
-      totalDebit: 425000,
-      totalCredit: 425000,
-      createdById: accountantUser.id,
+      totalDebit: 65000,
+      totalCredit: 65000,
+      createdById: acctUser.id,
       lines: {
         create: [
-          { accountId: createdAccounts.get("Salaries and Wages")!.id, debit: 425000, credit: 0 },
-          { accountId: createdAccounts.get("Main Bank Account - ICICI")!.id, debit: 0, credit: 425000 },
+          { accountId: accountsMap.get("5900")!.id, debit: 65000, credit: 0 },
+          { accountId: accountsMap.get("1410")!.id, debit: 0, credit: 40000 }, // Delivery Fleet Depreciation
+          { accountId: accountsMap.get("1430")!.id, debit: 0, credit: 25000 }, // IT Infrastructure Depreciation
         ],
       },
     },
   });
-  jeCounter++;
 
-  // Monthly rent
+  // 5. Draft Manual Journal Entry (to cover JournalEntryStatus.DRAFT)
   await prisma.journalEntry.create({
     data: {
-      entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-      journalId: createdJournals.get("Bank Journal")!.id,
-      accountingDate: new Date("2026-07-01"),
-      status: JournalEntryStatus.POSTED,
+      entryNumber: `JE-2026-${pad4(jeIndex++)}`,
+      journalId: journalsMap.get("CSH")!.id,
+      accountingDate: new Date("2026-09-05"),
+      status: JournalEntryStatus.DRAFT,
       source: JournalEntrySource.MANUAL,
-      totalDebit: 275000,
-      totalCredit: 275000,
-      createdById: accountantUser.id,
+      totalDebit: 15000,
+      totalCredit: 15000,
+      createdById: acctUser.id,
       lines: {
         create: [
-          { accountId: createdAccounts.get("Rent Expense - Showroom")!.id, debit: 150000, credit: 0 },
-          { accountId: createdAccounts.get("Rent Expense - Warehouse")!.id, debit: 100000, credit: 0 },
-          { accountId: createdAccounts.get("Rent Expense - Workshop")!.id, debit: 25000, credit: 0 },
-          { accountId: createdAccounts.get("Main Bank Account - ICICI")!.id, debit: 0, credit: 275000 },
+          { accountId: accountsMap.get("5500")!.id, debit: 15000, credit: 0 }, // Office Stationery
+          { accountId: accountsMap.get("1000")!.id, debit: 0, credit: 15000 }, // Petty Cash
         ],
       },
     },
   });
-  jeCounter++;
 
-  // Utilities
-  await prisma.journalEntry.create({
-    data: {
-      entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-      journalId: createdJournals.get("Bank Journal")!.id,
-      accountingDate: new Date("2026-07-05"),
-      status: JournalEntryStatus.POSTED,
-      source: JournalEntrySource.MANUAL,
-      totalDebit: 95000,
-      totalCredit: 95000,
-      createdById: accountantUser.id,
-      lines: {
-        create: [
-          { accountId: createdAccounts.get("Utilities - Electric")!.id, debit: 60000, credit: 0 },
-          { accountId: createdAccounts.get("Utilities - Water")!.id, debit: 15000, credit: 0 },
-          { accountId: createdAccounts.get("Internet & Telecom")!.id, debit: 20000, credit: 0 },
-          { accountId: createdAccounts.get("Main Bank Account - ICICI")!.id, debit: 0, credit: 95000 },
-        ],
-      },
-    },
-  });
-  jeCounter++;
-
-  // Depreciation
-  await prisma.journalEntry.create({
-    data: {
-      entryNumber: `JE-2026-${String(jeCounter).padStart(4, "0")}`,
-      journalId: createdJournals.get("Bank Journal")!.id,
-      accountingDate: new Date("2026-06-30"),
-      status: JournalEntryStatus.POSTED,
-      source: JournalEntrySource.MANUAL,
-      totalDebit: 45000,
-      totalCredit: 45000,
-      createdById: accountantUser.id,
-      lines: {
-        create: [
-          { accountId: createdAccounts.get("Depreciation Expense")!.id, debit: 45000, credit: 0 },
-          { accountId: createdAccounts.get("Office Equipment")!.id, debit: 0, credit: 15000 },
-          { accountId: createdAccounts.get("Delivery Vehicles")!.id, debit: 0, credit: 20000 },
-          { accountId: createdAccounts.get("Store Fixtures & Fittings")!.id, debit: 0, credit: 10000 },
-        ],
-      },
-    },
-  });
-  jeCounter++;
-
-  console.log("✓ Created 5 manual journal entries\n");
+  console.log("✓ Posted Manual Balanced Journal Entries (Payroll, Rent, Fixed Assets Depreciation, Opening Balances).");
 
   // ============================================================================
-  // 13. BUDGETS
+  // 10. BUDGETS & REVISIONS (All 3 BudgetStatus: DRAFT, CONFIRMED, CANCELLED)
   // ============================================================================
-  console.log("💵 Creating budgets...");
+  console.log("💵 10. Creating Budgets with Revisions and Analytic Targets...");
 
-  await prisma.budget.create({
+  // Budget 1: Q1 FY26 (Apr-Jun 2026) - CONFIRMED
+  const q1Budget = await prisma.budget.create({
     data: {
-      name: "Q2 2026 (Apr-Jun) - Sales & Ops",
+      name: "Q1 FY 2026-27 Strategic Operating Budget",
       startDate: new Date("2026-04-01"),
       endDate: new Date("2026-06-30"),
       responsibleId: adminUser.id,
       status: BudgetStatus.CONFIRMED,
       lines: {
         create: [
-          { analyticAccountId: createdAnalyticAccounts.get("Delhi Showroom - Revenue")!.id, type: AnalyticAccountType.INCOME, committedAmount: 1000000, achievedAmount: 800000, achievedPercent: 80, amountToAchieve: 200000 },
-          { analyticAccountId: createdAnalyticAccounts.get("B2B Corporate Sales")!.id, type: AnalyticAccountType.INCOME, committedAmount: 800000, achievedAmount: 600000, achievedPercent: 75, amountToAchieve: 200000 },
-          { analyticAccountId: createdAnalyticAccounts.get("Manufacturing - Labour")!.id, type: AnalyticAccountType.EXPENSES, committedAmount: 300000, achievedAmount: 250000, achievedPercent: 83.33, amountToAchieve: 50000 },
+          {
+            analyticAccountId: analyticMap.get("Delhi Flagship Showroom")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 2500000,
+            achievedAmount: 2350000,
+            achievedPercent: 94.0,
+            amountToAchieve: 150000,
+          },
+          {
+            analyticAccountId: analyticMap.get("Online Direct-to-Consumer Store")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 1200000,
+            achievedAmount: 1150000,
+            achievedPercent: 95.83,
+            amountToAchieve: 50000,
+          },
+          {
+            analyticAccountId: analyticMap.get("Direct Raw Materials")!.id,
+            type: AnalyticAccountType.EXPENSES,
+            committedAmount: 1500000,
+            achievedAmount: 1420000,
+            achievedPercent: 94.67,
+            amountToAchieve: 80000,
+          },
         ],
       },
     },
   });
 
-  await prisma.budget.create({
+  // Budget 2: Q2 FY26 (Jul-Sep 2026) - Original (CANCELLED / REVISED)
+  const q2Original = await prisma.budget.create({
     data: {
-      name: "Q3 2026 (Jul-Sep) - Sales & Marketing",
+      name: "Q2 FY 2026-27 Expansion Plan (Original Draft)",
+      startDate: new Date("2026-07-01"),
+      endDate: new Date("2026-09-30"),
+      responsibleId: adminUser.id,
+      status: BudgetStatus.CANCELLED,
+      lines: {
+        create: [
+          {
+            analyticAccountId: analyticMap.get("Mumbai Experience Center")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 2000000,
+            achievedAmount: 0,
+            achievedPercent: 0,
+            amountToAchieve: 2000000,
+          },
+          {
+            analyticAccountId: analyticMap.get("Summer 2026 Omnichannel Marketing")!.id,
+            type: AnalyticAccountType.EXPENSES,
+            committedAmount: 800000,
+            achievedAmount: 0,
+            achievedPercent: 0,
+            amountToAchieve: 800000,
+          },
+        ],
+      },
+    },
+  });
+
+  // Budget 3: Q2 FY26 (Jul-Sep 2026) - Revised Version (CONFIRMED)
+  const q2Revised = await prisma.budget.create({
+    data: {
+      name: "Q2 FY 2026-27 Festive Ramp-Up Budget (Revised)",
       startDate: new Date("2026-07-01"),
       endDate: new Date("2026-09-30"),
       responsibleId: adminUser.id,
       status: BudgetStatus.CONFIRMED,
+      revisionOfId: q2Original.id,
       lines: {
         create: [
-          { analyticAccountId: createdAnalyticAccounts.get("Online Sales Channel")!.id, type: AnalyticAccountType.INCOME, committedAmount: 600000, achievedAmount: 500000, achievedPercent: 83.33, amountToAchieve: 100000 },
-          { analyticAccountId: createdAnalyticAccounts.get("Marketing Campaign - Summer 2026")!.id, type: AnalyticAccountType.EXPENSES, committedAmount: 200000, achievedAmount: 150000, achievedPercent: 75, amountToAchieve: 50000 },
+          {
+            analyticAccountId: analyticMap.get("Delhi Flagship Showroom")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 3000000,
+            achievedAmount: 2100000,
+            achievedPercent: 70.0,
+            amountToAchieve: 900000,
+          },
+          {
+            analyticAccountId: analyticMap.get("B2B Hospitality & Corporate Contracts")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 2200000,
+            achievedAmount: 1800000,
+            achievedPercent: 81.82,
+            amountToAchieve: 400000,
+          },
+          {
+            analyticAccountId: analyticMap.get("Manufacturing Factory Labour")!.id,
+            type: AnalyticAccountType.EXPENSES,
+            committedAmount: 900000,
+            achievedAmount: 650000,
+            achievedPercent: 72.22,
+            amountToAchieve: 250000,
+          },
         ],
       },
     },
   });
 
+  // Link revision back
+  await prisma.budget.update({
+    where: { id: q2Original.id },
+    data: { revisedWithId: q2Revised.id },
+  });
+
+  // Budget 4: Annual FY 2026-27 (DRAFT)
   await prisma.budget.create({
     data: {
-      name: "FY 2026-27 Annual Budget",
+      name: "FY 2026-27 Master Annual Financial Blueprint",
       startDate: new Date("2026-04-01"),
       endDate: new Date("2027-03-31"),
       responsibleId: adminUser.id,
       status: BudgetStatus.DRAFT,
       lines: {
         create: [
-          { analyticAccountId: createdAnalyticAccounts.get("Delhi Showroom - Revenue")!.id, type: AnalyticAccountType.INCOME, committedAmount: 5000000, achievedAmount: 0, achievedPercent: 0, amountToAchieve: 5000000 },
-          { analyticAccountId: createdAnalyticAccounts.get("B2B Corporate Sales")!.id, type: AnalyticAccountType.INCOME, committedAmount: 4000000, achievedAmount: 0, achievedPercent: 0, amountToAchieve: 4000000 },
-          { analyticAccountId: createdAnalyticAccounts.get("Warehouse & Logistics")!.id, type: AnalyticAccountType.EXPENSES, committedAmount: 1200000, achievedAmount: 0, achievedPercent: 0, amountToAchieve: 1200000 },
+          {
+            analyticAccountId: analyticMap.get("Delhi Flagship Showroom")!.id,
+            type: AnalyticAccountType.INCOME,
+            committedAmount: 12000000,
+            achievedAmount: 4450000,
+            achievedPercent: 37.08,
+            amountToAchieve: 7550000,
+          },
+          {
+            analyticAccountId: analyticMap.get("Diwali & Festive 2026 Campaign")!.id,
+            type: AnalyticAccountType.EXPENSES,
+            committedAmount: 2500000,
+            achievedAmount: 350000,
+            achievedPercent: 14.0,
+            amountToAchieve: 2150000,
+          },
         ],
       },
     },
   });
 
-  console.log("✓ Created 3 budgets (2 confirmed, 1 draft)\n");
+  console.log("✓ Created 4 Budgets (including revision chain: Original Cancelled -> Revised Confirmed, and Draft).");
 
   // ============================================================================
-  // FINAL SUMMARY
+  // SUMMARY REPORT
   // ============================================================================
-  console.log("\n✅ Database seeding completed successfully!\n");
-  console.log("=" .repeat(60));
-  console.log("📋 COMPREHENSIVE SUMMARY:");
-  console.log("=" .repeat(60));
-  console.log(`Chart of Accounts:        ${accounts.length}`);
-  console.log(`Journals:                 ${journals.length}`);
-  console.log(`Tax Rates (GST):          ${taxRates.length}`);
-  console.log(`Product Categories:       ${categories.length}`);
-  console.log(`Products:                 ${products.length}`);
-  console.log(`Analytic Accounts:        ${analyticAccounts.length}`);
-  console.log(`Contacts (V/C):           ${contacts.length}`);
-  console.log(`Users:                    4 (2 internal + 2 portal)`);
-  console.log(`Purchase Orders:          6 (all with bills & payments)`);
-  console.log(`Sales Orders:             8 (all with invoices & payments)`);
-  console.log(`Journal Entries (Auto):   16 (from PO/SO/Payments)`);
-  console.log(`Journal Entries (Manual): 5 (depreciation, salary, rent, etc.)`);
-  console.log(`Budgets:                  3 (2 confirmed, 1 draft)`);
-  console.log(`Total Transactions:       30+ over Jun-Sep 2026`);
-  console.log("=" .repeat(60));
-  console.log("\n🔐 LOGIN CREDENTIALS:");
-  console.log("=" .repeat(60));
-  console.log("Admin Account:");
-  console.log("  Login ID: admin001");
-  console.log("  Password: Admin@123");
-  console.log("  Email:    admin@maharajafurniture.in");
-  console.log("\nAccountant Account:");
-  console.log("  Login ID: acct001");
-  console.log("  Password: Account@123");
-  console.log("  Email:    accountant@maharajafurniture.in");
-  console.log("\nPortal Customers:");
-  console.log("  Login ID: cust001 (Rajesh Kumar)");
-  console.log("  Login ID: cust002 (Taj Hotels)");
-  console.log("  Password: Contact@123 (for both)");
-  console.log("=" .repeat(60));
-  console.log("\n🎯 KEY FEATURES OF THIS SEED:");
-  console.log("=" .repeat(60));
-  console.log("✓ Indian company & product names");
-  console.log("✓ Indian GST tax rates (5%, 12%, 18%, 28%)");
-  console.log("✓ Indian cities & locations");
-  console.log("✓ 80+ realistic furniture products");
-  console.log("✓ 40+ vendors & customers (mix of B2B & B2C)");
-  console.log("✓ Transactions spanning Jun-Sep 2026 (3 months)");
-  console.log("✓ Multiple payment scenarios (Paid, Partial, Unpaid)");
-  console.log("✓ Payment Gateway integration (Razorpay)");
-  console.log("✓ Complete purchase & sales cycles");
-  console.log("✓ Auto journal entries with balance verification");
-  console.log("✓ Manual journal entries (depreciation, salary, rent)");
-  console.log("✓ Budget tracking with real achievements");
-  console.log("✓ Proper RBAC with Portal access");
-  console.log("✓ All double-entry bookkeeping balanced");
-  console.log("=" .repeat(60));
+  console.log("\n===============================================================");
+  console.log("✅ ALL 26 PRISMA MODELS SEEDED SUCCESSFULLY WITH ZERO ERRORS!");
+  console.log("===============================================================");
+  console.log(`1.  CompanySettings:            1 (Maharaja Furniture Solutions)`);
+  console.log(`2.  ChartOfAccount:             ${chartOfAccountsData.length} (Assets, Liab, Capital, Income, Exp, Cash, Bank)`);
+  console.log(`3.  Journal:                    ${journalsData.length} (Sales, Purchase, Bank, Cash)`);
+  console.log(`4.  TaxRate:                    ${taxRatesData.length} (0%, 5%, 12%, 18%, 28%)`);
+  console.log(`5.  AnalyticAccount:            ${analyticAccountsData.length} (Showrooms, Channels, Cost Centers)`);
+  console.log(`6.  ProductCategory:            ${categoriesData.length}`);
+  console.log(`7.  Product:                    ${productsData.length} (Normal stock, Low-stock alerts, Combos, Services)`);
+  console.log(`8.  User:                       5 (Admin, Accountant, Portal Customers, Portal Vendor)`);
+  console.log(`9.  Contact:                    ${contactsData.length} (Vendors, Customers, Both)`);
+  console.log(`10. PurchaseOrder:              ${purchaseScenarios.length} (Draft, Confirmed, Cancelled)`);
+  console.log(`11. PurchaseOrderLine:          Multiple multi-item rows`);
+  console.log(`12. VendorBill:                 ${purchaseScenarios.length - 1} (Not Paid, Partial, Paid, Overdue)`);
+  console.log(`13. VendorBillLine:             Multiple rows`);
+  console.log(`14. BillPayment:                Multi-month Bank & Cash settlements`);
+  console.log(`15. SalesOrder:                 ${salesScenarios.length} (Draft, Confirmed, Cancelled)`);
+  console.log(`16. SalesOrderLine:             Multiple multi-item rows with GST`);
+  console.log(`17. CustomerInvoice:            ${salesScenarios.length - 1} (Paid, Partial, Overdue, Due Soon)`);
+  console.log(`18. CustomerInvoiceLine:        Multiple rows`);
+  console.log(`19. InvoicePayment:             Manual & Gateway payments`);
+  console.log(`20. PaymentGatewayTransaction:  Razorpay Success & Failed records`);
+  console.log(`21. JournalEntry:               Over 25 balanced double-entry vouchers`);
+  console.log(`22. JournalEntryLine:           100% debit-credit balanced`);
+  console.log(`23. Budget:                     4 budgets with revision chaining`);
+  console.log(`24. BudgetLine:                 Committed vs Achieved tracking`);
+  console.log(`25. BillEmailLog:               Due Soon & Overdue email audit logs`);
+  console.log(`26. InvoiceEmailLog:            Sent and Failed email logs`);
+  console.log("===============================================================");
+  console.log("🔑 LOGIN CREDENTIALS:");
+  console.log("   • Administrator:     admin001 / Admin@123");
+  console.log("   • Accountant:        acct001  / Account@123");
+  console.log("   • Portal Customer 1: cust001  / Contact@123 (Taj Hotels Procurement)");
+  console.log("   • Portal Customer 2: cust002  / Contact@123 (Rajesh Kumar)");
+  console.log("   • Portal Vendor:     vend001  / Contact@123 (Rajendra Timber)");
+  console.log("===============================================================\n");
 }
 
 main()
   .catch((e) => {
-    console.error("❌ Error during seeding:", e);
+    console.error("❌ Seeding Error:", e);
     process.exit(1);
   })
   .finally(async () => {
