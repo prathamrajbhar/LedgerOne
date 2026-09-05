@@ -1,0 +1,70 @@
+"use server";
+
+import { journalEntryService } from "@/lib/services/journal-entry.service";
+import { profitLossReportService, GenerateProfitLossParams } from "@/lib/services/reports/profit-loss.service";
+import { Decimal } from "@prisma/client/runtime/library";
+
+export interface CreateJournalEntryActionInput {
+  journalId: string;
+  accountingDate: Date;
+  lines: {
+    accountId: string;
+    partnerId?: string;
+    debit: number;
+    credit: number;
+  }[];
+  userId: string;
+}
+
+export async function createManualJournalEntryAction(input: CreateJournalEntryActionInput) {
+  try {
+    const formattedLines = input.lines.map((line) => ({
+      accountId: line.accountId,
+      partnerId: line.partnerId,
+      debit: new Decimal(line.debit),
+      credit: new Decimal(line.credit),
+    }));
+
+    const entry = await journalEntryService.createManual({
+      journalId: input.journalId,
+      accountingDate: input.accountingDate,
+      lines: formattedLines,
+      userId: input.userId,
+    });
+
+    return { success: true, data: entry };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to create manual journal entry" };
+  }
+}
+
+export async function postJournalEntryAction(id: string) {
+  try {
+    const entry = await journalEntryService.post(id);
+    return { success: true, data: entry };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to post journal entry" };
+  }
+}
+
+export async function resetJournalEntryToDraftAction(id: string) {
+  try {
+    const entry = await journalEntryService.resetToDraft(id);
+    return { success: true, data: entry };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to reset journal entry to draft" };
+  }
+}
+
+export async function generateProfitLossReportAction(params: GenerateProfitLossParams) {
+  try {
+    const report = await profitLossReportService.generateReport(params);
+    return { success: true, data: report };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to generate Profit & Loss report" };
+  }
+}
