@@ -1,7 +1,6 @@
 import * as React from "react";
 import { getUserProfileAction } from "@/app/actions/profile.actions";
 import { ProfileClient } from "./profile-client";
-import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "My Profile - LedgerOne",

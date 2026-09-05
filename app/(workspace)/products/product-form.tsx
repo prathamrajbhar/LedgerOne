@@ -61,14 +61,13 @@ export function ProductForm({ initialData, categories, isEdit }: ProductFormProp
 
     if (!formData.name.trim()) newErrors.name = "Product name is required";
     if (!formData.categoryId) newErrors.categoryId = "Category is required";
-
-    if (!formData.cost) {
+    if (formData.cost === "" || formData.cost === null || formData.cost === undefined) {
       newErrors.cost = "Cost price is required";
     } else if (isNaN(costNum) || costNum < 0) {
       newErrors.cost = "Cost price must be 0 or a positive value";
     }
 
-    if (!formData.salesPrice) {
+    if (formData.salesPrice === "" || formData.salesPrice === null || formData.salesPrice === undefined) {
       newErrors.salesPrice = "Sales price is required";
     } else if (isNaN(salesPriceNum) || salesPriceNum < 0) {
       newErrors.salesPrice = "Selling price must be 0 or a positive value";

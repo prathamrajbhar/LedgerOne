@@ -256,6 +256,65 @@ export async function restoreAccountAction(id: string): Promise<ActionResult> {
 }
 
 /**
+ * Check whether an account can be hard-deleted or has linked journal lines/defaults
+ */
+export async function checkCanDeleteAccountAction(id: string): Promise<ActionResult<{ canDelete: boolean }>> {
+  try {
+    const canDelete = await chartOfAccountsService.canDelete(id);
+    return {
+      success: true,
+      data: { canDelete },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to check account usage";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Get detailed foreign key dependency breakdown for an archived account
+ */
+export async function getAccountUsageDetailsAction(id: string): Promise<ActionResult<Awaited<ReturnType<typeof chartOfAccountsService.getUsageDetails>>>> {
+  try {
+    const details = await chartOfAccountsService.getUsageDetails(id);
+    return {
+      success: true,
+      data: details,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to get account usage details";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
+ * Delete or unlink a specific blocking transaction dependency for an account
+ */
+export async function deleteAccountDependencyAction(type: string, id: string, lineId?: string): Promise<ActionResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+    await chartOfAccountsService.deleteDependency(type, id, lineId);
+    revalidatePath("/accounts");
+    return {
+      success: true,
+      data: { message: "Related entry removed successfully" },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to remove dependency";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+}
+
+/**
  * Hard delete an account (Administrator only, records with zero transactions)
  */
 export async function deleteAccountAction(id: string): Promise<ActionResult> {

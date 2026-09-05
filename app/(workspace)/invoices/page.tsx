@@ -616,7 +616,28 @@ export default function InvoicesPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => toast.info("PDF download feature coming soon")}
+                            onClick={async () => {
+                              try {
+                                const response = await fetch(`/api/invoices/${inv.id}/download`);
+                                if (!response.ok) {
+                                  toast.error("Failed to download invoice");
+                                  return;
+                                }
+                                const blob = await response.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.download = `Invoice-${inv.invoiceNumber}.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                                window.URL.revokeObjectURL(url);
+                                toast.success("Invoice downloaded successfully");
+                              } catch (error) {
+                                toast.error("Error downloading invoice");
+                                console.error(error);
+                              }
+                            }}
                             className="h-7 px-2 text-muted-foreground hover:text-navy"
                             title="Download Invoice PDF"
                           >

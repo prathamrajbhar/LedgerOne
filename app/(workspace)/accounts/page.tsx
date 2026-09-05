@@ -249,7 +249,11 @@ export default function AccountsPage() {
           </p>
         </div>
       ) : (
-        <AccountsTable accounts={filtered} onRefresh={loadAccounts} />
+        <AccountsTable
+          accounts={filtered}
+          onRefresh={loadAccounts}
+          isArchivedTab={statusFilter === "ARCHIVED"}
+        />
       )}
     </div>
   );

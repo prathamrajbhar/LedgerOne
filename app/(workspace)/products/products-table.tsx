@@ -15,9 +15,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
-import { archiveProductAction, restoreProductAction, deleteProductAction } from "@/app/actions/product.actions";
-import { DestructiveConfirmDialog, ConfirmActionType } from "@/components/ui/destructive-confirm-dialog";
+import {
+  archiveProductAction,
+  restoreProductAction,
+  deleteProductAction,
+  getProductUsageDetailsAction,
+  deleteProductDependencyAction,
+} from "@/app/actions/product.actions";
+import {
+  DestructiveConfirmDialog,
+  ConfirmActionType,
+  UsageDetails,
+} from "@/components/ui/destructive-confirm-dialog";
 import { useSession } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
 import { UserRole } from "@prisma/client";
 
 export interface FurnitureProductItem {
@@ -41,6 +52,9 @@ interface ProductsTableProps {
 
 export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: ProductsTableProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isArchivedTab = searchParams.get("status") === "ARCHIVED";
+
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
 
@@ -48,20 +62,85 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
     open: boolean;
     type: ConfirmActionType;
     product: FurnitureProductItem | null;
+    isReferenced: boolean;
+    checkingUsage: boolean;
+    usageDetails: UsageDetails | null;
   }>({
     open: false,
     type: "archive",
     product: null,
+    isReferenced: false,
+    checkingUsage: false,
+    usageDetails: null,
   });
+
+  const handleOpenDialog = async (type: ConfirmActionType, product: FurnitureProductItem) => {
+    if (type === "delete") {
+      setConfirmDialog({
+        open: true,
+        type: "delete",
+        product,
+        isReferenced: false,
+        checkingUsage: true,
+        usageDetails: null,
+      });
+
+      const res = await getProductUsageDetailsAction(product.id);
+      if (res.success && res.data) {
+        const details = res.data;
+        setConfirmDialog((prev) => ({
+          ...prev,
+          isReferenced: !details.canDelete,
+          usageDetails: details,
+          checkingUsage: false,
+        }));
+      } else {
+        setConfirmDialog((prev) => ({
+          ...prev,
+          checkingUsage: false,
+        }));
+      }
+    } else {
+      setConfirmDialog({
+        open: true,
+        type,
+        product,
+        isReferenced: false,
+        checkingUsage: false,
+        usageDetails: null,
+      });
+    }
+  };
+
+  const handleDeleteDependency = async (type: string, id: string, lineId?: string) => {
+    if (!confirmDialog.product) return;
+    const res = await deleteProductDependencyAction(type, id, lineId);
+    if (res.success) {
+      toast.success("Linked reference removed");
+      // Re-fetch usage details
+      const refreshed = await getProductUsageDetailsAction(confirmDialog.product.id);
+      if (refreshed.success && refreshed.data) {
+        setConfirmDialog((prev) => ({
+          ...prev,
+          isReferenced: !refreshed.data?.canDelete,
+          usageDetails: refreshed.data || null,
+        }));
+      }
+      router.refresh();
+    } else {
+      toast.error(res.error || "Failed to remove linked document");
+    }
+  };
 
   const handleExecuteAction = async () => {
     if (!confirmDialog.product) return;
     const { id, name } = confirmDialog.product;
 
-    if (confirmDialog.type === "archive") {
+    // If deleting from active tab with references -> archive it
+    if (confirmDialog.type === "archive" || (confirmDialog.type === "delete" && !isArchivedTab && confirmDialog.isReferenced)) {
       const res = await archiveProductAction(id);
       if (res.success) {
-        toast.success(`Product "${name}" archived`);
+        toast.success(`Product "${name}" archived successfully`);
         router.refresh();
       } else {
         toast.error(res.error || "Failed to archive product");
@@ -69,7 +148,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
     } else if (confirmDialog.type === "restore") {
       const res = await restoreProductAction(id);
       if (res.success) {
-        toast.success(`Product "${name}" restored`);
+        toast.success(`Product "${name}" restored successfully`);
         router.refresh();
       } else {
         toast.error(res.error || "Failed to restore product");
@@ -84,6 +163,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
       }
     }
   };
+
   return (
     <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
       <div className="overflow-x-auto">
@@ -181,13 +261,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
 
                         {item.isArchived ? (
                           <DropdownMenuItem
-                            onClick={() =>
-                              setConfirmDialog({
-                                open: true,
-                                type: "restore",
-                                product: item,
-                              })
-                            }
+                            onClick={() => handleOpenDialog("restore", item)}
                             className="text-navy gap-2"
                           >
                             <RotateCcw className="h-3.5 w-3.5" />
@@ -195,13 +269,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
-                            onClick={() =>
-                              setConfirmDialog({
-                                open: true,
-                                type: "archive",
-                                product: item,
-                              })
-                            }
+                            onClick={() => handleOpenDialog("archive", item)}
                             className="text-amber-700 gap-2"
                           >
                             <Archive className="h-3.5 w-3.5" />
@@ -211,13 +279,7 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
 
                         {isAdmin && (
                           <DropdownMenuItem
-                            onClick={() =>
-                              setConfirmDialog({
-                                open: true,
-                                type: "delete",
-                                product: item,
-                              })
-                            }
+                            onClick={() => handleOpenDialog("delete", item)}
                             className="text-destructive focus:text-destructive gap-2"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -242,6 +304,11 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
           actionType={confirmDialog.type}
           recordName={confirmDialog.product.name}
           recordType="Product"
+          isReferenced={confirmDialog.isReferenced}
+          checkingUsage={confirmDialog.checkingUsage}
+          usageDetails={confirmDialog.usageDetails}
+          isArchivedTab={isArchivedTab}
+          onDeleteDependency={handleDeleteDependency}
           onConfirm={handleExecuteAction}
         />
       )}

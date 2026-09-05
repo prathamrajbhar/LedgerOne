@@ -8,14 +8,14 @@ export interface CreateProductInput {
   name: string;
   type: "GOODS" | "SERVICE" | "COMBO";
   categoryId: string;
-  sku?: string;
-  material?: string;
-  dimensions?: string;
+  sku?: string | null;
+  material?: string | null;
+  dimensions?: string | null;
   salesPrice: number;
   cost: number;
   stock?: number;
   reorderPoint?: number;
-  image?: string;
+  image?: string | null;
 }
 
 export interface UpdateProductInput {
@@ -23,14 +23,14 @@ export interface UpdateProductInput {
   name?: string;
   type?: "GOODS" | "SERVICE" | "COMBO";
   categoryId?: string;
-  sku?: string;
-  material?: string;
-  dimensions?: string;
+  sku?: string | null;
+  material?: string | null;
+  dimensions?: string | null;
   salesPrice?: number;
   cost?: number;
   stock?: number;
   reorderPoint?: number;
-  image?: string;
+  image?: string | null;
 }
 
 export interface ListProductsParams {
@@ -68,36 +68,45 @@ export class ProductService {
       throw new ValidationError("Product category not found");
     }
 
+    const formattedSku = input.sku?.trim() || null;
+
     // Check SKU uniqueness if provided
-    if (input.sku) {
+    if (formattedSku) {
       const existingSku = await prisma.product.findUnique({
-        where: { sku: input.sku },
+        where: { sku: formattedSku },
       });
       if (existingSku) {
         throw new ConflictError("SKU already exists");
       }
     }
 
-    const product = await prisma.product.create({
-      data: {
-        name: input.name.trim(),
-        type: input.type,
-        categoryId: input.categoryId,
-        sku: input.sku?.trim() || null,
-        material: input.material?.trim() || null,
-        dimensions: input.dimensions?.trim() || null,
-        salesPrice: new Prisma.Decimal(input.salesPrice),
-        cost: new Prisma.Decimal(input.cost),
-        stock: input.stock ?? 0,
-        reorderPoint: input.reorderPoint ?? 10,
-        image: input.image,
-      },
-      include: {
-        category: true,
-      },
-    });
+    try {
+      const product = await prisma.product.create({
+        data: {
+          name: input.name.trim(),
+          type: input.type,
+          categoryId: input.categoryId,
+          sku: formattedSku,
+          material: input.material?.trim() || null,
+          dimensions: input.dimensions?.trim() || null,
+          salesPrice: new Prisma.Decimal(input.salesPrice),
+          cost: new Prisma.Decimal(input.cost),
+          stock: input.stock ?? 0,
+          reorderPoint: input.reorderPoint ?? 10,
+          image: input.image || null,
+        },
+        include: {
+          category: true,
+        },
+      });
 
-    return product;
+      return product;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictError("SKU already exists");
+      }
+      throw error;
+    }
   }
 
   async update(input: UpdateProductInput) {
@@ -109,6 +118,9 @@ export class ProductService {
       throw new NotFoundError("Product not found");
     }
 
+    if (input.name !== undefined && !input.name.trim()) {
+      throw new ValidationError("Product name cannot be empty");
+    }
     if (input.salesPrice !== undefined && input.salesPrice < 0) {
       throw new ValidationError("Sales price cannot be negative");
     }
@@ -132,37 +144,49 @@ export class ProductService {
       }
     }
 
-    // Check SKU uniqueness if being updated
-    if (input.sku && input.sku !== product.sku) {
+    const formattedSku = input.sku !== undefined ? (input.sku?.trim() || null) : undefined;
+
+    // Check SKU uniqueness if being updated to a non-null SKU
+    if (formattedSku !== undefined && formattedSku !== null && formattedSku !== product.sku) {
       const existingSku = await prisma.product.findUnique({
-        where: { sku: input.sku },
+        where: { sku: formattedSku },
       });
-      if (existingSku) {
+      if (existingSku && existingSku.id !== input.id) {
         throw new ConflictError("SKU already exists");
       }
     }
 
-    const updated = await prisma.product.update({
-      where: { id: input.id },
-      data: {
-        name: input.name?.trim(),
-        type: input.type,
-        categoryId: input.categoryId,
-        sku: input.sku?.trim(),
-        material: input.material?.trim(),
-        dimensions: input.dimensions?.trim(),
-        salesPrice: input.salesPrice ? new Prisma.Decimal(input.salesPrice) : undefined,
-        cost: input.cost ? new Prisma.Decimal(input.cost) : undefined,
-        stock: input.stock,
-        reorderPoint: input.reorderPoint,
-        image: input.image,
-      },
-      include: {
-        category: true,
-      },
-    });
+    const formattedMaterial = input.material !== undefined ? (input.material?.trim() || null) : undefined;
+    const formattedDimensions = input.dimensions !== undefined ? (input.dimensions?.trim() || null) : undefined;
 
-    return updated;
+    try {
+      const updated = await prisma.product.update({
+        where: { id: input.id },
+        data: {
+          ...(input.name !== undefined && { name: input.name.trim() }),
+          ...(input.type !== undefined && { type: input.type }),
+          ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+          ...(formattedSku !== undefined && { sku: formattedSku }),
+          ...(formattedMaterial !== undefined && { material: formattedMaterial }),
+          ...(formattedDimensions !== undefined && { dimensions: formattedDimensions }),
+          ...(input.salesPrice !== undefined && { salesPrice: new Prisma.Decimal(input.salesPrice) }),
+          ...(input.cost !== undefined && { cost: new Prisma.Decimal(input.cost) }),
+          ...(input.stock !== undefined && { stock: input.stock }),
+          ...(input.reorderPoint !== undefined && { reorderPoint: input.reorderPoint }),
+          ...(input.image !== undefined && { image: input.image }),
+        },
+        include: {
+          category: true,
+        },
+      });
+
+      return updated;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+        throw new ConflictError("SKU already exists");
+      }
+      throw error;
+    }
   }
 
   async findById(id: string) {
@@ -172,8 +196,6 @@ export class ProductService {
         category: true,
       },
     });
-
-    // select * from product where 
 
     if (!product) {
       throw new NotFoundError("Product not found");
@@ -263,6 +285,122 @@ export class ProductService {
     ]);
 
     return poLines === 0 && soLines === 0 && billLines === 0 && invoiceLines === 0;
+  }
+
+  async getUsageDetails(id: string) {
+    const [poLines, soLines, billLines, invoiceLines] = await Promise.all([
+      prisma.purchaseOrderLine.findMany({
+        where: { productId: id },
+        include: { purchaseOrder: true },
+        take: 10,
+      }),
+      prisma.salesOrderLine.findMany({
+        where: { productId: id },
+        include: { salesOrder: true },
+        take: 10,
+      }),
+      prisma.vendorBillLine.findMany({
+        where: { productId: id },
+        include: { vendorBill: true },
+        take: 10,
+      }),
+      prisma.customerInvoiceLine.findMany({
+        where: { productId: id },
+        include: { invoice: true },
+        take: 10,
+      }),
+    ]);
+
+    const dependencies = [
+      ...soLines.map((l) => ({
+        id: l.salesOrderId,
+        lineId: l.id,
+        type: "SALES_ORDER" as const,
+        typeName: "Sales Order",
+        reference: l.salesOrder.soNumber,
+        date: l.salesOrder.orderDate.toISOString(),
+        status: l.salesOrder.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/sales",
+        canDeleteDirectly: l.salesOrder.status !== "CONFIRMED",
+      })),
+      ...invoiceLines.map((l) => ({
+        id: l.invoiceId,
+        lineId: l.id,
+        type: "CUSTOMER_INVOICE" as const,
+        typeName: "Customer Invoice",
+        reference: l.invoice.invoiceNumber,
+        date: l.invoice.invoiceDate.toISOString(),
+        status: l.invoice.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/invoices",
+        canDeleteDirectly: l.invoice.status === "DRAFT" || l.invoice.status === "CANCELLED",
+      })),
+      ...billLines.map((l) => ({
+        id: l.vendorBillId,
+        lineId: l.id,
+        type: "VENDOR_BILL" as const,
+        typeName: "Vendor Bill",
+        reference: l.vendorBill.billNumber,
+        date: l.vendorBill.billDate.toISOString(),
+        status: l.vendorBill.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/bills",
+        canDeleteDirectly: l.vendorBill.status === "DRAFT" || l.vendorBill.status === "CANCELLED",
+      })),
+      ...poLines.map((l) => ({
+        id: l.purchaseOrderId,
+        lineId: l.id,
+        type: "PURCHASE_ORDER" as const,
+        typeName: "Purchase Order",
+        reference: l.purchaseOrder.poNumber,
+        date: l.purchaseOrder.orderDate.toISOString(),
+        status: l.purchaseOrder.status,
+        amount: Number(l.lineTotal),
+        viewUrl: "/purchases",
+        canDeleteDirectly: l.purchaseOrder.status !== "CONFIRMED",
+      })),
+    ];
+
+    return {
+      canDelete: dependencies.length === 0,
+      totalReferences: dependencies.length,
+      breakdown: {
+        salesOrders: soLines.length,
+        invoices: invoiceLines.length,
+        vendorBills: billLines.length,
+        purchaseOrders: poLines.length,
+      },
+      dependencies,
+    };
+  }
+
+  async deleteDependency(type: string, id: string, lineId?: string) {
+    if (type === "SALES_ORDER") {
+      if (lineId) {
+        await prisma.salesOrderLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.salesOrder.delete({ where: { id } });
+      }
+    } else if (type === "CUSTOMER_INVOICE") {
+      if (lineId) {
+        await prisma.customerInvoiceLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.customerInvoice.delete({ where: { id } });
+      }
+    } else if (type === "VENDOR_BILL") {
+      if (lineId) {
+        await prisma.vendorBillLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.vendorBill.delete({ where: { id } });
+      }
+    } else if (type === "PURCHASE_ORDER") {
+      if (lineId) {
+        await prisma.purchaseOrderLine.delete({ where: { id: lineId } });
+      } else {
+        await prisma.purchaseOrder.delete({ where: { id } });
+      }
+    }
   }
 }
 
