@@ -537,15 +537,13 @@ export function InvoicesClient({
         <div className="flex items-center gap-3">
           <Button
             onClick={() => setOpenCreateModal(true)}
-            className="h-9 px-3.5 bg-teal hover:bg-teal/90 text-white text-xs font-semibold gap-1.5 shadow-2xs hover:shadow-xs transition-all"
+            className="h-9 px-3.5 bg-teal hover:bg-teal/90 text-white text-xs font-semibold gap-1.5 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
-            + Create Invoice
+            Create Invoice
           </Button>
         </div>
       </div>
-
-      {/* SUMMARY CARDS - continuing in next message due to length */}
 
       {/* SUMMARY SECTION */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -630,13 +628,13 @@ export function InvoicesClient({
       <Card className="p-3 border-border shadow-2xs bg-white space-y-2.5">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <input
               type="text"
               placeholder="Search invoice/customer..."
               value={search}
               onChange={(e) => updateFilters({ search: e.target.value })}
-              className="w-full h-8.5 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
             />
           </div>
 
@@ -644,7 +642,7 @@ export function InvoicesClient({
             <select
               value={customerFilter}
               onChange={(e) => updateFilters({ customer: e.target.value })}
-              className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
             >
               <option value="ALL">All Customers</option>
               {customers.map((c) => (
@@ -657,7 +655,7 @@ export function InvoicesClient({
             <select
               value={statusFilter}
               onChange={(e) => updateFilters({ status: e.target.value })}
-              className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
             >
               <option value="ALL">Document Status</option>
               <option value="DRAFT">Draft</option>
@@ -669,7 +667,7 @@ export function InvoicesClient({
             <select
               value={paymentStatusFilter}
               onChange={(e) => updateFilters({ paymentStatus: e.target.value })}
-              className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
             >
               <option value="ALL">Payment Status</option>
               <option value="NOT_PAID">Not Paid</option>
@@ -677,20 +675,20 @@ export function InvoicesClient({
               <option value="PAID">Paid in Full</option>
             </select>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <input
                 type="date"
                 value={startDate}
                 onChange={(e) => updateFilters({ startDate: e.target.value })}
-                className="w-full h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
                 title="Start Date"
               />
-              <span className="text-muted-foreground text-xs">-</span>
+              <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => updateFilters({ endDate: e.target.value })}
-                className="w-full h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
                 title="End Date"
               />
             </div>
