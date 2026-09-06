@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Search, Download, Loader2 } from "lucide-react";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
 import { toast } from "sonner";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 interface BillLineItem {
   id: string;
@@ -81,14 +82,12 @@ export function PortalBillsClient({ bills }: PortalBillsClientProps) {
 
       {/* Toolbar with Search and Filter Pills */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
+        <div className="w-full sm:w-80">
+          <DebouncedSearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
             placeholder="Search bill # or PO ref..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+            className="h-9"
           />
         </div>
 

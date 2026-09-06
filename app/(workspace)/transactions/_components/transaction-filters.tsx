@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 export function TransactionFilters() {
   const router = useRouter();
@@ -11,14 +11,24 @@ export function TransactionFilters() {
   const [search, setSearch] = React.useState(searchParams.get("search") || "");
   const [status, setStatus] = React.useState(searchParams.get("status") || "");
   const [source, setSource] = React.useState(searchParams.get("source") || "");
+  const isInitialMount = React.useRef(true);
 
-  const handleFilter = () => {
+  const applyFilters = React.useCallback((newSearch: string, newStatus: string, newSource: string) => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (status) params.set("status", status);
-    if (source) params.set("source", source);
+    if (newSearch) params.set("search", newSearch);
+    if (newStatus) params.set("status", newStatus);
+    if (newSource) params.set("source", newSource);
     router.push(`/transactions?${params.toString()}`);
-  };
+  }, [router]);
+
+  // Debounced auto-filter when search changes
+  React.useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    applyFilters(search, status, source);
+  }, [search, status, source, applyFilters]);
 
   const handleReset = () => {
     setSearch("");
@@ -29,15 +39,12 @@ export function TransactionFilters() {
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
-      <div className="relative w-full sm:w-80">
-        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-        <input
-          type="text"
+      <div className="w-full sm:w-80">
+        <DebouncedSearchInput
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleFilter()}
+          onChange={setSearch}
           placeholder="Search by entry #, invoice, bill..."
-          className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+          className="h-9"
         />
       </div>
 
@@ -66,7 +73,7 @@ export function TransactionFilters() {
         </select>
 
         <Button
-          onClick={handleFilter}
+          onClick={() => applyFilters(search, status, source)}
           size="sm"
           className="bg-navy hover:bg-navy-hover text-white text-xs"
         >

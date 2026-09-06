@@ -36,6 +36,7 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 import {
   getVendorBillsAction,
   createStandaloneBillAction,
@@ -57,6 +58,7 @@ import { parseVendorBillAction } from "@/app/actions/ai-document.actions";
 import type { ParsedVendorBillResult } from "@/lib/services/ai-document-parser.service";
 import { DocumentStatus, PaymentStatus, PaymentMethod, Prisma } from "@prisma/client";
 import type { Contact, Product, AnalyticAccount } from "@prisma/client";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 
 interface BillLineItem {
   id: string;
@@ -471,6 +473,7 @@ export default function VendorBillsPage() {
 
       const result = await createStandaloneBillAction({
         vendorId: formVendor,
+        billNumber: formVendorBillNumber || undefined,
         billDate: new Date(formBillDate),
         dueDate: new Date(formDueDate),
         lines: billLines,
@@ -766,6 +769,24 @@ export default function VendorBillsPage() {
     );
   });
 
+  // Client-side column sorting
+  type BillSortColumn = "billNumber" | "vendor" | "billDate" | "dueDate" | "total" | "amountPaid" | "amountDue" | "status";
+  const { sortedItems: sortedBills, sortState, handleSort } = useTableSort<VendorBillWithRelations, BillSortColumn>(
+    filteredBills,
+    "billDate",
+    "desc",
+    {
+      billNumber: (b) => b.billNumber,
+      vendor: (b) => b.vendor?.name || "",
+      billDate: (b) => new Date(b.billDate),
+      dueDate: (b) => new Date(b.dueDate),
+      total: (b) => Number(b.total),
+      amountPaid: (b) => Number(b.amountPaid),
+      amountDue: (b) => Number(b.amountDue),
+      status: (b) => getDisplayStatus(b),
+    }
+  );
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-3">
@@ -947,14 +968,12 @@ export default function VendorBillsPage() {
       <Card className="p-3 border-border shadow-2xs bg-white space-y-2.5">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
           {/* Search input */}
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
+          <div className="flex-1 min-w-[240px]">
+            <DebouncedSearchInput
               placeholder="Search vendor/bill number (e.g. BILL00001, Timber Supplies)..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-8.5 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              onChange={setSearch}
+              className="h-8.5"
             />
           </div>
 
@@ -1075,19 +1094,35 @@ export default function VendorBillsPage() {
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-4">Bill #</th>
-                  <th className="py-3 px-4">Vendor</th>
-                  <th className="py-3 px-4">Bill Date</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4 text-right">Paid</th>
-                  <th className="py-3 px-4 text-right">Balance</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <SortableTableHead columnKey="billNumber" currentSort={sortState} onSort={handleSort}>
+                    Bill #
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="vendor" currentSort={sortState} onSort={handleSort}>
+                    Vendor
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="billDate" currentSort={sortState} onSort={handleSort}>
+                    Bill Date
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="dueDate" currentSort={sortState} onSort={handleSort}>
+                    Due Date
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="total" currentSort={sortState} onSort={handleSort} align="right">
+                    Amount
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="amountPaid" currentSort={sortState} onSort={handleSort} align="right">
+                    Paid
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="amountDue" currentSort={sortState} onSort={handleSort} align="right">
+                    Balance
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="status" currentSort={sortState} onSort={handleSort} align="center">
+                    Status
+                  </SortableTableHead>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {filteredBills.map((bill) => {
+                {sortedBills.map((bill) => {
                   const displayStatus = getDisplayStatus(bill);
                   const isDraft = bill.status === DocumentStatus.DRAFT;
                   const isConfirmed = bill.status === DocumentStatus.CONFIRMED;

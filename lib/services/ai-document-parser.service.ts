@@ -33,10 +33,12 @@ export interface ParsedExpenseResult {
 export class AiDocumentParserService {
   private client: GoogleGenerativeAI | null = null;
 
-  private getClient(): GoogleGenerativeAI | null {
+  private getClient(): GoogleGenerativeAI {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey || apiKey === "your-gemini-api-key" || apiKey.length < 10) {
-      return null;
+      throw new Error(
+        "Google Gemini API key is missing or unconfigured. Please set a valid GEMINI_API_KEY in your environment to use AI OCR document scanning."
+      );
     }
     if (!this.client) {
       this.client = new GoogleGenerativeAI(apiKey);
@@ -45,7 +47,7 @@ export class AiDocumentParserService {
   }
 
   /**
-   * Parse Vendor Bill Document using Gemini Vision with intelligent fallback
+   * Parse Vendor Bill Document using authentic Gemini Vision OCR
    */
   async parseVendorBill(params: {
     fileBase64: string;
@@ -57,35 +59,38 @@ export class AiDocumentParserService {
   }): Promise<ParsedVendorBillResult> {
     const client = this.getClient();
 
-    if (client) {
-      try {
-        const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = client.getGenerativeModel({
+      model: "gemini-3.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
 
-        const prompt = `You are an expert ERP accounting OCR system for LedgerOne.
+    const prompt = `You are an expert ERP accounting OCR system for LedgerOne.
 Analyze this vendor bill/invoice document or image carefully and extract all key data into a strict JSON object.
 
-Available system vendors:
+Available system vendors in LedgerOne:
 ${JSON.stringify(params.availableVendors)}
 
-Available system products:
+Available system products in LedgerOne:
 ${JSON.stringify(params.availableProducts.map((p) => ({ id: p.id, name: p.name, sku: p.sku })))}
 
 Available system analytic accounts:
 ${JSON.stringify(params.availableAnalytics)}
 
-Return ONLY a raw JSON object (NO markdown code blocks, no backticks, no commentary) with this exact schema:
+Return ONLY a valid JSON object adhering strictly to this schema:
 {
-  "vendorName": "extracted vendor name",
-  "matchedVendorId": "id from available system vendors if matched, or null",
-  "billNumber": "extracted invoice/bill number or null",
-  "billDate": "YYYY-MM-DD format, or today's date if not found",
-  "dueDate": "YYYY-MM-DD format, or 30 days after billDate",
+  "vendorName": "extracted vendor or supplier name from document, or null",
+  "matchedVendorId": "exact string ID from available system vendors if name matches, or null",
+  "billNumber": "extracted invoice or bill number from document, or null",
+  "billDate": "YYYY-MM-DD format extracted from document, or null",
+  "dueDate": "YYYY-MM-DD format extracted from document, or null",
   "totalAmount": 1234.56,
   "lines": [
     {
-      "productName": "item description",
-      "matchedProductId": "id from available system products if matched, or null",
-      "matchedAnalyticAccountId": "id from available analytics if matched, or null",
+      "productName": "item description or title from document line",
+      "matchedProductId": "exact string ID from available system products if matched, or null",
+      "matchedAnalyticAccountId": "exact string ID from available analytics if matched, or null",
       "quantity": 1,
       "unitPrice": 100.00,
       "lineTotal": 100.00
@@ -93,60 +98,81 @@ Return ONLY a raw JSON object (NO markdown code blocks, no backticks, no comment
   ]
 }`;
 
-        const filePart = {
-          inlineData: {
-            data: params.fileBase64,
-            mimeType: params.mimeType,
-          },
-        };
+    const filePart = {
+      inlineData: {
+        data: params.fileBase64,
+        mimeType: params.mimeType,
+      },
+    };
 
-        const result = await model.generateContent([prompt, filePart]);
-        const text = result.response.text().trim();
-        const cleanedJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        const parsed = JSON.parse(cleanedJson);
-
-        return {
-          vendorName: parsed.vendorName,
-          vendorId: parsed.matchedVendorId || this.fuzzyMatchVendor(parsed.vendorName, params.availableVendors),
-          billNumber: parsed.billNumber,
-          billDate: parsed.billDate || new Date().toISOString().split("T")[0],
-          dueDate: parsed.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-          lines: (parsed.lines || []).map((l: {
-            productName: string;
-            matchedProductId?: string;
-            matchedAnalyticAccountId?: string;
-            quantity?: number;
-            unitPrice?: number;
-            lineTotal?: number;
-          }) => {
-            const pid = l.matchedProductId || this.fuzzyMatchProduct(l.productName, params.availableProducts);
-            const aid = l.matchedAnalyticAccountId || (params.availableAnalytics[0]?.id || "");
-            const qty = Number(l.quantity) || 1;
-            const price = Number(l.unitPrice) || 0;
-            return {
-              productName: l.productName || "Bill Item",
-              productId: pid,
-              analyticAccountId: aid,
-              quantity: qty,
-              unitPrice: price,
-              lineTotal: Number(l.lineTotal) || qty * price,
-            };
-          }),
-          totalAmount: Number(parsed.totalAmount) || 0,
-          confidence: 0.95,
-          rawTextSummary: `AI parsed bill from ${parsed.vendorName || "supplier"}`,
-        };
-      } catch (err) {
-        console.warn("Gemini vision parse failed, using smart heuristic fallback:", err);
-      }
+    let text = "";
+    try {
+      const result = await model.generateContent([prompt, filePart]);
+      text = result.response.text().trim();
+    } catch (apiError) {
+      const msg = apiError instanceof Error ? apiError.message : String(apiError);
+      throw new Error(`Gemini Vision OCR extraction failed: ${msg}`);
     }
 
-    // Heuristic Fallback Parser (Robust, deterministic matching from filename and document hints)
-    return this.fallbackVendorBillParser(params);
+    const cleanedJson = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+    let parsed: {
+      vendorName?: string;
+      matchedVendorId?: string;
+      billNumber?: string;
+      billDate?: string;
+      dueDate?: string;
+      totalAmount?: number;
+      lines?: Array<{
+        productName: string;
+        matchedProductId?: string;
+        matchedAnalyticAccountId?: string;
+        quantity?: number;
+        unitPrice?: number;
+        lineTotal?: number;
+      }>;
+    };
+
+    try {
+      parsed = JSON.parse(cleanedJson);
+    } catch {
+      throw new Error("Failed to parse OCR response from Gemini Vision into structured JSON.");
+    }
+
+    const matchedVendorId =
+      parsed.matchedVendorId || this.fuzzyMatchVendor(parsed.vendorName, params.availableVendors);
+
+    const lines = (parsed.lines || []).map((line) => {
+      const pid = line.matchedProductId || this.fuzzyMatchProduct(line.productName, params.availableProducts);
+      const aid = line.matchedAnalyticAccountId || (params.availableAnalytics[0]?.id || "");
+      const qty = Number(line.quantity) > 0 ? Number(line.quantity) : 1;
+      const price = Number(line.unitPrice) >= 0 ? Number(line.unitPrice) : 0;
+      const computedTotal = Number(line.lineTotal) >= 0 ? Number(line.lineTotal) : qty * price;
+
+      return {
+        productName: line.productName || "Extracted Item",
+        productId: pid,
+        analyticAccountId: aid,
+        quantity: qty,
+        unitPrice: price,
+        lineTotal: computedTotal,
+      };
+    });
+
+    return {
+      vendorName: parsed.vendorName || undefined,
+      vendorId: matchedVendorId || undefined,
+      billNumber: parsed.billNumber || undefined,
+      billDate: parsed.billDate || undefined,
+      dueDate: parsed.dueDate || undefined,
+      lines,
+      totalAmount: typeof parsed.totalAmount === "number" ? parsed.totalAmount : undefined,
+      confidence: 0.95,
+      rawTextSummary: parsed.vendorName ? `AI parsed bill from ${parsed.vendorName}` : "AI parsed vendor bill",
+    };
   }
 
   /**
-   * Parse Expense Receipt Document
+   * Parse Expense Receipt Document using authentic Gemini Vision OCR
    */
   async parseExpenseReceipt(params: {
     fileBase64: string;
@@ -157,73 +183,100 @@ Return ONLY a raw JSON object (NO markdown code blocks, no backticks, no comment
   }): Promise<ParsedExpenseResult> {
     const client = this.getClient();
 
-    if (client) {
-      try {
-        const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = client.getGenerativeModel({
+      model: "gemini-3.5-flash-lite",
+      generationConfig: {
+        responseMimeType: "application/json",
+      },
+    });
 
-        const prompt = `You are an expert expense auditor for LedgerOne.
+    const prompt = `You are an expert expense auditor for LedgerOne.
 Analyze this expense receipt image or document. Extract the merchant, transaction purpose, total amount paid, date, and categorize it against the provided accounts.
 
-Available expense accounts:
+Available expense accounts in LedgerOne:
 ${JSON.stringify(params.availableAccounts)}
 
-Return ONLY a raw JSON object (NO markdown, no backticks, no comments) with this schema:
+Return ONLY a valid JSON object adhering strictly to this schema:
 {
-  "merchantName": "store or merchant name",
-  "description": "brief description of expense e.g. Sawmill Timber Logistics or Fuel expense",
+  "merchantName": "store or merchant name from receipt, or null",
+  "description": "brief descriptive summary of expense, or null",
   "amount": 1250.00,
   "expenseDate": "YYYY-MM-DD",
-  "matchedAccountId": "id from available expense accounts that best fits, or null"
+  "matchedAccountId": "exact ID from available expense accounts that best fits, or null"
 }`;
 
-        const filePart = {
-          inlineData: {
-            data: params.fileBase64,
-            mimeType: params.mimeType,
-          },
-        };
+    const filePart = {
+      inlineData: {
+        data: params.fileBase64,
+        mimeType: params.mimeType,
+      },
+    };
 
-        const result = await model.generateContent([prompt, filePart]);
-        const text = result.response.text().trim();
-        const cleanedJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
-        const parsed = JSON.parse(cleanedJson);
-
-        return {
-          merchantName: parsed.merchantName,
-          description: parsed.description || `${parsed.merchantName || "Expense"} Receipt`,
-          amount: Number(parsed.amount) || 0,
-          expenseDate: parsed.expenseDate || new Date().toISOString().split("T")[0],
-          recommendedAccountId: parsed.matchedAccountId || this.matchExpenseAccount(parsed.description, params.availableAccounts),
-          confidence: 0.95,
-          rawTextSummary: `Extracted receipt for ${parsed.description}`,
-        };
-      } catch (err) {
-        console.warn("Gemini vision parse for receipt failed, using heuristic fallback:", err);
-      }
+    let text = "";
+    try {
+      const result = await model.generateContent([prompt, filePart]);
+      text = result.response.text().trim();
+    } catch (apiError) {
+      const msg = apiError instanceof Error ? apiError.message : String(apiError);
+      throw new Error(`Gemini Vision OCR extraction failed: ${msg}`);
     }
 
-    return this.fallbackExpenseParser(params);
+    const cleanedJson = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+    let parsed: {
+      merchantName?: string;
+      description?: string;
+      amount?: number;
+      expenseDate?: string;
+      matchedAccountId?: string;
+    };
+
+    try {
+      parsed = JSON.parse(cleanedJson);
+    } catch {
+      throw new Error("Failed to parse OCR response from Gemini Vision into structured JSON.");
+    }
+
+    const desc = parsed.description || (parsed.merchantName ? `${parsed.merchantName} Receipt` : "Expense Receipt");
+    const matchedId =
+      parsed.matchedAccountId || this.matchExpenseAccount(desc, params.availableAccounts);
+    const matchedAccount = params.availableAccounts.find((a) => a.id === matchedId);
+
+    return {
+      merchantName: parsed.merchantName || undefined,
+      description: desc,
+      amount: typeof parsed.amount === "number" ? parsed.amount : 0,
+      expenseDate: parsed.expenseDate || new Date().toISOString().split("T")[0],
+      recommendedAccountId: matchedId || undefined,
+      recommendedAccountName: matchedAccount?.name,
+      confidence: 0.95,
+      rawTextSummary: `Extracted receipt for ${desc}`,
+    };
   }
 
-  // --- Fallback & Fuzzy Matching Helpers ---
+  // --- Fuzzy Matching Helpers (For genuine extracted entities against database records) ---
 
   private fuzzyMatchVendor(name: string | undefined, vendors: Array<{ id: string; name: string }>): string {
-    if (!name || vendors.length === 0) return vendors[0]?.id || "";
-    const cleanName = name.toLowerCase();
-    const found = vendors.find((v) => cleanName.includes(v.name.toLowerCase()) || v.name.toLowerCase().includes(cleanName));
-    return found ? found.id : vendors[0]?.id || "";
+    if (!name || vendors.length === 0) return "";
+    const cleanName = name.toLowerCase().trim();
+    const found = vendors.find(
+      (v) => cleanName.includes(v.name.toLowerCase()) || v.name.toLowerCase().includes(cleanName)
+    );
+    return found ? found.id : "";
   }
 
-  private fuzzyMatchProduct(name: string | undefined, products: Array<{ id: string; name: string; sku?: string | null }>): string {
-    if (!name || products.length === 0) return products[0]?.id || "";
-    const clean = name.toLowerCase();
+  private fuzzyMatchProduct(
+    name: string | undefined,
+    products: Array<{ id: string; name: string; sku?: string | null }>
+  ): string {
+    if (!name || products.length === 0) return "";
+    const clean = name.toLowerCase().trim();
     const found = products.find(
       (p) =>
         clean.includes(p.name.toLowerCase()) ||
         p.name.toLowerCase().includes(clean) ||
         (p.sku && clean.includes(p.sku.toLowerCase()))
     );
-    return found ? found.id : products[0]?.id || "";
+    return found ? found.id : "";
   }
 
   private matchExpenseAccount(text: string, accounts: Array<{ id: string; name: string }>): string {
@@ -235,7 +288,7 @@ Return ONLY a raw JSON object (NO markdown, no backticks, no comments) with this
       const acc = accounts.find((a) => a.name.toLowerCase().includes("fuel") || a.name.toLowerCase().includes("vehicle") || a.name.toLowerCase().includes("delivery"));
       if (acc) return acc.id;
     }
-    // Check office supplies / stationary
+    // Check office supplies / stationery
     if (t.includes("stationery") || t.includes("office") || t.includes("paper") || t.includes("supplies")) {
       const acc = accounts.find((a) => a.name.toLowerCase().includes("supplies") || a.name.toLowerCase().includes("office"));
       if (acc) return acc.id;
@@ -252,99 +305,6 @@ Return ONLY a raw JSON object (NO markdown, no backticks, no comments) with this
     }
 
     return accounts[0]?.id || "";
-  }
-
-  private fallbackVendorBillParser(params: {
-    fileName: string;
-    availableVendors: Array<{ id: string; name: string }>;
-    availableProducts: Array<{ id: string; name: string; cost?: number | null }>;
-    availableAnalytics: Array<{ id: string; name: string }>;
-  }): ParsedVendorBillResult {
-    const fn = params.fileName.toLowerCase();
-    let selectedVendor = params.availableVendors[0];
-
-    // Try finding vendor in filename
-    for (const v of params.availableVendors) {
-      if (fn.includes(v.name.toLowerCase()) || v.name.toLowerCase().split(" ")[0] && fn.includes(v.name.toLowerCase().split(" ")[0])) {
-        selectedVendor = v;
-        break;
-      }
-    }
-
-    // Generate 1-2 realistic line items from products catalog
-    const product1 = params.availableProducts[0] || { id: "p1", name: "Solid Oak Dining Chair", cost: 1200 };
-    const product2 = params.availableProducts[1] || { id: "p2", name: "Premium Teak Timber Planks", cost: 4500 };
-    const defaultAnalytic = params.availableAnalytics[0]?.id || "";
-
-    const lines = [
-      {
-        productName: product1.name,
-        productId: product1.id,
-        analyticAccountId: defaultAnalytic,
-        quantity: 5,
-        unitPrice: Number(product1.cost) || 1200,
-        lineTotal: (Number(product1.cost) || 1200) * 5,
-      },
-      {
-        productName: product2.name,
-        productId: product2.id,
-        analyticAccountId: defaultAnalytic,
-        quantity: 2,
-        unitPrice: Number(product2.cost) || 4500,
-        lineTotal: (Number(product2.cost) || 4500) * 2,
-      },
-    ];
-
-    const total = lines.reduce((sum, l) => sum + l.lineTotal, 0);
-
-    return {
-      vendorName: selectedVendor?.name || "Premium Wood Suppliers Inc.",
-      vendorId: selectedVendor?.id || "",
-      billNumber: `BILL-${Math.floor(100000 + Math.random() * 900000)}`,
-      billDate: new Date().toISOString().split("T")[0],
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      lines,
-      totalAmount: total,
-      confidence: 0.88,
-      rawTextSummary: `Intelligently extracted vendor bill from ${params.fileName}`,
-    };
-  }
-
-  private fallbackExpenseParser(params: {
-    fileName: string;
-    availableAccounts: Array<{ id: string; name: string }>;
-  }): ParsedExpenseResult {
-    const fn = params.fileName.toLowerCase();
-    let desc = "Operational Expense";
-    let amount = 3500;
-
-    if (fn.includes("fuel") || fn.includes("petrol") || fn.includes("diesel")) {
-      desc = "Commercial Delivery Vehicle Fuel";
-      amount = 2850.00;
-    } else if (fn.includes("sawmill") || fn.includes("timber") || fn.includes("wood")) {
-      desc = "Sawmill Timber Processing & Cutting Services";
-      amount = 8400.00;
-    } else if (fn.includes("office") || fn.includes("stationery")) {
-      desc = "Showroom Stationery & Packaging Material";
-      amount = 1420.00;
-    } else if (fn.includes("electric") || fn.includes("utility") || fn.includes("power")) {
-      desc = "Manufacturing Workshop Electricity Bill";
-      amount = 6200.00;
-    }
-
-    const matchedId = this.matchExpenseAccount(desc, params.availableAccounts);
-    const matchedAccount = params.availableAccounts.find((a) => a.id === matchedId);
-
-    return {
-      merchantName: "Verified Vendor / Service Partner",
-      description: desc,
-      amount,
-      expenseDate: new Date().toISOString().split("T")[0],
-      recommendedAccountId: matchedId,
-      recommendedAccountName: matchedAccount?.name,
-      confidence: 0.85,
-      rawTextSummary: `Auto-extracted from ${params.fileName}`,
-    };
   }
 }
 

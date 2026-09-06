@@ -12,6 +12,8 @@ import { getSalesOrdersAction, confirmSalesOrderAction, createInvoiceFromSalesOr
 import { SalesOrderForm } from "./sales-order-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 interface SalesOrderItem {
   id: string;
@@ -27,6 +29,7 @@ interface SalesOrderItem {
 export default function SalesOrdersPage() {
   const router = useRouter();
   const [salesOrders, setSalesOrders] = React.useState<SalesOrderItem[]>([]);
+  const [search, setSearch] = React.useState("");
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
@@ -52,6 +55,16 @@ export default function SalesOrdersPage() {
   React.useEffect(() => {
     loadSalesOrders();
   }, [loadSalesOrders]);
+
+  const filteredOrders = React.useMemo(() => {
+    if (!search.trim()) return salesOrders;
+    const q = search.toLowerCase().trim();
+    return salesOrders.filter(
+      (so) =>
+        so.soNumber.toLowerCase().includes(q) ||
+        (so.customer?.name && so.customer.name.toLowerCase().includes(q))
+    );
+  }, [salesOrders, search]);
 
   const handleConfirmOrder = async (id: string) => {
     setActionLoading(id);
@@ -104,6 +117,22 @@ export default function SalesOrdersPage() {
     );
   }
 
+  const { sortedItems: sortedSalesOrders, sortState, handleSort } = useTableSort<
+    SalesOrderItem,
+    "soNumber" | "customer" | "orderDate" | "items" | "total" | "status"
+  >(
+    filteredOrders,
+    "orderDate",
+    "desc",
+    {
+      customer: (item) => item.customer?.name || "",
+      orderDate: (item) => new Date(item.orderDate).getTime(),
+      items: (item) => item.lines?.length || 0,
+      total: (item) => Number(item.total || 0),
+      status: (item) => item.status,
+    }
+  );
+
   return (
     <div className="space-y-5">
       <PageHeader
@@ -130,21 +159,83 @@ export default function SalesOrdersPage() {
           }}
         />
       ) : (
-        <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-          <table className="w-full text-left text-xs">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="max-w-sm w-full">
+              <DebouncedSearchInput
+                placeholder="Search sales orders by order # or customer..."
+                value={search}
+                onChange={setSearch}
+                className="py-2"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
+            {sortedSalesOrders.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground text-sm">
+                No sales orders found matching &quot;{search}&quot;
+              </div>
+            ) : (
+              <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
-                <th className="py-3.5 px-4">Order #</th>
-                <th className="py-3.5 px-4">Customer</th>
-                <th className="py-3.5 px-4">Order Date</th>
-                <th className="py-3.5 px-4 text-center">Items</th>
-                <th className="py-3.5 px-4 text-right">Order Total</th>
-                <th className="py-3.5 px-4 text-center">Status</th>
+                <SortableTableHead
+                  columnKey="soNumber"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Order #
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="customer"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Customer
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="orderDate"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Order Date
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="items"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  align="center"
+                  className="py-3.5 px-4"
+                >
+                  Items
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="total"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  align="right"
+                  className="py-3.5 px-4"
+                >
+                  Order Total
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="status"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  align="center"
+                  className="py-3.5 px-4"
+                >
+                  Status
+                </SortableTableHead>
                 <th className="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {salesOrders.map((so) => {
+              {sortedSalesOrders.map((so) => {
                 const isInvoiced = so.status === "INVOICED" || (so.invoices && so.invoices.length > 0);
                 return (
                   <tr key={so.id} className="hover:bg-primary-light/30">
@@ -200,6 +291,8 @@ export default function SalesOrdersPage() {
               })}
             </tbody>
           </table>
+            )}
+          </div>
         </div>
       )}
 

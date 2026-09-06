@@ -5,6 +5,7 @@ import { Plus, Search } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { AccountsTable, AccountItem } from "./accounts-table";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 import {
   Dialog,
   DialogContent,
@@ -180,14 +181,12 @@ export default function AccountsPage() {
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
+        <div className="w-full sm:w-80">
+          <DebouncedSearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
             placeholder="Search account code or title..."
-            className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+            className="h-9"
           />
         </div>
 

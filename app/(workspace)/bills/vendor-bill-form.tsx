@@ -63,6 +63,7 @@ export function VendorBillForm() {
 
   // Form State
   const [vendorId, setVendorId] = React.useState("");
+  const [vendorBillNumber, setVendorBillNumber] = React.useState("");
   const [billDate, setBillDate] = React.useState(
     new Date().toISOString().split("T")[0]
   );
@@ -131,6 +132,9 @@ export function VendorBillForm() {
 
     if (data.vendorId) {
       setVendorId(data.vendorId);
+    }
+    if (data.billNumber) {
+      setVendorBillNumber(data.billNumber);
     }
     if (data.billDate) {
       setBillDate(data.billDate);
@@ -245,6 +249,7 @@ export function VendorBillForm() {
     try {
       const result = await createStandaloneBillAction({
         vendorId,
+        billNumber: vendorBillNumber || undefined,
         billDate: new Date(billDate),
         dueDate: new Date(dueDate),
         lines: lines.map((line) => ({
@@ -259,6 +264,7 @@ export function VendorBillForm() {
         toast.success("Vendor bill created successfully");
         setOpen(false);
         setVendorId("");
+        setVendorBillNumber("");
         setBillDate(new Date().toISOString().split("T")[0]);
         setDueDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
         setLines([
@@ -316,45 +322,56 @@ export function VendorBillForm() {
             />
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                <Label htmlFor="vendor">Vendor *</Label>
-                <Select value={vendorId} onValueChange={setVendorId}>
-                  <SelectTrigger id="vendor">
-                    <SelectValue placeholder="Select vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendors.map((vendor) => (
-                      <SelectItem key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <Label htmlFor="vendor">Vendor *</Label>
+                  <Select value={vendorId} onValueChange={setVendorId}>
+                    <SelectTrigger id="vendor">
+                      <SelectValue placeholder="Select vendor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vendors.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="billDate">Bill Date *</Label>
-                <Input
-                  id="billDate"
-                  type="date"
-                  value={billDate}
-                  onChange={(e) => setBillDate(e.target.value)}
-                  required
-                />
-              </div>
+                <div className="space-y-2">
+                  <Label htmlFor="vendorBillNumber">Bill / Invoice #</Label>
+                  <Input
+                    id="vendorBillNumber"
+                    type="text"
+                    placeholder="e.g. INV-2026-001"
+                    value={vendorBillNumber}
+                    onChange={(e) => setVendorBillNumber(e.target.value)}
+                  />
+                </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date *</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  required
-                />
+                <div className="space-y-2">
+                  <Label htmlFor="billDate">Bill Date *</Label>
+                  <Input
+                    id="billDate"
+                    type="date"
+                    value={billDate}
+                    onChange={(e) => setBillDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="dueDate">Due Date *</Label>
+                  <Input
+                    id="dueDate"
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">

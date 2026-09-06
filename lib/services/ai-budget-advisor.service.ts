@@ -245,7 +245,7 @@ export class AiBudgetAdvisorService {
     const client = this.getClient();
     if (client) {
       try {
-        const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = client.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
         const prompt = `You are an expert CFO & Budget Advisor AI for LedgerOne ERP.
 Analyze the following budget health statistics for the company:

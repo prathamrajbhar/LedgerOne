@@ -11,6 +11,9 @@ import {
 } from "@/app/actions/payment.actions";
 import { PaymentModal } from "@/components/forms/payment-modal";
 
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
+
 export default function PaymentsPage() {
   const [payments, setPayments] = React.useState<PaymentRecord[]>([]);
   const [search, setSearch] = React.useState("");
@@ -33,10 +36,25 @@ export default function PaymentsPage() {
     loadPayments();
   }, [loadPayments]);
 
-  const filtered = payments.filter((p) =>
-    p.party.toLowerCase().includes(search.toLowerCase()) ||
-    p.ref.toLowerCase().includes(search.toLowerCase()) ||
-    p.documentNumber.toLowerCase().includes(search.toLowerCase())
+  const filtered = React.useMemo(() => {
+    return payments.filter((p) =>
+      p.party.toLowerCase().includes(search.toLowerCase()) ||
+      p.ref.toLowerCase().includes(search.toLowerCase()) ||
+      p.documentNumber.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [payments, search]);
+
+  const { sortedItems: sortedPayments, sortState, handleSort } = useTableSort<
+    PaymentRecord,
+    "ref" | "party" | "documentNumber" | "method" | "date" | "account" | "amount"
+  >(
+    filtered,
+    "date",
+    "desc",
+    {
+      date: (item) => new Date(item.date).getTime(),
+      amount: (item) => (item.direction === "INBOUND" ? item.amount : -item.amount),
+    }
   );
 
   return (
@@ -62,14 +80,12 @@ export default function PaymentsPage() {
       />
 
       <div className="flex items-center gap-3">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
+        <div className="max-w-sm w-full">
+          <DebouncedSearchInput
             placeholder="Search payments by ref, party, or document..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
+            onChange={setSearch}
+            className="py-2"
           />
         </div>
       </div>
@@ -79,7 +95,7 @@ export default function PaymentsPage() {
           <div className="p-8 text-center text-muted-foreground text-sm">
             Loading payments...
           </div>
-        ) : filtered.length === 0 ? (
+        ) : sortedPayments.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
             {search ? "No payments found matching your search" : "No payments recorded yet"}
           </div>
@@ -87,17 +103,67 @@ export default function PaymentsPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                <th className="py-3.5 px-4">Payment #</th>
-                <th className="py-3.5 px-4">Party / Counterparty</th>
-                <th className="py-3.5 px-4">Document</th>
-                <th className="py-3.5 px-4">Mode</th>
-                <th className="py-3.5 px-4">Date</th>
-                <th className="py-3.5 px-4">Account</th>
-                <th className="py-3.5 px-4 text-right">Amount (₹)</th>
+                <SortableTableHead
+                  columnKey="ref"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Payment #
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="party"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Party / Counterparty
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="documentNumber"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Document
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="method"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Mode
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="date"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Date
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="account"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  className="py-3.5 px-4"
+                >
+                  Account
+                </SortableTableHead>
+                <SortableTableHead
+                  columnKey="amount"
+                  currentSort={sortState}
+                  onSort={handleSort}
+                  align="right"
+                  className="py-3.5 px-4"
+                >
+                  Amount (₹)
+                </SortableTableHead>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((row) => (
+              {sortedPayments.map((row) => (
                 <tr key={row.id} className="hover:bg-primary-light/30 transition-colors">
                   <td className="py-3.5 px-4 font-mono font-bold text-navy">{row.ref}</td>
                   <td className="py-3.5 px-4 font-semibold text-foreground">{row.party}</td>

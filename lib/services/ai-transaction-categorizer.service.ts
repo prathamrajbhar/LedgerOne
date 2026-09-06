@@ -55,7 +55,7 @@ export class AiTransactionCategorizerService {
 
     if (client) {
       try {
-        const model = client.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = client.getGenerativeModel({ model: "gemini-3.5-flash-lite" });
 
         const formattedAccounts = accounts.map((a) => ({ id: a.id, code: a.code, name: a.name, type: a.type }));
         const formattedAnalytics = analyticAccounts.map((a) => ({ id: a.id, name: a.name, type: a.type }));

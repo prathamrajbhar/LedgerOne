@@ -14,6 +14,8 @@ import {
 import { confirmBudgetAction, cancelBudgetAction } from "@/app/actions/budget.actions";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 export interface BudgetItem {
   id: string;
@@ -31,6 +33,34 @@ export interface BudgetItem {
 export function BudgetsTable({ budgets }: { budgets: BudgetItem[] }) {
   const router = useRouter();
   const [processingId, setProcessingId] = React.useState<string | null>(null);
+  const [search, setSearch] = React.useState("");
+
+  const filteredBudgets = React.useMemo(() => {
+    if (!search.trim()) return budgets;
+    const q = search.toLowerCase().trim();
+    return budgets.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        (b.responsible?.name && b.responsible.name.toLowerCase().includes(q))
+    );
+  }, [budgets, search]);
+
+  const { sortedItems: sortedBudgets, sortState, handleSort } = useTableSort<
+    BudgetItem,
+    "name" | "period" | "responsible" | "totalCommitted" | "totalAchieved" | "achievementRate" | "status"
+  >(
+    filteredBudgets,
+    "name",
+    "asc",
+    {
+      period: (b) => new Date(b.startDate).getTime(),
+      responsible: (b) => b.responsible?.name || "",
+      totalCommitted: (b) => b.totalCommitted,
+      totalAchieved: (b) => b.totalAchieved,
+      achievementRate: (b) => b.achievementRate,
+      status: (b) => b.status,
+    }
+  );
 
   const handleAction = async (
     budgetId: string,
@@ -60,23 +90,93 @@ export function BudgetsTable({ budgets }: { budgets: BudgetItem[] }) {
     new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="max-w-sm w-full">
+          <DebouncedSearchInput
+            placeholder="Search budgets by name or responsible..."
+            value={search}
+            onChange={setSearch}
+            className="py-2"
+          />
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
+        {sortedBudgets.length === 0 ? (
+          <div className="p-8 text-center text-muted-foreground text-sm">
+            {search ? "No budgets found matching your search" : "No budgets recorded yet"}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Budget Name</th>
-              <th className="py-3.5 px-4">Period</th>
-              <th className="py-3.5 px-4">Responsible</th>
-              <th className="py-3.5 px-4 text-right">Committed</th>
-              <th className="py-3.5 px-4 text-right">Achieved</th>
-              <th className="py-3.5 px-4 text-center">Achievement</th>
-              <th className="py-3.5 px-4 text-center">Status</th>
+              <SortableTableHead
+                columnKey="name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Budget Name
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="period"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Period
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="responsible"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Responsible
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="totalCommitted"
+                currentSort={sortState}
+                onSort={handleSort}
+                align="right"
+                className="py-3.5 px-4"
+              >
+                Committed
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="totalAchieved"
+                currentSort={sortState}
+                onSort={handleSort}
+                align="right"
+                className="py-3.5 px-4"
+              >
+                Achieved
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="achievementRate"
+                currentSort={sortState}
+                onSort={handleSort}
+                align="center"
+                className="py-3.5 px-4"
+              >
+                Achievement
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="status"
+                currentSort={sortState}
+                onSort={handleSort}
+                align="center"
+                className="py-3.5 px-4"
+              >
+                Status
+              </SortableTableHead>
               <th className="py-3.5 px-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {budgets.map((budget) => {
+            {sortedBudgets.map((budget) => {
               const rate = Math.min(Math.max(budget.achievementRate, 0), 100);
               const isProcessing = processingId === budget.id;
 
@@ -148,6 +248,8 @@ export function BudgetsTable({ budgets }: { budgets: BudgetItem[] }) {
             })}
           </tbody>
         </table>
+      </div>
+        )}
       </div>
     </div>
   );

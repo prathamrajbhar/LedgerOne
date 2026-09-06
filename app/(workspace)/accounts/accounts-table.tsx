@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/destructive-confirm-dialog";
 import { useSession } from "next-auth/react";
 import { UserRole, AccountType } from "@prisma/client";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 
 export interface AccountItem {
   id: string;
@@ -47,6 +48,15 @@ export function AccountsTable({ accounts, isArchivedTab = false, onRefresh }: Ac
   const router = useRouter();
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === UserRole.ADMINISTRATOR;
+
+  const { sortedItems: sortedAccounts, sortState, handleSort } = useTableSort<
+    AccountItem,
+    "code" | "name" | "type" | "isArchived"
+  >(
+    accounts,
+    "code",
+    "asc"
+  );
 
   const [confirmDialog, setConfirmDialog] = React.useState<{
     open: boolean;
@@ -177,15 +187,44 @@ export function AccountsTable({ accounts, isArchivedTab = false, onRefresh }: Ac
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Code</th>
-              <th className="py-3.5 px-4">Account Name</th>
-              <th className="py-3.5 px-4">Classification</th>
-              <th className="py-3.5 px-4 text-center">Status</th>
+              <SortableTableHead
+                columnKey="code"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Code
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="name"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Account Name
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="type"
+                currentSort={sortState}
+                onSort={handleSort}
+                className="py-3.5 px-4"
+              >
+                Classification
+              </SortableTableHead>
+              <SortableTableHead
+                columnKey="isArchived"
+                currentSort={sortState}
+                onSort={handleSort}
+                align="center"
+                className="py-3.5 px-4"
+              >
+                Status
+              </SortableTableHead>
               <th className="py-3.5 px-4 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {accounts.map((acc) => (
+            {sortedAccounts.map((acc) => (
               <tr
                 key={acc.id}
                 className="hover:bg-primary-light/30 transition-colors group"

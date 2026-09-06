@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
 import { toast } from "sonner";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 interface SerializedInvoice {
   id: string;
@@ -190,14 +191,12 @@ export function PortalBillingClient({ invoices, stats }: PortalBillingClientProp
               Review invoice details, settlement status, and pay outstanding amounts instantly.
             </p>
           </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <input
-              type="text"
+          <div className="w-full sm:w-64">
+            <DebouncedSearchInput
               placeholder="Search invoice number..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-border rounded-lg placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-teal"
+              onChange={setSearch}
+              className="py-1.5"
             />
           </div>
         </div>

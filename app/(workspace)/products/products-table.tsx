@@ -30,6 +30,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { UserRole } from "@prisma/client";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 
 export interface FurnitureProductItem {
   id: string;
@@ -181,31 +182,61 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
     }
   };
 
+  type ProductSortColumn = "name" | "category" | "material" | "cost" | "salesPrice" | "stock" | "status";
+  const { sortedItems: sortedProducts, sortState, handleSort } = useTableSort<FurnitureProductItem, ProductSortColumn>(
+    products,
+    "name",
+    "asc",
+    {
+      name: (p) => p.name,
+      category: (p) => p.category,
+      material: (p) => p.material,
+      cost: (p) => Number(p.cost),
+      salesPrice: (p) => Number(p.salesPrice),
+      stock: (p) => Number(p.stock),
+      status: (p) => p.status,
+    }
+  );
+
   return (
     <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Product & SKU</th>
-              <th className="py-3.5 px-4">Category</th>
-              <th className="py-3.5 px-4">Material / Finish</th>
-              <th className="py-3.5 px-4 text-right">Cost Price</th>
-              <th className="py-3.5 px-4 text-right">Selling Price</th>
-              <th className="py-3.5 px-4 text-center">Stock Level</th>
-              <th className="py-3.5 px-4">Status</th>
+              <SortableTableHead columnKey="name" currentSort={sortState} onSort={handleSort}>
+                Product & SKU
+              </SortableTableHead>
+              <SortableTableHead columnKey="category" currentSort={sortState} onSort={handleSort}>
+                Category
+              </SortableTableHead>
+              <SortableTableHead columnKey="material" currentSort={sortState} onSort={handleSort}>
+                Material / Finish
+              </SortableTableHead>
+              <SortableTableHead columnKey="cost" currentSort={sortState} onSort={handleSort} align="right">
+                Cost Price
+              </SortableTableHead>
+              <SortableTableHead columnKey="salesPrice" currentSort={sortState} onSort={handleSort} align="right">
+                Selling Price
+              </SortableTableHead>
+              <SortableTableHead columnKey="stock" currentSort={sortState} onSort={handleSort} align="center">
+                Stock Level
+              </SortableTableHead>
+              <SortableTableHead columnKey="status" currentSort={sortState} onSort={handleSort}>
+                Status
+              </SortableTableHead>
               <th className="py-3.5 px-4 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {products.length === 0 ? (
+            {sortedProducts.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-12 text-center text-muted-foreground">
                   No furniture products found.
                 </td>
               </tr>
             ) : (
-              products.map((item) => (
+              sortedProducts.map((item) => (
                 <tr
                   key={item.id}
                   className="hover:bg-primary-light/30 transition-colors group"

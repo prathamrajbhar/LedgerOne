@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/destructive-confirm-dialog";
 import { useSession } from "next-auth/react";
 import { UserRole } from "@prisma/client";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 
 export interface ContactItem {
   id: string;
@@ -158,30 +159,58 @@ export function ContactsTable({ contacts, isArchivedTab = false, onInvitePortal,
       }
     }
   };
+
+  type ContactSortColumn = "name" | "type" | "portal" | "phone" | "address" | "outstandingBalance";
+  const { sortedItems: sortedContacts, sortState, handleSort } = useTableSort<ContactItem, ContactSortColumn>(
+    contacts,
+    "name",
+    "asc",
+    {
+      name: (c) => c.name,
+      type: (c) => c.type,
+      portal: (c) => (c.hasPortalAccess ? 1 : 0),
+      phone: (c) => c.phone || "",
+      address: (c) => c.address || "",
+      outstandingBalance: (c) => Number(c.outstandingBalance || 0),
+    }
+  );
+
   return (
     <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <th className="py-3.5 px-4">Contact</th>
-              <th className="py-3.5 px-4">Type</th>
-              <th className="py-3.5 px-4">Portal Access</th>
-              <th className="py-3.5 px-4">Phone</th>
-              <th className="py-3.5 px-4">Address</th>
-              <th className="py-3.5 px-4 text-right">Outstanding</th>
+              <SortableTableHead columnKey="name" currentSort={sortState} onSort={handleSort}>
+                Contact
+              </SortableTableHead>
+              <SortableTableHead columnKey="type" currentSort={sortState} onSort={handleSort}>
+                Type
+              </SortableTableHead>
+              <SortableTableHead columnKey="portal" currentSort={sortState} onSort={handleSort}>
+                Portal Access
+              </SortableTableHead>
+              <SortableTableHead columnKey="phone" currentSort={sortState} onSort={handleSort}>
+                Phone
+              </SortableTableHead>
+              <SortableTableHead columnKey="address" currentSort={sortState} onSort={handleSort}>
+                Address
+              </SortableTableHead>
+              <SortableTableHead columnKey="outstandingBalance" currentSort={sortState} onSort={handleSort} align="right">
+                Outstanding
+              </SortableTableHead>
               <th className="py-3.5 px-4 text-center">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-xs">
-            {contacts.length === 0 ? (
+            {sortedContacts.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-muted-foreground">
                   No contacts found.
                 </td>
               </tr>
             ) : (
-              contacts.map((contact) => (
+              sortedContacts.map((contact) => (
                 <tr
                   key={contact.id}
                   className="hover:bg-primary-light/30 transition-colors group"

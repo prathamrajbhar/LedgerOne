@@ -15,6 +15,7 @@ import {
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 import { toast } from "sonner";
 import {
   getJournalsAction,
@@ -223,14 +224,12 @@ export default function JournalsPage() {
       />
 
       <div className="flex items-center gap-3">
-        <div className="relative max-w-sm w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <input
-            type="text"
+        <div className="max-w-sm w-full">
+          <DebouncedSearchInput
             placeholder="Search journals by name or code..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs rounded-lg border border-border bg-white focus:outline-none focus:ring-2 focus:ring-teal/30 focus:border-teal"
+            onChange={setSearch}
+            className="py-2"
           />
         </div>
       </div>

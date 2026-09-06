@@ -72,6 +72,7 @@ import { ProductForm } from "@/app/(workspace)/products/product-form";
 import { ExpenseModal } from "@/components/forms/expense-modal";
 import { PaymentModal } from "@/components/forms/payment-modal";
 import { CreateInvoiceModal } from "@/components/forms/create-invoice-modal";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 interface DashboardClientProps {
   kpis: DashboardKPIs;
@@ -1040,12 +1041,11 @@ export function DashboardClient({
         {/* Filters & Search Toolbar */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pb-4 border-b border-border">
           <div className="w-full sm:w-72">
-            <input
-              type="text"
+            <DebouncedSearchInput
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={setSearchQuery}
               placeholder="Search transactions..."
-              className="h-9 w-full rounded-lg border border-border bg-white px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-navy"
+              className="h-9"
             />
           </div>
 

@@ -6,7 +6,7 @@ import { TransactionPagination } from "./_components/transaction-pagination";
 import { getJournalEntriesAction } from "@/app/actions/accounting.actions";
 import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
 import { TransactionFilters } from "./_components/transaction-filters";
-import { TransactionRow } from "./_components/transaction-row";
+import { TransactionsTable } from "./_components/transactions-table";
 
 interface TransactionsPageProps {
   searchParams?: {
@@ -115,62 +115,42 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  <th className="py-3.5 px-4 w-8"></th>
-                  <th className="py-3.5 px-4">Date</th>
-                  <th className="py-3.5 px-4">Entry #</th>
-                  <th className="py-3.5 px-4">Journal</th>
-                  <th className="py-3.5 px-4">Document Ref</th>
-                  <th className="py-3.5 px-4">Party</th>
-                  <th className="py-3.5 px-4 text-right">Debit (₹)</th>
-                  <th className="py-3.5 px-4 text-right">Credit (₹)</th>
-                  <th className="py-3.5 px-4 text-center">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {entries.map((entry) => {
-                  const docRef = getDocumentReference(entry);
-                  const isBalanced = Number(entry.totalDebit) === Number(entry.totalCredit);
+          <TransactionsTable
+            entries={entries.map((entry) => {
+              const docRef = getDocumentReference(entry);
+              const isBalanced = Number(entry.totalDebit) === Number(entry.totalCredit);
 
-                  const serializedEntry = {
-                    id: entry.id,
-                    entryNumber: entry.entryNumber,
-                    accountingDate: entry.accountingDate.toISOString(),
-                    status: entry.status,
-                    totalDebit: Number(entry.totalDebit),
-                    totalCredit: Number(entry.totalCredit),
-                    journal: {
-                      name: entry.journal.name,
-                    },
-                    lines: (entry.lines || []).map((line) => ({
-                      id: line.id,
-                      accountId: line.accountId,
-                      partnerId: line.partnerId,
-                      debit: Number(line.debit),
-                      credit: Number(line.credit),
-                      account: {
-                        code: line.account.code,
-                        name: line.account.name,
-                      },
-                      partner: line.partner ? { name: line.partner.name } : null,
-                    })),
-                  };
+              const serializedEntry = {
+                id: entry.id,
+                entryNumber: entry.entryNumber,
+                accountingDate: entry.accountingDate.toISOString(),
+                status: entry.status,
+                totalDebit: Number(entry.totalDebit),
+                totalCredit: Number(entry.totalCredit),
+                journal: {
+                  name: entry.journal.name,
+                },
+                lines: (entry.lines || []).map((line) => ({
+                  id: line.id,
+                  accountId: line.accountId,
+                  partnerId: line.partnerId,
+                  debit: Number(line.debit),
+                  credit: Number(line.credit),
+                  account: {
+                    code: line.account.code,
+                    name: line.account.name,
+                  },
+                  partner: line.partner ? { name: line.partner.name } : null,
+                })),
+              };
 
-                  return (
-                    <TransactionRow
-                      key={entry.id}
-                      entry={serializedEntry}
-                      docRef={docRef}
-                      isBalanced={isBalanced}
-                    />
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+              return {
+                entry: serializedEntry,
+                docRef,
+                isBalanced,
+              };
+            })}
+          />
         )}
       </div>
 

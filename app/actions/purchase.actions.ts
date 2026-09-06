@@ -114,6 +114,7 @@ export interface CreateVendorBillInput {
   vendorId: string;
   billDate: Date;
   dueDate: Date;
+  billNumber?: string;
   createdById?: string;
   lines: {
     productId: string;
@@ -140,7 +141,15 @@ export async function createStandaloneBillAction(input: CreateVendorBillInput) {
       };
     });
 
-    const billNumber = `BILL-${Date.now()}`;
+    let billNumber = input.billNumber?.trim();
+    if (billNumber) {
+      const existing = await prisma.vendorBill.findUnique({ where: { billNumber } });
+      if (existing) {
+        billNumber = `${billNumber}-${Date.now().toString().slice(-4)}`;
+      }
+    } else {
+      billNumber = `BILL-${Date.now()}`;
+    }
 
     const bill = await prisma.vendorBill.create({
       data: {

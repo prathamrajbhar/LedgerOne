@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import {
@@ -41,6 +42,7 @@ import {
 import { recordPaymentAction } from "@/app/actions/payment.actions";
 import { DocumentStatus, PaymentStatus, PaymentMethod, Prisma } from "@prisma/client";
 import type { CustomerInvoice, Contact, Product } from "@prisma/client";
+import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 
 interface InvoiceLineItem {
   id: string;
@@ -206,6 +208,33 @@ export function InvoicesClient({
   const clearFilters = () => {
     router.push("/invoices");
   };
+
+  // Client-side column sorting
+  type InvoiceSortColumn =
+    | "invoiceNumber"
+    | "customer"
+    | "invoiceDate"
+    | "dueDate"
+    | "total"
+    | "amountPaid"
+    | "amountDue"
+    | "status";
+
+  const { sortedItems: sortedInvoices, sortState, handleSort } = useTableSort<InvoiceWithRelations, InvoiceSortColumn>(
+    invoices,
+    "invoiceDate",
+    "desc",
+    {
+      invoiceNumber: (i) => i.invoiceNumber,
+      customer: (i) => i.customer?.name || "",
+      invoiceDate: (i) => new Date(i.invoiceDate),
+      dueDate: (i) => new Date(i.dueDate),
+      total: (i) => Number(i.total),
+      amountPaid: (i) => Number(i.amountPaid),
+      amountDue: (i) => Number(i.amountDue),
+      status: (i) => getDisplayStatus(i),
+    }
+  );
 
   // Dynamic line management
   const handleAddLine = () => {
@@ -658,14 +687,12 @@ export function InvoicesClient({
       {/* FILTER BAR */}
       <Card className="p-3 border-border shadow-2xs bg-white space-y-2.5">
         <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          <div className="relative flex-1 min-w-[240px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <input
-              type="text"
+          <div className="flex-1 min-w-[240px]">
+            <DebouncedSearchInput
               placeholder="Search invoice/customer..."
               value={search}
-              onChange={(e) => updateFilters({ search: e.target.value })}
-              className="w-full h-9 pl-9 pr-3 rounded-lg border border-border bg-white text-xs text-foreground placeholder:text-muted-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              onChange={(val) => updateFilters({ search: val })}
+              className="h-9"
             />
           </div>
 
@@ -767,19 +794,35 @@ export function InvoicesClient({
             <table className="w-full text-xs text-left border-collapse">
               <thead>
                 <tr className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-4">Invoice #</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Invoice Date</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4 text-right">Paid</th>
-                  <th className="py-3 px-4 text-right">Balance</th>
-                  <th className="py-3 px-4 text-center">Status</th>
+                  <SortableTableHead columnKey="invoiceNumber" currentSort={sortState} onSort={handleSort}>
+                    Invoice #
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="customer" currentSort={sortState} onSort={handleSort}>
+                    Customer
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="invoiceDate" currentSort={sortState} onSort={handleSort}>
+                    Invoice Date
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="dueDate" currentSort={sortState} onSort={handleSort}>
+                    Due Date
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="total" currentSort={sortState} onSort={handleSort} align="right">
+                    Amount
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="amountPaid" currentSort={sortState} onSort={handleSort} align="right">
+                    Paid
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="amountDue" currentSort={sortState} onSort={handleSort} align="right">
+                    Balance
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="status" currentSort={sortState} onSort={handleSort} align="center">
+                    Status
+                  </SortableTableHead>
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {invoices.map((inv) => {
+                {sortedInvoices.map((inv) => {
                   const displayStatus = getDisplayStatus(inv);
                   const isDraft = inv.status === DocumentStatus.DRAFT;
                   const isConfirmed = inv.status === DocumentStatus.CONFIRMED;
