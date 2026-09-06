@@ -48,6 +48,7 @@ model User {
   @@index([email])
   @@index([loginId])
   @@index([role])
+  @@index([isActive])
   @@map("users")
 }
 

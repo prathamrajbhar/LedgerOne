@@ -1,22 +1,33 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Lock, User, Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { getPostLoginRedirectAction } from "@/app/actions/auth.actions";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Display error message if user was automatically logged out
+  useEffect(() => {
+    const error = searchParams.get("error");
+    if (error === "SessionExpired") {
+      toast.error("Your session has expired. Please log in again.", {
+        duration: 5000,
+      });
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

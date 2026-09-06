@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
 import { authService } from "@/lib/services/auth.service";
 import { prisma } from "@/lib/prisma";
+import { checkUserStatus } from "./user-status";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -86,6 +87,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
     signIn: "/login",
@@ -93,6 +95,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
+      // Initial sign in - populate token
       if (user) {
         token.id = user.id;
         token.role = user.role;
@@ -105,15 +108,52 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
+      // Handle session updates (e.g., password change completion)
       if (trigger === "update" && session) {
         if (typeof session.mustChangePassword === "boolean") {
           token.mustChangePassword = session.mustChangePassword;
         }
       }
 
+      // CRITICAL SECURITY CHECK: Validate user status on every request
+      // This ensures deactivated/deleted users are logged out across all devices
+      if (token.id && token.role) {
+        try {
+          const status = await checkUserStatus(
+            token.id as string,
+            token.role as UserRole,
+            token.contactId as string | undefined
+          );
+
+          // If user should be logged out, return null to invalidate the token
+          if (status.shouldLogout) {
+            console.warn(
+              `User ${token.id} session invalidated:`,
+              !status.exists
+                ? "User deleted"
+                : !status.isActive
+                  ? "User deactivated"
+                  : status.isContactArchived
+                    ? "Contact archived"
+                    : "Access revoked"
+            );
+            return null;
+          }
+        } catch (error) {
+          // On error checking status, invalidate session for security
+          console.error("Error validating user session:", error);
+          return null;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
+      // If token is null (user was logged out), return null session
+      if (!token) {
+        return null as any;
+      }
+
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;

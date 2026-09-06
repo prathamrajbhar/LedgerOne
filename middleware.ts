@@ -17,9 +17,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect to unified login if not authenticated
+  // Redirect to appropriate login if not authenticated or session invalidated
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Determine which login page based on the route being accessed
+    const isPortalRoute = pathname.startsWith("/portal");
+    const loginUrl = isPortalRoute ? "/portal/login" : "/login";
+
+    // Add error parameter to show user why they were logged out
+    const url = new URL(loginUrl, request.url);
+
+    // Only add error if they were on a protected route (not just landing on site)
+    if (!isPublicRoute) {
+      url.searchParams.set("error", "SessionExpired");
+    }
+
+    return NextResponse.redirect(url);
   }
 
   const userRole = token.role as string | undefined;
