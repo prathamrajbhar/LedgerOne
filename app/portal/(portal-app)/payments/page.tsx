@@ -13,7 +13,7 @@ export default async function PortalPaymentsPage() {
     portalSession.contactType === ContactType.VENDOR ||
     portalSession.contactType === ContactType.BOTH;
 
-  // Fetch customer payments
+  // Fetch customer payments with invoice details and line items
   const customerPayments = isCustomer
     ? await prisma.invoicePayment.findMany({
         where: {
@@ -24,8 +24,20 @@ export default async function PortalPaymentsPage() {
         include: {
           invoice: {
             select: {
+              id: true,
               invoiceNumber: true,
               invoiceDate: true,
+              total: true,
+              lines: {
+                include: {
+                  product: {
+                    select: {
+                      name: true,
+                      sku: true,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -63,8 +75,19 @@ export default async function PortalPaymentsPage() {
     paymentDate: p.paymentDate.toISOString(),
     paymentMethod: p.paymentMethod,
     invoice: {
+      id: p.invoice.id,
       invoiceNumber: p.invoice.invoiceNumber,
       invoiceDate: p.invoice.invoiceDate.toISOString(),
+      total: Number(p.invoice.total),
+      lines: p.invoice.lines.map((line) => ({
+        id: line.id,
+        productName: line.product?.name || "Unknown Product",
+        productSku: line.product?.sku || null,
+        quantity: Number(line.quantity),
+        unitPrice: Number(line.unitPrice),
+        lineTotal: Number(line.lineTotal),
+        taxAmount: Number(line.taxAmount),
+      })),
     },
   }));
 
