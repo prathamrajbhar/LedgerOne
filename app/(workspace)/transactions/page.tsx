@@ -2,7 +2,7 @@ import * as React from "react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { Pagination } from "@/components/ui/pagination";
+import { TransactionPagination } from "./_components/transaction-pagination";
 import { getJournalEntriesAction } from "@/app/actions/accounting.actions";
 import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
 import { TransactionFilters } from "./_components/transaction-filters";
@@ -175,13 +175,11 @@ export default async function TransactionsPage({ searchParams }: TransactionsPag
       </div>
 
       {pagination.totalPages > 1 && (
-        <Pagination
+        <TransactionPagination
           currentPage={pagination.page}
           totalPages={pagination.totalPages}
           totalItems={pagination.total}
-          onPageChange={(_newPage) => {
-            // Handled by URL params via router
-          }}
+          pageSize={pagination.pageSize}
         />
       )}
     </div>
