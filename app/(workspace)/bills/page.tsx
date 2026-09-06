@@ -52,6 +52,9 @@ import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
 import { getTaxRatesAction } from "@/app/actions/tax-rate.actions";
 import { recordPaymentAction } from "@/app/actions/payment.actions";
+import { AiFileUploader } from "@/components/ai/ai-file-uploader";
+import { parseVendorBillAction } from "@/app/actions/ai-document.actions";
+import type { ParsedVendorBillResult } from "@/lib/services/ai-document-parser.service";
 import { DocumentStatus, PaymentStatus, PaymentMethod, Prisma } from "@prisma/client";
 import type { Contact, Product, AnalyticAccount } from "@prisma/client";
 
@@ -243,6 +246,71 @@ export default function VendorBillsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // AI Document OCR Auto-Fill Handler
+  const handleAiParsedBill = (raw: unknown) => {
+    const data = raw as ParsedVendorBillResult;
+    if (!data) return;
+
+    if (data.vendorId) {
+      setFormVendor(data.vendorId);
+    } else if (data.vendorName && vendors.length > 0) {
+      const matchedVendor = vendors.find((v) =>
+        v.name.toLowerCase().includes((data.vendorName || "").toLowerCase())
+      );
+      if (matchedVendor) {
+        setFormVendor(matchedVendor.id);
+      }
+    }
+
+    if (data.billNumber) {
+      setFormVendorBillNumber(data.billNumber);
+    }
+    if (data.billDate) {
+      setFormBillDate(data.billDate);
+    }
+    if (data.dueDate) {
+      setFormDueDate(data.dueDate);
+    }
+
+    if (data.lines && data.lines.length > 0) {
+      const newLines: FormBillLineRow[] = data.lines.map((l) => {
+        let matchedPid = l.productId || "";
+        let matchedUnitCost = l.unitPrice > 0 ? l.unitPrice : 0;
+        let matchedDesc = l.productName || "";
+
+        if (!matchedPid && products.length > 0) {
+          const found = products.find((p) =>
+            p.name.toLowerCase().includes(l.productName.toLowerCase())
+          );
+          if (found) {
+            matchedPid = found.id;
+            matchedDesc = found.name;
+            if (matchedUnitCost === 0 && found.cost) {
+              matchedUnitCost = Number(found.cost);
+            }
+          }
+        }
+
+        return {
+          productId: matchedPid,
+          analyticAccountId: l.analyticAccountId || analyticAccounts[0]?.id || "",
+          description: matchedDesc,
+          quantity: l.quantity > 0 ? l.quantity : 1,
+          unit: "pcs",
+          unitCost: matchedUnitCost,
+          taxRateId: taxRates[0]?.id || "",
+          discountPercent: 0,
+        };
+      });
+
+      setFormLines(newLines);
+    }
+
+    toast.success(
+      `Vendor bill auto-filled with ${data.lines?.length || 0} line item(s)!`
+    );
   };
 
   // Dynamic item table management
@@ -1243,6 +1311,14 @@ export default function VendorBillsPage() {
           </div>
 
           <div className="p-6 space-y-6">
+            {/* AI Document & Image Upload Auto-Fill */}
+            <AiFileUploader
+              onParsedData={handleAiParsedBill}
+              parseAction={parseVendorBillAction}
+              label="Auto-Fill Bill with AI Document Scan"
+              description="Drop vendor invoice PDF or bill photo to auto-detect supplier, dates, bill number, and line items"
+            />
+
             {/* Section 1: Vendor & Document Identity */}
             <div className="bg-white rounded-xl p-5 border border-border/80 shadow-2xs space-y-4">
               <div className="flex items-center gap-2 pb-2 border-b border-border/60 text-xs font-bold text-navy">
