@@ -1,8 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { helpAssistant, ChatMessage } from "@/lib/chatbot/help-assistant";
+import { helpAssistant, ChatMessage, AuthContext } from "@/lib/chatbot/help-assistant";
+import { auth } from "@/lib/auth/auth.config";
+import { UserRole } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Session & Auth check: Reject unauthenticated callers
+    const session = await auth();
+
+    if (!session?.user?.id || !session.user.role) {
+      return NextResponse.json(
+        { error: "Unauthorized. Please log in to consult LedgerOne AI Assistant." },
+        { status: 401 }
+      );
+    }
+
     const { messages } = await request.json();
 
     // Validate request
@@ -29,10 +41,18 @@ export async function POST(request: NextRequest) {
       content: msg.content,
     }));
 
-    // Call the help assistant with real LLM
+    // Construct caller security & RBAC context
+    const authContext: AuthContext = {
+      role: session.user.role as UserRole,
+      contactId: session.user.contactId,
+      name: session.user.name || undefined,
+    };
+
+    // Call the help assistant with real LLM and security context
     const reply = await helpAssistant.ask(
       lastUserMessage.content,
-      conversationHistory
+      conversationHistory,
+      authContext
     );
 
     return NextResponse.json({ message: reply });

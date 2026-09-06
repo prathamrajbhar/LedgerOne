@@ -1,10 +1,12 @@
 import { GoogleGenerativeAI, Content, FunctionDeclaration, SchemaType } from "@google/generative-ai";
+import { UserRole } from "@prisma/client";
 import {
   getProductsSummary,
   getContactsSummary,
   getInvoicesSummary,
   getBillsAndOrdersSummary,
   getFinancialOverview,
+  AuthContext,
 } from "./db-tools";
 
 export interface ChatMessage {
@@ -12,7 +14,29 @@ export interface ChatMessage {
   content: string;
 }
 
-const SYSTEM_PROMPT = `You are the intelligent LedgerOne AI Assistant for accounting, ERP, inventory, and business operations.
+export type { AuthContext };
+
+function buildSystemPrompt(context?: AuthContext): string {
+  const isContact = context?.role === UserRole.CONTACT;
+  const userName = context?.name || "User";
+
+  if (isContact) {
+    return `You are the LedgerOne AI Portal Assistant helping customer/vendor "${userName}".
+
+CAPABILITIES & RESTRICTIONS:
+1. You have SAFE access ONLY to this contact's personal business transactions via tool functions:
+   - getInvoicesSummary: Returns this contact's customer invoices, due dates, and amount owed.
+   - getBillsAndOrdersSummary: Returns this contact's vendor bills, sales orders, and purchase orders.
+   - getProductsSummary: Returns product catalog info and stock availability.
+2. ACCESS RESTRICTIONS & RBAC:
+   - NEVER disclose internal financial KPIs (total company profit, net revenue, total company receivables/payables, or chart of accounts).
+   - NEVER disclose details or names of other customers, suppliers, or system users.
+   - NEVER leak user password hashes, secret API keys, authentication tokens, or internal credentials.
+3. Be professional, transparent, and direct when presenting invoice balances or order numbers.`;
+  }
+
+  return `You are the intelligent LedgerOne AI Assistant for accounting, ERP, inventory, and business operations.
+Current user: "${userName}" (Role: ${context?.role || "WORKSPACE"}).
 
 CAPABILITIES & DATABASE ACCESS:
 1. You have SAFE access to real-time company operational and database statistics via tool functions:
@@ -32,6 +56,7 @@ RESPONSE FORMATTING:
 - Format responses cleanly with Markdown (bold text, key-value bullets, numbers).
 - When suggesting follow-up questions or example queries to the user, wrap each question in single quotes as a bullet item (e.g. * 'How many products do we have in stock?'). Limit suggestions to 3-4 top relevant queries.
 - Be helpful, conversational, precise, and practical.`;
+}
 
 // Define Gemini Tool Function Declarations
 const productsToolDeclaration: FunctionDeclaration = {
@@ -104,20 +129,20 @@ export class HelpAssistant {
   }
 
   /**
-   * Execute DB tool based on function call name
+   * Execute DB tool based on function call name with AuthContext
    */
-  private async executeDbTool(name: string, args: Record<string, unknown>) {
+  private async executeDbTool(name: string, args: Record<string, unknown>, context?: AuthContext) {
     switch (name) {
       case "getProductsSummary":
-        return await getProductsSummary(args.searchQuery as string | undefined);
+        return await getProductsSummary(args.searchQuery as string | undefined, context);
       case "getContactsSummary":
-        return await getContactsSummary(args.typeFilter as "CUSTOMER" | "VENDOR" | undefined);
+        return await getContactsSummary(args.typeFilter as "CUSTOMER" | "VENDOR" | undefined, context);
       case "getInvoicesSummary":
-        return await getInvoicesSummary();
+        return await getInvoicesSummary(context);
       case "getBillsAndOrdersSummary":
-        return await getBillsAndOrdersSummary();
+        return await getBillsAndOrdersSummary(context);
       case "getFinancialOverview":
-        return await getFinancialOverview();
+        return await getFinancialOverview(context);
       default:
         return { error: `Unknown tool: ${name}` };
     }
@@ -126,11 +151,12 @@ export class HelpAssistant {
   /**
    * Fallback database query synthesizer when Gemini API is unavailable or rate-limited
    */
-  private async generateDatabaseFallbackResponse(message: string): Promise<string> {
+  private async generateDatabaseFallbackResponse(message: string, context?: AuthContext): Promise<string> {
     const lower = message.toLowerCase();
+    const isContact = context?.role === UserRole.CONTACT;
 
     if (lower.includes("product") || lower.includes("stock") || lower.includes("chair") || lower.includes("furniture") || lower.includes("inventory") || lower.includes("catalog") || lower.includes("item")) {
-      const data = await getProductsSummary();
+      const data = await getProductsSummary(undefined, context);
       if (!data.success) {
         return "I encountered an error fetching live product data from the database. Please try again in a moment.";
       }
@@ -160,7 +186,11 @@ export class HelpAssistant {
     }
 
     if (lower.includes("customer") || lower.includes("vendor") || lower.includes("contact") || lower.includes("party")) {
-      const data = await getContactsSummary();
+      if (isContact) {
+        return "You are logged in as a portal contact. Access to other customer and vendor directories is restricted.";
+      }
+
+      const data = await getContactsSummary(undefined, context);
       if (!data.success) {
         return "I encountered an error fetching contacts from the database.";
       }
@@ -180,23 +210,24 @@ export class HelpAssistant {
       return response;
     }
 
-    if (lower.includes("invoice") || lower.includes("receivable") || lower.includes("sale order") || lower.includes("due")) {
-      const data = await getInvoicesSummary();
+    if (lower.includes("invoice") || lower.includes("receivable") || lower.includes("sale order") || lower.includes("due") || lower.includes("bill") || lower.includes("order")) {
+      const data = await getInvoicesSummary(context);
       if (!data.success) {
-        return "I encountered an error fetching invoice details from the database.";
+        return data.error || "I encountered an error fetching invoice details from the database.";
       }
 
-      let response = `### 🧾 Customer Invoices & Receivables Overview\n\n`;
+      const title = isContact ? "🧾 Your Invoices & Outstanding Balance" : "🧾 Customer Invoices & Receivables Overview";
+      let response = `### ${title}\n\n`;
       response += `* **Total Invoices:** ${data.totalInvoices}\n`;
       response += `* **Paid Invoices:** ${data.paidCount}\n`;
       response += `* **Unpaid Invoices:** ${data.unpaidCount}\n`;
       response += `* **Overdue Invoices:** ${data.overdueCount}\n`;
-      response += `* **Total Accounts Receivable:** **${data.totalReceivables}**\n\n`;
+      response += `* **Total Amount Due:** **${data.totalReceivables}**\n\n`;
 
       if (data.recentInvoices && data.recentInvoices.length > 0) {
-        response += `#### 📄 Recent Customer Invoices:\n`;
+        response += `#### 📄 Recent Invoices:\n`;
         data.recentInvoices.slice(0, 4).forEach((inv) => {
-          response += `* **${inv.invoiceNumber}** — ${inv.customer} | Total: ${inv.total} | Status: **${inv.status}** (${inv.paymentStatus})\n`;
+          response += `* **${inv.invoiceNumber}** — Total: ${inv.total} | Due: ${inv.amountDue} | Status: **${inv.status}** (${inv.paymentStatus})\n`;
         });
       }
 
@@ -204,7 +235,11 @@ export class HelpAssistant {
     }
 
     if (lower.includes("revenue") || lower.includes("expense") || lower.includes("profit") || lower.includes("kpi") || lower.includes("balance") || lower.includes("financial")) {
-      const data = await getFinancialOverview();
+      if (isContact) {
+        return "Company financial statements, profits, and balance sheets are confidential and restricted to workspace users.";
+      }
+
+      const data = await getFinancialOverview(context);
       if (!data.success) {
         return "I encountered an error fetching financial overview statistics.";
       }
@@ -221,6 +256,16 @@ export class HelpAssistant {
     }
 
     // Default friendly accounting & navigation assistance
+    if (isContact) {
+      return (
+        `Hello! I am your LedgerOne Portal Assistant.\n\n` +
+        `You can ask me questions about your account, such as:\n` +
+        `* **'What is my outstanding invoice balance?'**\n` +
+        `* **'Show me my recent invoices and due dates'**\n` +
+        `* **'Do you have Office Chairs in stock?'**`
+      );
+    }
+
     return (
       "I am your LedgerOne Smart ERP & Accounting Assistant! I have live database integration with your catalog, inventory, invoices, contacts, and financial records.\n\n" +
       "You can ask me questions like:\n" +
@@ -232,7 +277,11 @@ export class HelpAssistant {
     );
   }
 
-  async ask(message: string, conversationHistory: ChatMessage[] = []): Promise<string> {
+  async ask(
+    message: string,
+    conversationHistory: ChatMessage[] = [],
+    context?: AuthContext
+  ): Promise<string> {
     try {
       const client = this.getClient();
 
@@ -244,7 +293,7 @@ export class HelpAssistant {
 
       const model = client.getGenerativeModel({
         model: "gemini-2.5-flash",
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: buildSystemPrompt(context),
         tools: [
           {
             functionDeclarations: [
@@ -266,7 +315,11 @@ export class HelpAssistant {
       const functionCalls = response.functionCalls();
       if (functionCalls && functionCalls.length > 0) {
         const call = functionCalls[0];
-        const toolResult = await this.executeDbTool(call.name, call.args as Record<string, unknown>);
+        const toolResult = await this.executeDbTool(
+          call.name,
+          call.args as Record<string, unknown>,
+          context
+        );
 
         // Send tool output back to model to synthesize final answer
         const followUp = await chat.sendMessage([
@@ -290,11 +343,11 @@ export class HelpAssistant {
       }
 
       // If text empty, fall back to direct DB synthesis
-      return await this.generateDatabaseFallbackResponse(message);
+      return await this.generateDatabaseFallbackResponse(message, context);
     } catch (error) {
       console.warn("Gemini API call failed or unavailable, using live DB synthesizer fallback:", error);
       // Fallback guarantees accurate database answers even if Gemini key is not set or rate-limited!
-      return await this.generateDatabaseFallbackResponse(message);
+      return await this.generateDatabaseFallbackResponse(message, context);
     }
   }
 }

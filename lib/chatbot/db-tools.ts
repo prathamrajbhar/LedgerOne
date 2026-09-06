@@ -1,11 +1,17 @@
 import { prisma } from "@/lib/prisma";
-import { DocumentStatus, PaymentStatus } from "@prisma/client";
+import { DocumentStatus, PaymentStatus, UserRole } from "@prisma/client";
+
+export interface AuthContext {
+  role: UserRole;
+  contactId?: string;
+  name?: string;
+}
 
 /**
  * Get products and inventory summary statistics from the database.
  * Returns product counts, stock levels, low-stock & out-of-stock counts, categories, and sanitized item list.
  */
-export async function getProductsSummary(searchQuery?: string) {
+export async function getProductsSummary(searchQuery?: string, _context?: AuthContext) {
   try {
     const products = await prisma.product.findMany({
       where: {
@@ -75,8 +81,16 @@ export async function getProductsSummary(searchQuery?: string) {
 /**
  * Get contacts (customers and vendors) summary statistics.
  */
-export async function getContactsSummary(typeFilter?: "CUSTOMER" | "VENDOR") {
+export async function getContactsSummary(typeFilter?: "CUSTOMER" | "VENDOR", context?: AuthContext) {
   try {
+    // RBAC: CONTACT users cannot query or inspect other company contacts
+    if (context?.role === UserRole.CONTACT) {
+      return {
+        success: false,
+        error: "Access restricted: Portal contacts are not authorized to view contacts directory.",
+      };
+    }
+
     const contacts = await prisma.contact.findMany({
       where: {
         isArchived: false,
@@ -114,11 +128,23 @@ export async function getContactsSummary(typeFilter?: "CUSTOMER" | "VENDOR") {
 }
 
 /**
- * Get customer invoices summary statistics.
+ * Get customer invoices summary statistics with role-aware scoping.
  */
-export async function getInvoicesSummary() {
+export async function getInvoicesSummary(context?: AuthContext) {
   try {
+    // RBAC: If user is a portal contact, strictly isolate invoices to their contactId
+    const isContactUser = context?.role === UserRole.CONTACT;
+    const contactId = context?.contactId;
+
+    if (isContactUser && !contactId) {
+      return {
+        success: false,
+        error: "Portal contact identity not found in active session.",
+      };
+    }
+
     const invoices = await prisma.customerInvoice.findMany({
+      where: isContactUser ? { customerId: contactId } : {},
       select: {
         id: true,
         invoiceNumber: true,
@@ -151,6 +177,7 @@ export async function getInvoicesSummary() {
 
     return {
       success: true,
+      isPersonalScope: isContactUser,
       totalInvoices,
       draftCount: drafts.length,
       confirmedCount: confirmed.length,
@@ -175,12 +202,23 @@ export async function getInvoicesSummary() {
 }
 
 /**
- * Get vendor bills and orders summary statistics.
+ * Get vendor bills and orders summary statistics with role-aware scoping.
  */
-export async function getBillsAndOrdersSummary() {
+export async function getBillsAndOrdersSummary(context?: AuthContext) {
   try {
+    const isContactUser = context?.role === UserRole.CONTACT;
+    const contactId = context?.contactId;
+
+    if (isContactUser && !contactId) {
+      return {
+        success: false,
+        error: "Portal contact identity not found in active session.",
+      };
+    }
+
     const [bills, purchaseOrders, salesOrders] = await Promise.all([
       prisma.vendorBill.findMany({
+        where: isContactUser ? { vendorId: contactId } : {},
         select: {
           id: true,
           billNumber: true,
@@ -193,6 +231,7 @@ export async function getBillsAndOrdersSummary() {
         orderBy: { billDate: "desc" },
       }),
       prisma.purchaseOrder.findMany({
+        where: isContactUser ? { vendorId: contactId } : {},
         select: {
           id: true,
           poNumber: true,
@@ -202,6 +241,7 @@ export async function getBillsAndOrdersSummary() {
         },
       }),
       prisma.salesOrder.findMany({
+        where: isContactUser ? { customerId: contactId } : {},
         select: {
           id: true,
           soNumber: true,
@@ -218,6 +258,7 @@ export async function getBillsAndOrdersSummary() {
 
     return {
       success: true,
+      isPersonalScope: isContactUser,
       totalVendorBills: bills.length,
       totalPayables: `₹${totalPayables.toLocaleString("en-IN")}`,
       totalPurchaseOrders: purchaseOrders.length,
@@ -243,10 +284,18 @@ export async function getBillsAndOrdersSummary() {
 }
 
 /**
- * Get high-level financial overview KPIs safely.
+ * Get high-level financial overview KPIs safely. Restricted to Workspace users (Admin / Accountant).
  */
-export async function getFinancialOverview() {
+export async function getFinancialOverview(context?: AuthContext) {
   try {
+    // RBAC: Portal contacts must never see global balance sheet or financial profit/loss numbers
+    if (context?.role === UserRole.CONTACT) {
+      return {
+        success: false,
+        error: "Access restricted: Company financial KPIs are strictly confidential and only visible to administrators and accountants.",
+      };
+    }
+
     const [confirmedInvoices, confirmedBills, accounts] = await Promise.all([
       prisma.customerInvoice.aggregate({
         where: { status: DocumentStatus.CONFIRMED },

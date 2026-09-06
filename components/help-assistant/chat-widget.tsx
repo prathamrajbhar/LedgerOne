@@ -30,7 +30,7 @@ interface Message {
   isStreaming?: boolean;
 }
 
-const initialSuggestions = [
+const workspaceSuggestions = [
   {
     icon: Box,
     text: "How many products do we have in stock?",
@@ -55,6 +55,24 @@ const initialSuggestions = [
     icon: FileText,
     text: "What is our customer invoice & receivable total?",
     label: "Invoices Summary",
+  },
+];
+
+const contactSuggestions = [
+  {
+    icon: FileText,
+    text: "What is my outstanding invoice balance?",
+    label: "My Invoices",
+  },
+  {
+    icon: Box,
+    text: "How many products do we have in stock?",
+    label: "Catalog Availability",
+  },
+  {
+    icon: AlertTriangle,
+    text: "Show my recent invoices and due dates",
+    label: "Recent Invoices",
   },
 ];
 
@@ -154,7 +172,11 @@ function parseInlineFormatting(text: string) {
   });
 }
 
+import { useSession } from "next-auth/react";
+import { UserRole } from "@prisma/client";
+
 export function HelpAssistantWidget() {
+  const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -164,6 +186,9 @@ export function HelpAssistantWidget() {
   const containerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stageTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isContact = session?.user?.role === UserRole.CONTACT;
+  const suggestions = isContact ? contactSuggestions : workspaceSuggestions;
 
   // Click outside to close chatbot drawer automatically
   useEffect(() => {
@@ -435,7 +460,7 @@ export function HelpAssistantWidget() {
                 </span>
 
                 <div className="grid grid-cols-1 gap-1.5">
-                  {initialSuggestions.map((item, idx) => {
+                  {suggestions.map((item, idx) => {
                     const IconComponent = item.icon;
                     return (
                       <button
