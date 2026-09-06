@@ -27,8 +27,8 @@ export default function AuthLayout({
       {/* Subtle readability overlay on mobile */}
       <div className="fixed inset-0 w-full h-full bg-white/20 lg:bg-transparent pointer-events-none z-0" />
 
-      {/* Main Inner Shell - Strictly fits viewport, 80px left padding on desktop */}
-      <div className="relative z-10 w-full h-full max-w-[1440px] mx-auto flex flex-col justify-between px-5 sm:px-10 lg:px-[80px] overflow-hidden">
+      {/* Main Inner Shell - Strictly fits viewport, with comfortable left and right margins */}
+      <div className="relative z-10 w-full h-full max-w-[1400px] mx-auto flex flex-col justify-between px-6 sm:px-12 lg:px-[100px] xl:px-[120px] overflow-hidden">
         {/* Top Header Bar: ~35px from top on desktop */}
         <header className="w-full flex items-start justify-between flex-shrink-0 pt-1 lg:pt-[15px]">
           {/* 1. TOP-LEFT BRANDING */}
@@ -43,16 +43,9 @@ export default function AuthLayout({
             </Link>
             <div className="w-[40px] h-[3px] bg-[#167C80] rounded-full mt-2" />
           </div>
-
-          {/* 2. TOP-RIGHT TAGLINE: ~140px from right */}
-          <div className="hidden sm:block text-right lg:mr-[60px] xl:mr-[80px]">
-            <p className="text-xs font-medium text-[#526477] tracking-tight">Reliable Accounts.</p>
-            <p className="text-xs font-medium text-[#526477] tracking-tight">Stronger Businesses.</p>
-            <div className="w-[30px] h-[2.5px] bg-[#167C80] rounded-full ml-auto mt-1" />
-          </div>
         </header>
 
-        {/* 3 & 4 & 5. MAIN CONTENT - Perfectly centered vertically, 0 overflow */}
+        {/* MAIN CONTENT - Perfectly centered vertically, 0 overflow */}
         <div className="flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 xl:gap-14 items-center min-h-0 py-2 sm:py-3 lg:py-4">
           {/* Left Column: Hero Content & Feature Cards */}
           <div className="hidden lg:flex lg:col-span-6 xl:col-span-7 flex-col justify-center space-y-[clamp(12px,2vh,24px)] max-w-xl pr-2">
@@ -77,7 +70,7 @@ export default function AuthLayout({
               </p>
             </div>
 
-            {/* 4. FEATURE CARDS */}
+            {/* FEATURE CARDS */}
             <div className="grid grid-cols-4 gap-2.5 sm:gap-3 max-w-lg pt-1">
               {/* Card 1: Inventory Tracking */}
               <div className="bg-white/90 backdrop-blur-sm border border-white/90 shadow-[0_4px_16px_rgba(0,0,0,0.04)] rounded-2xl p-2.5 sm:p-3 flex flex-col items-center justify-center text-center hover:-translate-y-0.5 transition-all">
@@ -126,13 +119,6 @@ export default function AuthLayout({
                   Analytics
                 </span>
               </div>
-            </div>
-
-            {/* Below the cards: Callout Quote */}
-            <div className="border-l-[2.5px] border-[#167C80] pl-3.5 py-1 text-xs text-[#526477] italic leading-relaxed pt-1">
-              Everything your furniture business needs,
-              <br />
-              in one powerful platform.
             </div>
           </div>
 
