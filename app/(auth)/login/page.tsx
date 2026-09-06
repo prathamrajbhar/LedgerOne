@@ -56,7 +56,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="w-full max-w-[575px] max-h-[calc(100dvh-40px)] max-h-[calc(100svh-40px)] bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-6 sm:p-8 lg:p-[48px] flex flex-col justify-between overflow-hidden">
+    <div className="w-full max-w-[575px] max-h-[calc(100dvh-50px)] max-h-[calc(100svh-50px)] mb-3 sm:mb-4 lg:mb-6 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-6 sm:p-8 lg:p-[48px] flex flex-col justify-between overflow-hidden">
       {/* Header with Title & Subtitle */}
       <div className="flex-shrink-0">
         <h2 className="text-2xl sm:text-[28px] font-bold text-[#0F2942] tracking-tight leading-tight">
