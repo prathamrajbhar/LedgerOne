@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   getUnpaidInvoicesAction,
   getUnpaidBillsAction,
@@ -135,17 +136,29 @@ export function PaymentModal({
               { value: "OUTBOUND", label: "Vendor Payment (Money Out)" },
             ]}
           />
-          <FormSelect
-            label={direction === "INBOUND" ? "Select Invoice" : "Select Bill"}
-            value={selectedDocument}
-            onValueChange={setSelectedDocument}
-            options={unpaidDocuments.map((doc) => ({
-              value: doc.id,
-              label: `${doc.number} - ${doc.party} - Due: ₹${doc.amountDue.toLocaleString("en-IN")}`,
-            }))}
-            placeholder={unpaidDocuments.length === 0 ? "No unpaid documents" : "Select document"}
-            required
-          />
+          <div className="space-y-1.5 w-full">
+            <label className="text-xs font-semibold text-foreground">
+              {direction === "INBOUND" ? "Select Invoice" : "Select Bill"}
+              <span className="text-destructive ml-1">*</span>
+            </label>
+            <SearchableSelect
+              options={unpaidDocuments.map((doc) => ({
+                value: doc.id,
+                label: `${doc.number} • ${doc.party}`,
+                subLabel: `Due: ₹${doc.amountDue.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
+              }))}
+              value={selectedDocument}
+              onChange={setSelectedDocument}
+              placeholder={unpaidDocuments.length === 0 ? "No unpaid documents" : "Select document..."}
+              searchPlaceholder={
+                direction === "INBOUND"
+                  ? "Search invoice # or customer..."
+                  : "Search bill # or vendor..."
+              }
+              emptyMessage="No unpaid documents found"
+              className="h-10"
+            />
+          </div>
           {selectedDocument && (
             <div className="p-3 bg-gray-50 rounded-lg text-xs space-y-1">
               <div className="flex justify-between">
@@ -193,20 +206,21 @@ export function PaymentModal({
             value={note}
             onChange={(e) => setNote(e.target.value)}
           />
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex justify-end gap-2.5 pt-4 border-t border-border">
             <Button
               type="button"
-              variant="secondary"
+              variant="outline"
               size="sm"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
+              className="h-9 px-4 text-xs rounded-lg font-medium"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               size="sm"
-              className="bg-navy hover:bg-navy-hover text-white"
+              className="h-9 px-4 text-xs rounded-lg bg-navy hover:bg-navy/90 text-white font-semibold shadow-xs"
               disabled={submitting || !selectedDocument || !amount}
             >
               {submitting ? "Recording..." : "Post Payment"}
