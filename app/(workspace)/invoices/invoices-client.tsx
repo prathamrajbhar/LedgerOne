@@ -1236,7 +1236,7 @@ export function InvoicesClient({
                 size="sm"
                 onClick={() => setOpenCreateModal(false)}
                 disabled={creating}
-                className="h-8.5 text-xs"
+                className="h-9 px-4 text-xs rounded-lg font-medium"
               >
                 Cancel
               </Button>
@@ -1246,7 +1246,7 @@ export function InvoicesClient({
                 size="sm"
                 onClick={() => handleSaveInvoice(true)}
                 disabled={creating}
-                className="h-8.5 text-xs text-navy font-medium"
+                className="h-9 px-4 text-xs rounded-lg font-medium"
               >
                 Save Draft
               </Button>
@@ -1255,17 +1255,17 @@ export function InvoicesClient({
                 size="sm"
                 onClick={() => handleSaveInvoice(false)}
                 disabled={creating}
-                className="h-8.5 text-xs bg-navy hover:bg-navy/90 text-white font-semibold gap-1.5"
+                className="h-9 px-4 text-xs rounded-lg bg-navy hover:bg-navy/90 text-white font-semibold gap-2 shadow-xs"
               >
                 {creating ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Creating...
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Creating...</span>
                   </>
                 ) : (
                   <>
-                    <Receipt className="w-3.5 h-3.5" />
-                    Create Invoice
+                    <Receipt className="w-4 h-4" />
+                    <span>Create Invoice</span>
                   </>
                 )}
               </Button>

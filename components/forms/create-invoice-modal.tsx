@@ -588,7 +588,7 @@ export function CreateInvoiceModal({
               size="sm"
               onClick={() => onOpenChange(false)}
               disabled={creating}
-              className="h-8.5 text-xs"
+              className="h-9 px-4 text-xs rounded-lg font-medium"
             >
               Cancel
             </Button>
@@ -598,7 +598,7 @@ export function CreateInvoiceModal({
               size="sm"
               onClick={() => handleSaveInvoice(true)}
               disabled={creating}
-              className="h-8.5 text-xs text-navy font-medium"
+              className="h-9 px-4 text-xs rounded-lg font-medium"
             >
               Save Draft
             </Button>
@@ -607,17 +607,17 @@ export function CreateInvoiceModal({
               size="sm"
               onClick={() => handleSaveInvoice(false)}
               disabled={creating}
-              className="h-8.5 text-xs bg-navy hover:bg-navy/90 text-white font-semibold gap-1.5 shadow-sm px-4"
+              className="h-9 px-4 text-xs rounded-lg bg-navy hover:bg-navy/90 text-white font-semibold gap-2 shadow-xs"
             >
               {creating ? (
                 <>
-                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-1" />
-                  Creating Invoice...
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-0.5" />
+                  <span>Creating Invoice...</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-3.5 h-3.5 mr-0.5" />
-                  Create Invoice
+                  <Plus className="w-4 h-4" />
+                  <span>Create Invoice</span>
                 </>
               )}
             </Button>
