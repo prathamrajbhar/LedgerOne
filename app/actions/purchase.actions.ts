@@ -5,6 +5,32 @@ import { prisma } from "@/lib/prisma";
 import { purchaseOrderService } from "@/lib/services/purchase-order.service";
 import { vendorBillService } from "@/lib/services/vendor-bill.service";
 
+import { getSession } from "@/lib/auth/session";
+
+async function resolveUserId(providedId?: string): Promise<string> {
+  if (providedId && providedId !== "system") {
+    const existing = await prisma.user.findUnique({ where: { id: providedId } });
+    if (existing) return existing.id;
+  }
+
+  const session = await getSession();
+  if (session?.user?.id) {
+    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    if (user) return user.id;
+  }
+
+  const fallbackUser = await prisma.user.findFirst({
+    where: { isActive: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (!fallbackUser) {
+    throw new Error("No active user available to author this record");
+  }
+
+  return fallbackUser.id;
+}
+
 export interface CreatePurchaseOrderInput {
   vendorId: string;
   orderDate: Date;
@@ -19,6 +45,8 @@ export interface CreatePurchaseOrderInput {
 
 export async function createPurchaseOrderAction(input: CreatePurchaseOrderInput) {
   try {
+    const authorId = await resolveUserId(input.createdById);
+
     let total = 0;
     const lineDatas = input.lines.map((line) => {
       const lineTotal = line.quantity * line.unitPrice;
@@ -41,7 +69,7 @@ export async function createPurchaseOrderAction(input: CreatePurchaseOrderInput)
         orderDate: input.orderDate,
         status: DocumentStatus.DRAFT,
         total,
-        createdById: input.createdById || "system",
+        createdById: authorId,
         lines: {
           create: lineDatas,
         },
@@ -97,6 +125,8 @@ export interface CreateVendorBillInput {
 
 export async function createStandaloneBillAction(input: CreateVendorBillInput) {
   try {
+    const authorId = await resolveUserId(input.createdById);
+
     let total = 0;
     const lineDatas = input.lines.map((line) => {
       const lineTotal = line.quantity * line.unitPrice;
@@ -122,7 +152,7 @@ export async function createStandaloneBillAction(input: CreateVendorBillInput) {
         total,
         amountPaid: 0,
         amountDue: total,
-        createdById: input.createdById || "system",
+        createdById: authorId,
         lines: {
           create: lineDatas,
         },
