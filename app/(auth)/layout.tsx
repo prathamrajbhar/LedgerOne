@@ -1,5 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Package, FileText, Users, BarChart3 } from "lucide-react";
 
 export default function AuthLayout({
@@ -34,12 +35,26 @@ export default function AuthLayout({
           {/* 1. TOP-LEFT BRANDING */}
           <div>
             <Link href="/" className="inline-block group">
-              <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0F2942]">
-                Ledger<span className="text-[#167C80]">One</span>
-              </span>
-              <p className="text-[11px] sm:text-xs text-[#526477] mt-0.5 font-normal tracking-wide">
-                Enterprise Accounting & Furniture ERP System
-              </p>
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="relative w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0 rounded-xl bg-white border border-border/60 shadow-2xs overflow-hidden flex items-center justify-center p-1">
+                  <Image
+                    src="/logo.png"
+                    alt="LedgerOne Logo"
+                    width={40}
+                    height={40}
+                    className="w-full h-full object-contain"
+                    priority
+                  />
+                </div>
+                <div>
+                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#0F2942]">
+                    Ledger<span className="text-[#167C80]">One</span>
+                  </span>
+                  <p className="text-[11px] sm:text-xs text-[#526477] -mt-0.5 font-normal tracking-wide">
+                    Enterprise Accounting & Furniture ERP System
+                  </p>
+                </div>
+              </div>
             </Link>
             <div className="w-[40px] h-[3px] bg-[#167C80] rounded-full mt-2" />
           </div>
