@@ -121,5 +121,7 @@ htmlcov/
 *.html
 !docs/**/*.html
 scripts/latest_report.html
-scripts/screenshots/
 *.png
+!public/*.png
+!app/*.png
+
