@@ -30,6 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import {
@@ -156,6 +157,36 @@ export function InvoicesClient({
       discountPercent: 0,
     },
   ]);
+
+  // Searchable select options for Create Invoice Modal
+  const customerOptions = React.useMemo(() => {
+    return customers.map((c) => ({
+      value: c.id,
+      label: c.name,
+      subLabel: c.phone || c.email || undefined,
+    }));
+  }, [customers]);
+
+  const salesOrderOptions = React.useMemo(() => {
+    const availableOrders = salesOrders.filter(
+      (so) => !formCustomer || so.customerId === formCustomer
+    );
+    return [
+      { value: "", label: "Direct Invoice (No Sales Order)" },
+      ...availableOrders.map((so) => ({
+        value: so.soNumber,
+        label: so.soNumber,
+      })),
+    ];
+  }, [salesOrders, formCustomer]);
+
+  const productOptions = React.useMemo(() => {
+    return products.map((p) => ({
+      value: p.id,
+      label: p.name,
+      subLabel: p.sku ? `SKU: ${p.sku} • ₹${Number(p.salesPrice || 0).toLocaleString("en-IN")}` : `₹${Number(p.salesPrice || 0).toLocaleString("en-IN")}`,
+    }));
+  }, [products]);
 
   // Update URL with new filter values
   const updateFilters = (updates: Record<string, string>) => {
@@ -919,38 +950,39 @@ export function InvoicesClient({
                 <label className="text-xs font-semibold text-foreground block mb-1.5">
                   Customer <span className="text-destructive">*</span>
                 </label>
-                <select
+                <SearchableSelect
+                  options={customerOptions}
                   value={formCustomer}
-                  onChange={(e) => setFormCustomer(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Select a Customer</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => {
+                    setFormCustomer(val);
+                    // Clear selected sales order if customer changes and order does not match
+                    if (formSalesOrder) {
+                      const so = salesOrders.find((s) => s.soNumber === formSalesOrder);
+                      if (so && so.customerId !== val) {
+                        setFormSalesOrder("");
+                      }
+                    }
+                  }}
+                  placeholder="Select a Customer"
+                  searchPlaceholder="Search customer by name or phone..."
+                  emptyMessage="No customers found"
+                  className="h-9"
+                />
               </div>
 
               <div>
                 <label className="text-xs font-semibold text-foreground block mb-1.5">
                   Sales Order (Optional)
                 </label>
-                <select
+                <SearchableSelect
+                  options={salesOrderOptions}
                   value={formSalesOrder}
-                  onChange={(e) => setFormSalesOrder(e.target.value)}
-                  className="w-full h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                >
-                  <option value="">Direct Invoice</option>
-                  {salesOrders
-                    .filter((so) => !formCustomer || so.customerId === formCustomer)
-                    .map((so) => (
-                      <option key={so.id} value={so.soNumber}>
-                        {so.soNumber}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setFormSalesOrder(val)}
+                  placeholder="Direct Invoice"
+                  searchPlaceholder="Search sales order..."
+                  emptyMessage="No sales orders found"
+                  className="h-9"
+                />
               </div>
 
               <div>
@@ -1042,21 +1074,19 @@ export function InvoicesClient({
 
                       return (
                         <tr key={idx} className="hover:bg-surface-subtle/50">
-                          <td className="p-2">
-                            <select
+                          <td className="p-2 min-w-[200px]">
+                            <SearchableSelect
+                              size="sm"
+                              options={productOptions}
                               value={line.productId}
-                              onChange={(e) =>
-                                handleLineChange(idx, "productId", e.target.value)
+                              onChange={(val) =>
+                                handleLineChange(idx, "productId", val)
                               }
-                              className="w-full h-8 px-2 rounded-md border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-                            >
-                              <option value="">Select product...</option>
-                              {products.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.name} {p.sku ? `(${p.sku})` : ""}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Select product..."
+                              searchPlaceholder="Search product by name or SKU..."
+                              emptyMessage="No products found"
+                              className="h-8"
+                            />
                           </td>
 
                           <td className="p-2">
