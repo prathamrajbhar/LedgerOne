@@ -1,17 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import Image from "next/image";
-import { Lock, User, Eye, EyeOff, ArrowRight, AlertCircle } from "lucide-react";
+import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { getPostLoginRedirectAction } from "@/app/actions/auth.actions";
 
-export default function LoginPage() {
-  const router = useRouter();
+function LoginForm() {
   const searchParams = useSearchParams();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
@@ -188,5 +186,19 @@ export default function LoginPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="w-full max-w-[575px] h-[520px] mb-6 sm:mb-8 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-6 sm:p-8 flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-[#0F2942] border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }
