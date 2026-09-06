@@ -109,14 +109,6 @@ export default function SalesOrdersPage() {
     });
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <LoadingSpinner />
-      </div>
-    );
-  }
-
   const { sortedItems: sortedSalesOrders, sortState, handleSort } = useTableSort<
     SalesOrderItem,
     "soNumber" | "customer" | "orderDate" | "items" | "total" | "status"
@@ -132,6 +124,14 @@ export default function SalesOrdersPage() {
       status: (item) => item.status,
     }
   );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -178,119 +178,119 @@ export default function SalesOrdersPage() {
               </div>
             ) : (
               <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
-                <SortableTableHead
-                  columnKey="soNumber"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Order #
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="customer"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Customer
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="orderDate"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Order Date
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="items"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  align="center"
-                  className="py-3.5 px-4"
-                >
-                  Items
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="total"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  align="right"
-                  className="py-3.5 px-4"
-                >
-                  Order Total
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="status"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  align="center"
-                  className="py-3.5 px-4"
-                >
-                  Status
-                </SortableTableHead>
-                <th className="py-3.5 px-4 text-center">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sortedSalesOrders.map((so) => {
-                const isInvoiced = so.status === "INVOICED" || (so.invoices && so.invoices.length > 0);
-                return (
-                  <tr key={so.id} className="hover:bg-primary-light/30">
-                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{so.soNumber}</td>
-                    <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer?.name || "N/A"}</td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{formatDate(so.orderDate)}</td>
-                    <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines?.length || 0}</td>
-                    <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                      ₹{Number(so.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <StatusBadge status={isInvoiced ? "INVOICED" : so.status} />
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {so.status === "DRAFT" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleConfirmOrder(so.id)}
-                            disabled={actionLoading === so.id}
-                            className="gap-1.5"
-                          >
-                            <CheckCircle className="h-3.5 w-3.5" />
-                            {actionLoading === so.id ? "Confirming..." : "Confirm"}
-                          </Button>
-                        )}
-                        {so.status === "CONFIRMED" && !isInvoiced && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleCreateInvoice(so.id)}
-                            disabled={actionLoading === so.id}
-                            className="gap-1.5 text-navy border-navy hover:bg-navy hover:text-white"
-                          >
-                            <FileText className="h-3.5 w-3.5" />
-                            {actionLoading === so.id ? "Creating..." : "Create Invoice"}
-                          </Button>
-                        )}
-                        {isInvoiced && (
-                          <Link
-                            href="/invoices"
-                            className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            View Invoice
-                          </Link>
-                        )}
-                      </div>
-                    </td>
+                <thead>
+                  <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
+                    <SortableTableHead
+                      columnKey="soNumber"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3.5 px-4"
+                    >
+                      Order #
+                    </SortableTableHead>
+                    <SortableTableHead
+                      columnKey="customer"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3.5 px-4"
+                    >
+                      Customer
+                    </SortableTableHead>
+                    <SortableTableHead
+                      columnKey="orderDate"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      className="py-3.5 px-4"
+                    >
+                      Order Date
+                    </SortableTableHead>
+                    <SortableTableHead
+                      columnKey="items"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      align="center"
+                      className="py-3.5 px-4"
+                    >
+                      Items
+                    </SortableTableHead>
+                    <SortableTableHead
+                      columnKey="total"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      align="right"
+                      className="py-3.5 px-4"
+                    >
+                      Order Total
+                    </SortableTableHead>
+                    <SortableTableHead
+                      columnKey="status"
+                      currentSort={sortState}
+                      onSort={handleSort}
+                      align="center"
+                      className="py-3.5 px-4"
+                    >
+                      Status
+                    </SortableTableHead>
+                    <th className="py-3.5 px-4 text-center">Actions</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {sortedSalesOrders.map((so) => {
+                    const isInvoiced = so.status === "INVOICED" || (so.invoices && so.invoices.length > 0);
+                    return (
+                      <tr key={so.id} className="hover:bg-primary-light/30">
+                        <td className="py-3.5 px-4 font-mono font-bold text-navy">{so.soNumber}</td>
+                        <td className="py-3.5 px-4 font-semibold text-foreground">{so.customer?.name || "N/A"}</td>
+                        <td className="py-3.5 px-4 text-muted-foreground">{formatDate(so.orderDate)}</td>
+                        <td className="py-3.5 px-4 text-center text-muted-foreground">{so.lines?.length || 0}</td>
+                        <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                          ₹{Number(so.total).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <StatusBadge status={isInvoiced ? "INVOICED" : so.status} />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {so.status === "DRAFT" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleConfirmOrder(so.id)}
+                                disabled={actionLoading === so.id}
+                                className="gap-1.5"
+                              >
+                                <CheckCircle className="h-3.5 w-3.5" />
+                                {actionLoading === so.id ? "Confirming..." : "Confirm"}
+                              </Button>
+                            )}
+                            {so.status === "CONFIRMED" && !isInvoiced && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleCreateInvoice(so.id)}
+                                disabled={actionLoading === so.id}
+                                className="gap-1.5 text-navy border-navy hover:bg-navy hover:text-white"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                {actionLoading === so.id ? "Creating..." : "Create Invoice"}
+                              </Button>
+                            )}
+                            {isInvoiced && (
+                              <Link
+                                href="/invoices"
+                                className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                View Invoice
+                              </Link>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
         </div>
