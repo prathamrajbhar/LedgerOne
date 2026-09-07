@@ -125,3 +125,4 @@ scripts/latest_report.html
 !public/*.png
 !app/*.png
 
+!docs/screenshots/*.png

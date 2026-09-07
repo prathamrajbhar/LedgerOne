@@ -1,505 +1,365 @@
-# LedgerOne - Accounting System
+# LedgerOne — Production-Grade Accounting System
 
-> A modern, production-grade accounting system for small businesses built with Next.js, Prisma, and PostgreSQL.
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)](https://tailwindcss.com/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Integrated-0C2340?style=for-the-badge&logo=razorpay)](https://razorpay.com/)
 
-[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748)](https://www.prisma.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-316192)](https://www.postgresql.org/)
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Admin Screenshots](#-admin-screenshots)
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Development](#development)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
+> **LedgerOne** is a production-grade, modular monolith accounting and business management ERP system tailored for enterprises, distributors, and furniture retailers. Built on strict double-entry bookkeeping principles, it provides real-time financial reporting, automated purchase and sales document lifecycles, payment gateway reconciliation, and a dedicated self-service customer/vendor portal.
 
 ---
 
-## 🎯 Overview
+## 📑 Table of Contents
 
-LedgerOne replaces fragmented spreadsheets and manual ledgers with a structured, auditable workflow for small businesses. It handles:
-
-- 📊 **Master Data Management** - Contacts, Products, Chart of Accounts
-- 🛒 **Purchase Cycle** - PO → Vendor Bill → Payment
-- 💰 **Sales Cycle** - SO → Customer Invoice → Receipt
-- 📖 **Double-Entry Accounting** - Auto-balanced Journal Entries
-- 📈 **Budgeting** - Real-time budget tracking with achievement computation
-- 📄 **Financial Reporting** - Balance Sheet, P&L, Budget Reports
-- 🌐 **Customer/Vendor Portal** - Self-service invoice viewing and payment
-- 🔒 **Payment Gateway Integration** - Razorpay for online payments
-- 💬 **Help Assistant** - FAQ-based chatbot for product guidance
-
-**Architecture:** Modular Monolith - Single Next.js application with clearly bounded domain modules.
-
----
-
-## 📸 Admin Screenshots
-
-> These are local placeholder screenshots so the GitHub README renders correctly. Replace each file later with the final admin page screenshots.
-
-| Module | Screenshot | Description |
-| --- | --- | --- |
-| Products & Inventory | ![Products & Inventory](./docs/screenshots/products-inventory.svg) | Product catalog, stock status, search, filters, and inventory overview. |
-| User & Access Management | ![User & Access Management](./docs/screenshots/user-access-management.svg) | Admin controls for user accounts, role assignment, status management, and associated entities. |
-| Purchase Orders | ![Purchase Orders](./docs/screenshots/purchase-orders.svg) | Purchase order listing with status tracking, totals, and confirmation workflow. |
-| Payments & Banking | ![Payments & Banking](./docs/screenshots/payments-banking.svg) | Payment records, bank transfers, cash transactions, and account reconciliation view. |
-| Profit & Loss | ![Profit & Loss](./docs/screenshots/profit-loss.svg) | Performance analysis with revenue, expenses, net loss, and account-level drilldown. |
-
-### Upcoming Vendor / Client Screenshots
-
-| Section | Status | Notes |
-| --- | --- | --- |
-| Vendor Portal | Planned | Add invoice, bill, and payment screens after vendor mockups are finalized. |
-| Customer Portal | Planned | Add customer invoice and payment portal screenshots. |
-| Mobile Views | Planned | Add responsive admin and portal mobile layouts. |
-| Settings & Profile | Planned | Add profile, company settings, and fiscal year configuration screens. |
+1. [Key Highlights & Principles](#-key-highlights--principles)
+2. [Application Screenshots (Live Application)](#-application-screenshots-live-application)
+3. [System Architecture](#-system-architecture)
+4. [Functional Modules](#-functional-modules)
+5. [Role-Based Access Control (RBAC)](#-role-based-access-control-rbac)
+6. [Tech Stack](#-tech-stack)
+7. [Directory Structure](#-directory-structure)
+8. [Getting Started & Installation](#-getting-started--installation)
+9. [Environment Configuration](#-environment-configuration)
+10. [Database Management & Seeding](#-database-management--seeding)
+11. [Testing & Quality Assurance](#-testing--quality-assurance)
+12. [Deployment Guidelines](#-deployment-guidelines)
 
 ---
 
-## ✨ Features
+## 🌟 Key Highlights & Principles
 
-### For Business Owners & Accountants
+* **100% Deterministic Accounting Engine**: All ledger computations, tax calculations, balance sheet totals, and P&L aggregations are strictly computed through explicit double-entry mathematical rules (`Debits = Credits`). No generative AI touches the core financial ledger.
+* **Isolated Help Assistant (AI)**: An intelligent contextual assistant (Google Gemini / Anthropic Claude) directly integrated into the Workspace and Portal to answer workflow and feature questions without access to sensitive database records.
+* **Automated Double-Entry Accounting**: Real-time journal entry generation upon confirming Invoices, Vendor Bills, and Payments, with validation preventing unbalanced postings.
+* **Complete Business Cycles**:
+  * **Sales Cycle**: Sales Orders $\rightarrow$ Customer Invoices $\rightarrow$ Payment Receipts (Cash, Bank, or Razorpay Gateway).
+  * **Purchase Cycle**: Purchase Orders $\rightarrow$ Vendor Bills $\rightarrow$ Payment Clearances.
+* **Customer & Vendor Self-Service Portal**: Direct, role-scoped tenant portal for external parties to inspect invoice dues, verify payment history, download PDFs, and settle outstanding balances online.
+* **Budgeting & Variance Tracking**: Set departmental or project expenditure limits mapped to Analytic Accounts with real-time variance calculation.
+* **Document Engine**: Server-side PDF generation for invoices, statements, and reports using `@react-pdf/renderer` and transactional emails via Resend / AWS SES.
 
-- ✅ Real-time financial visibility (Balance Sheet, P&L on demand)
-- ✅ Automated journal entry generation from business transactions
-- ✅ Budget vs. actual tracking with drill-down capabilities
-- ✅ Enforced accounting correctness (balanced entries, computed statuses)
-- ✅ Single source of truth for contacts, products, and accounts
-- ✅ Role-based access control (Administrator, Accountant, Contact)
+---
 
-### For Customers & Vendors
+## 📸 Application Screenshots (Live Application)
 
-- ✅ Self-service portal for viewing invoices and bills
-- ✅ Online payment for invoices via Razorpay gateway
-- ✅ Payment history tracking
-- ✅ Mobile-responsive design
+*Actual screenshots captured from the live LedgerOne system instance in production configuration.*
 
-### Technical Excellence
+### 1. Executive Analytics Dashboard
+*Comprehensive KPI grid tracking gross revenue, operating expenses, net profit margins, outstanding receivables, payables, inventory status, and real-time revenue vs. expense curves.*
 
-- ✅ Type-safe with TypeScript throughout
-- ✅ Transactional consistency with Prisma
-- ✅ Comprehensive error handling
-- ✅ Security-first design (role checks, data isolation, webhook verification)
-- ✅ Production-ready logging and monitoring
-- ✅ Test coverage for critical business rules
+![LedgerOne Dashboard](docs/screenshots/real-dashboard.png)
+
+---
+
+### 2. Customer Invoices (Sales Cycle)
+*Complete sales invoice register tracking document numbers, customer entities, issue dates, due dates, total amounts, paid portions, balances, and multi-tier payment statuses.*
+
+![Customer Invoices](docs/screenshots/real-invoices.png)
+
+---
+
+### 3. Purchase Orders & Procurement
+*Supplier procurement tracking with line-item ordering, tax breakdown, and draft-to-confirmed workflow controls.*
+
+![Purchase Orders](docs/screenshots/real-purchases.png)
+
+---
+
+### 4. Payments & Banking Reconciliation
+*Unified banking and cash register showing customer receipts, vendor disbursements, payment modes, and linked accounting vouchers.*
+
+![Payments & Banking](docs/screenshots/real-payments.png)
+
+---
+
+### 5. Products & Inventory Catalog
+*Catalog item management featuring SKU tracking, category breakdowns, unit cost, selling prices, and real-time inventory levels.*
+
+![Products & Inventory](docs/screenshots/real-products.png)
+
+---
+
+### 6. Statutory Financial Statements (Profit & Loss / Balance Sheet)
+*Automated period-based Profit & Loss (P&L) statements, Cost of Goods Sold (COGS), operating overheads, and printable Balance Sheets.*
+
+![Financial Statements](docs/screenshots/real-financial-reports.png)
+
+---
+
+### 7. Authentication & Secure Portal Login
+*Enterprise login interface with unified entry for administrators, accountants, and external customer/vendor portal users.*
+
+![Login Screen](docs/screenshots/login-page.png)
+
+---
+
+## 🏗 System Architecture
+
+LedgerOne is organized as a **Modular Monolith** using the Next.js 14 App Router, keeping operational deployment simple while strictly isolating domain layers:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                        Presentation Layer                              │
+│   Next.js 14 App Router • Server Components • Client Form Hydration    │
+│   - app/(auth): Authentication, Password Reset, Registration           │
+│   - app/(workspace): Admin & Accountant Enterprise ERP Workspace       │
+│   - app/portal: Customer & Vendor Self-Service Experience              │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Server Actions & API Handlers
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                        Domain Service Layer                            │
+│   - AuthService          - PurchaseService       - ReportingService    │
+│   - ContactService       - SalesService          - BudgetService       │
+│   - JournalEntryService  - PaymentService        - ChatbotService      │
+│   Validation & Safety: Zod Schema Enforcement • Transaction Bounds     │
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ Prisma ORM
+┌───────────────────────────────────▼────────────────────────────────────┐
+│                         Persistence Layer                              │
+│       PostgreSQL 16 Database with PgBouncer Connection Pooling         │
+│   - Double-Entry Journals    - Trade Documents    - Master Catalog     │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🧩 Functional Modules
+
+| Module | Scope & Core Capabilities | Core Models |
+| :--- | :--- | :--- |
+| **Authentication & RBAC** | Credential validation, bcrypt password hashing, session revocation, role-based route guards. | `User`, `RefreshToken` |
+| **Master Data** | Chart of Accounts (COA), Tax Rates, Journals, Analytic Accounts, Contacts, Products. | `Account`, `Journal`, `Contact`, `Product`, `TaxRate` |
+| **Sales Cycle** | Sales Orders, Invoices, Delivery notes, Customer receipts, payment status computation. | `SalesOrder`, `CustomerInvoice`, `InvoicePayment` |
+| **Purchase Cycle** | Purchase Orders, Vendor Bills, 3-way line item match, bill settlement entries. | `PurchaseOrder`, `VendorBill`, `BillPayment` |
+| **Accounting Engine** | Journal Entries (`DRAFT` $\rightarrow$ `POSTED`), automated double-entry line generation, reconciliation. | `JournalEntry`, `JournalEntryLine` |
+| **Budgeting** | Spending caps by Analytic Account and period, real-time variance calculation. | `Budget`, `BudgetLine` |
+| **Financial Reports** | Balance Sheet, Profit & Loss (P&L), General Ledger, and Budget Consumption reports. | Derived on-demand |
+| **Payment Gateway** | Razorpay order creation, hosted checkout widget, webhook signature verification. | `PaymentGatewayTransaction` |
+| **Contact Portal** | Isolated tenant access for clients/vendors to review invoices, bills, and pay online. | Scoped to session `contactId` |
+| **Help Assistant** | Floating conversational chatbot providing contextual assistance and FAQ lookup. | Powered by Gemini / Claude |
+
+---
+
+## 🔐 Role-Based Access Control (RBAC)
+
+LedgerOne enforces strict, server-side RBAC across three distinct roles:
+
+| Capability | Administrator | Accountant | Contact (Customer / Vendor) |
+| :--- | :---: | :---: | :---: |
+| **Internal User Management** | Full | ❌ No Access | ❌ No Access |
+| **Company Settings & Fiscal Year** | Full | ❌ No Access | ❌ No Access |
+| **Master Data (Create & Edit)** | Full | Full (Archive only, no hard delete) | ❌ No Access |
+| **Sales & Purchase Orders** | Full | Full | ❌ No Access |
+| **Post Journal Entries** | Full | Full | ❌ No Access |
+| **Define & Revise Budgets** | Full | Full | ❌ No Access |
+| **Generate & Print Financial Reports** | Full | Full | ❌ No Access |
+| **Portal Self-Service Invoices** | ❌ Internal | ❌ Internal | View own invoices & Pay online (Customer) |
+| **Portal Self-Service Bills** | ❌ Internal | ❌ Internal | View own vendor bills (Read-only) |
+| **Help Assistant Chatbot** | Full | Full | Full |
 
 ---
 
 ## 🛠 Tech Stack
 
-### Core
-
-- **Framework:** [Next.js 14](https://nextjs.org/) (App Router, Server Actions)
-- **Language:** [TypeScript 5.3](https://www.typescriptlang.org/)
-- **Database:** [PostgreSQL 15+](https://www.postgresql.org/)
-- **ORM:** [Prisma 5.22](https://www.prisma.io/)
-- **Authentication:** [Auth.js (NextAuth v5)](https://authjs.dev/)
-
-### UI/UX
-
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **Components:** [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/)
-- **Forms:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
-- **Charts:** [Recharts](https://recharts.org/)
-- **Notifications:** [Sonner](https://sonner.emilkowal.ski/)
-
-### Integrations
-
-- **Payment Gateway:** [Razorpay](https://razorpay.com/)
-- **Email:** [Resend](https://resend.com/)
-- **File Storage:** [AWS S3](https://aws.amazon.com/s3/)
-- **PDF Generation:** [@react-pdf/renderer](https://react-pdf.org/)
-- **Help Assistant:** [Anthropic Claude API](https://www.anthropic.com/)
-
-### Development & Testing
-
-- **Testing:** [Vitest](https://vitest.dev/) + [Playwright](https://playwright.dev/)
-- **Linting:** [ESLint](https://eslint.org/) + [Prettier](https://prettier.io/)
-- **Type Checking:** TypeScript Compiler
-
-### Deployment
-
-- **Hosting:** [Vercel](https://vercel.com/)
-- **Database:** [Neon](https://neon.tech/) or [Supabase](https://supabase.com/)
-- **Logging:** [Better Stack / Logtail](https://betterstack.com/)
+* **Framework**: [Next.js 14](https://nextjs.org/) (App Router, Server Actions, Route Handlers)
+* **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict Mode)
+* **Styling**: [Tailwind CSS](https://tailwindcss.com/) with CSS variables & semantic tokens
+* **Component Library**: [shadcn/ui](https://ui.shadcn.com/) (Radix UI primitives)
+* **Form & Validation**: [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
+* **Database & ORM**: [PostgreSQL](https://www.postgresql.org/) via [Prisma ORM](https://www.prisma.io/)
+* **Authentication**: [NextAuth.js v5 (Auth.js)](https://authjs.dev/) with credential provider & bcrypt hashing
+* **Payment Gateway**: [Razorpay](https://razorpay.com/) (Orders API, Webhooks, Signature HMAC verification)
+* **Document Generation**: [@react-pdf/renderer](https://react-pdf.org/) for programmatic invoice & statement PDFs
+* **Transactional Email**: [Resend](https://resend.com/) & AWS SES
+* **Testing**: [Vitest](https://vitest.dev/) for unit/integration testing, [Playwright](https://playwright.dev/) for E2E workflows
+* **Icons**: [Lucide React](https://lucide.dev/)
 
 ---
 
-## 🚀 Getting Started
+## 📁 Directory Structure
+
+```text
+LedgerOne/
+├── app/                              # Next.js 14 App Router
+│   ├── (auth)/                       # Login, registration, password reset
+│   ├── (workspace)/                  # Back-office ERP (Admin & Accountant)
+│   │   ├── accounts/                 # Chart of accounts
+│   │   ├── bills/                    # Vendor bills
+│   │   ├── budgets/                  # Budget planning & analytics
+│   │   ├── contacts/                 # Customer & vendor directory
+│   │   ├── dashboard/                # Main analytics dashboard
+│   │   ├── financial-reports/        # Balance sheet, P&L, reports
+│   │   ├── invoices/                 # Customer invoices
+│   │   ├── journal-entries/          # Double-entry ledger entries
+│   │   ├── payments/                 # Cash, bank & gateway payments
+│   │   ├── products/                 # Product & pricing catalog
+│   │   ├── purchases/                # Purchase orders
+│   │   ├── sales/                    # Sales orders
+│   │   ├── settings/                 # Company profile & config
+│   │   └── users/                    # System user administration
+│   ├── api/                          # Webhooks (Razorpay) & REST routes
+│   └── portal/                       # External customer/vendor portal
+├── components/                       # Reusable UI component library
+│   ├── forms/                        # Shared form controls & line item tables
+│   └── ui/                           # shadcn/ui base primitives
+├── docs/                             # Engineering & product documentation
+│   ├── PRD.md                        # Product requirements document
+│   ├── WORKFLOW.md                   # Screen navigation & business rules
+│   ├── TECH_STACK.md                 # Technical stack specification
+│   ├── architecture.md               # System architectural blueprint
+│   ├── SCREENS.md                    # UI & theme token specification
+│   └── screenshots/                  # High-resolution screenshots of the live system
+├── lib/                              # Core application logic
+│   ├── auth/                         # Session options & RBAC middleware
+│   ├── chatbot/                      # Help Assistant LLM integration
+│   ├── email/                        # Transactional email templates
+│   ├── pdf/                          # React-PDF document templates
+│   ├── prisma/                       # Prisma client singleton
+│   ├── services/                     # Domain business logic & transactions
+│   ├── utils/                        # Currency, date, & math formatting
+│   └── validation/                   # Shared Zod validation schemas
+├── prisma/                           # Database schema & migrations
+│   ├── migrations/                   # SQL migration history
+│   └── schema.prisma                 # Declarative data model
+├── public/                           # Static assets, logos, and screenshots
+├── scripts/                          # Test orchestration & automation scripts
+├── package.json                      # Dependencies & npm scripts
+├── tailwind.config.ts                # Design tokens & color definitions
+└── tsconfig.json                     # TypeScript strict configuration
+```
+
+---
+
+## 🚀 Getting Started & Installation
 
 ### Prerequisites
+* **Node.js**: v18.0.0 or higher
+* **Package Manager**: `npm` (v9+) or `pnpm`
+* **Database**: PostgreSQL 14+ (Local instance, Docker, Neon, or Supabase)
 
-- **Node.js:** >= 18.0.0
-- **npm:** >= 9.0.0
-- **PostgreSQL:** >= 15.0
-- **Git**
-
-### Installation
-
-1. **Clone the repository**
-
-   ```bash
-   git clone <repository-url>
-   cd LedgerOne
-   ```
-
-2. **Install dependencies**
-
-   ```bash
-   npm install
-   ```
-
-3. **Set up environment variables**
-
-   ```bash
-   cp .env.example .env
-   ```
-
-   Edit `.env` and configure:
-   - `DATABASE_URL` - PostgreSQL connection string
-   - `NEXTAUTH_SECRET` - Generate with `openssl rand -base64 32`
-   - AWS S3 credentials
-   - Resend API key
-   - Razorpay keys (use test mode for development)
-   - Anthropic API key
-
-4. **Set up the database**
-
-   ```bash
-   # Push Prisma schema to database
-   npm run db:push
-
-   # (Optional) Seed with initial data
-   npm run db:seed
-
-   # Open Prisma Studio to view data
-   npm run db:studio
-   ```
-
-5. **Start the development server**
-
-   ```bash
-   npm run dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-### First-Time Setup
-
-1. Navigate to `/sign-up` to create your first Accountant account
-2. Use that account to log in
-3. The system will have pre-configured:
-   - Default Chart of Accounts
-   - Default Journals (Sales, Purchase, Bank, Cash)
-4. Start by creating:
-   - Contacts (Customers/Vendors)
-   - Products
-   - Analytic Accounts for budget tracking
-
----
-
-## 📁 Project Structure
-
+### 1. Clone the Repository
+```bash
+git clone https://github.com/prathamrajbhar/LedgerOne.git
+cd LedgerOne
 ```
-LedgerOne/
-├── app/                              # Next.js App Router
-│   ├── (auth)/                       # Authentication routes
-│   │   ├── login/
-│   │   ├── sign-up/
-│   │   └── forgot-password/
-│   ├── (workspace)/                  # Admin & Accountant workspace
-│   │   ├── dashboard/
-│   │   ├── contacts/
-│   │   ├── products/
-│   │   ├── purchase/
-│   │   ├── sales/
-│   │   ├── accounting/
-│   │   ├── budgets/
-│   │   └── reports/
-│   ├── (portal)/                     # Customer/Vendor portal
-│   │   ├── invoices/
-│   │   ├── bills/
-│   │   └── payments/
-│   └── api/
-│       └── webhooks/payment/         # Razorpay webhook handler
-│
-├── lib/
-│   ├── services/                     # Business logic layer
-│   │   ├── auth.service.ts
-│   │   ├── contact.service.ts
-│   │   ├── payment.service.ts
-│   │   ├── journal-entry.service.ts
-│   │   └── budget.service.ts
-│   ├── validation/                   # Zod schemas
-│   ├── auth/                         # Auth.js configuration
-│   ├── email/                        # Email templates
-│   ├── pdf/                          # PDF generation
-│   ├── payments/                     # Payment gateway client
-│   ├── chatbot/                      # Help Assistant
-│   └── utils/                        # Helpers & utilities
-│
-├── components/
-│   ├── ui/                           # shadcn/ui components
-│   └── forms/                        # Form components
-│
-├── prisma/
-│   ├── schema.prisma                 # Database schema
-│   ├── migrations/                   # Migration history
-│   └── seed.ts                       # Seed data
-│
-├── docs/                             # Product documentation
-│   ├── PRD.md                        # Product Requirements
-│   ├── USECASE.md                    # Use Cases
-│   ├── TECH_STACK.md                 # Technical Stack
-│   ├── architecture.md               # Architecture Design
-│   └── WORKFLOW.md                   # User Workflows
-│
-├── .claude/                          # Claude Code configuration
-│   ├── agents/                       # Custom agents
-│   └── skills/                       # Custom skills
-│
-├── CLAUDE.md                         # Project guidelines for Claude Code
-└── README.md                         # This file
+
+### 2. Install Dependencies
+```bash
+npm install
+```
+
+### 3. Configure Environment Variables
+Copy the example environment file and update credentials:
+```bash
+cp .env.example .env
 ```
 
 ---
 
-## 💻 Development
+## ⚙️ Environment Configuration
 
-### Available Commands
+Ensure the following variables are configured in your `.env` file:
+
+```env
+# Database (PostgreSQL)
+DATABASE_URL="postgresql://postgres:password@localhost:5432/ledgerone?schema=public"
+
+# Auth.js / NextAuth
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here-min-32-characters-long"
+
+# Payment Gateway (Razorpay)
+RAZORPAY_KEY_ID="rzp_test_your_key_id"
+RAZORPAY_KEY_SECRET="your_razorpay_secret_key"
+RAZORPAY_WEBHOOK_SECRET="your_webhook_secret"
+
+# Transactional Email (Resend or SMTP)
+SMTP_HOST="smtp.gmail.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="billing@yourcompany.com"
+SMTP_PASS="your-app-password"
+SMTP_FROM="LedgerOne <billing@yourcompany.com>"
+
+# Object Storage (AWS S3) - Optional for avatars/attachments
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="your_aws_access_key"
+AWS_SECRET_ACCESS_KEY="your_aws_secret_key"
+AWS_S3_BUCKET_NAME="ledgerone-documents"
+
+# Help Assistant AI (Google Gemini or Claude)
+GEMINI_API_KEY="your_gemini_api_key"
+```
+
+---
+
+## 🗄 Database Management & Seeding
 
 ```bash
-# Development
-npm run dev              # Start dev server (http://localhost:3000)
-npm run build            # Build for production
-npm run start            # Start production server
-npm run lint             # Run ESLint
-npm run type-check       # TypeScript type checking
-npm run format           # Format code with Prettier
+# Generate Prisma Client
+npm run db:generate
 
-# Database
-npm run db:generate      # Generate Prisma Client
-npm run db:push          # Push schema changes (dev)
-npm run db:migrate       # Create and apply migration
-npm run db:studio        # Open Prisma Studio GUI
-npm run db:seed          # Seed database with initial data
+# Sync schema with local database
+npm run db:push
 
-# Testing
-npm run test             # Run unit tests
-npm run test:ui          # Run tests with UI
-npm run test:coverage    # Generate coverage report
-npm run e2e              # Run E2E tests
-npm run e2e:ui           # Run E2E tests with UI
+# Run database migrations
+npm run db:migrate
+
+# Seed demo enterprise business data
+npx tsx scripts/seed_production_runner.ts
+
+# Open Prisma Studio GUI
+npm run db:studio
 ```
 
-### Development Workflow
+### Default Login Accounts
+After database setup, use the following credentials to access the workspace:
 
-1. **Create a feature branch**
-   ```bash
-   git checkout -b feature/sales-invoice-creation
-   ```
-
-2. **Make changes following the guidelines**
-   - Read relevant docs in `/docs`
-   - Follow service layer pattern
-   - Write tests for business logic
-   - Use TypeScript strictly (no `any`)
-
-3. **Test your changes**
-   ```bash
-   npm run lint
-   npm run type-check
-   npm run test
-   ```
-
-4. **Commit following conventions**
-   ```bash
-   git add .
-   git commit -m "feat(sales): add customer invoice creation from sales order
-
-   - Create invoice from confirmed SO
-   - Auto-fill customer and line items
-   - Generate balanced journal entry on confirmation
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
-   ```
-
-5. **Push and create Pull Request**
-   ```bash
-   git push origin feature/sales-invoice-creation
-   ```
-
-### Code Standards
-
-- **TypeScript:** Strict mode, no `any` types
-- **Services:** All business logic in service layer, never in routes/components
-- **Validation:** Zod schemas at every service entry point
-- **Transactions:** Use Prisma transactions for multi-step operations
-- **Errors:** Throw typed errors (ValidationError, UnauthorizedError, etc.)
-- **Security:** Role check on every protected operation
-
-See **CLAUDE.md** for comprehensive guidelines.
+| Role | Login ID | Password | Access Path |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin001` | `AdminPassword123!` | `/dashboard` |
+| **Accountant** | `acct001` | `AccountantPass123!` | `/dashboard` |
+| **Portal Customer** | `cust001` | `Password@123` | `/portal` |
 
 ---
 
-## 🧪 Testing
-
-### Unit Tests
+## 🧪 Testing & Quality Assurance
 
 ```bash
-npm run test              # Run all unit tests
-npm run test:ui           # Run with Vitest UI
-npm run test:coverage     # Generate coverage report
+# Run Vitest unit & integration tests
+npm run test
+
+# Run tests with interactive Vitest UI
+npm run test:ui
+
+# Generate test coverage report
+npm run test:coverage
+
+# Run Playwright end-to-end tests
+npm run e2e
+
+# Run Playwright E2E tests in headed browser mode
+npm run e2e:ui
+
+# Verify TypeScript type check
+npm run type-check
+
+# Run ESLint check
+npm run lint
 ```
 
-**Minimum 80% coverage required for service layer.**
+---
 
-### Integration Tests
+## 🚢 Deployment Guidelines
 
-Integration tests use a test database:
-
-```bash
-DATABASE_URL="postgresql://user:pass@localhost:5432/ledgerone_test" npm run test
-```
-
-### E2E Tests
-
-```bash
-npm run e2e               # Run Playwright tests
-npm run e2e:ui            # Run with Playwright UI
-```
-
-Critical flows to test:
-- Purchase flow: PO → Bill → Payment
-- Sales flow: SO → Invoice → Receipt
-- Portal payment via gateway
-- Budget achievement computation
+* **Vercel Deployment**: Link repository, set environment variables in Project Settings, and build with standard Next.js preset (`npm run build`).
+* **Connection Pooling**: Use PgBouncer or connection poolers (such as Neon or AWS RDS Proxy) for serverless environments.
+* **Webhook Registration**: In your Razorpay Dashboard, set the Webhook URL to `https://yourdomain.com/api/webhooks/payment` and paste the matching `RAZORPAY_WEBHOOK_SECRET`.
 
 ---
 
-## 🚢 Deployment
+## 📄 License
 
-### Environment Setup
-
-1. **Production Database**
-   - Set up PostgreSQL on Neon or Supabase
-   - Run migrations: `npm run db:migrate`
-
-2. **Environment Variables**
-   - Configure all secrets in Vercel dashboard
-   - Use production Razorpay keys
-   - Set `NODE_ENV=production`
-
-3. **Vercel Deployment**
-   ```bash
-   # Connect to Vercel
-   vercel link
-
-   # Deploy
-   vercel --prod
-   ```
-
-### Migration Strategy
-
-- **Development:** Use `npm run db:push` for quick iteration
-- **Production:** Always use `npm run db:migrate` to create migration files
-- Review migration files before applying to production
-- Test migrations on staging first
-
----
-
-## 📚 Documentation
-
-Comprehensive product and technical documentation is in `/docs`:
-
-- **[PRD.md](./docs/PRD.md)** - Product Requirements Document
-- **[USECASE.md](./docs/USECASE.md)** - Use Case Specifications (38 use cases)
-- **[TECH_STACK.md](./docs/TECH_STACK.md)** - Technology Stack Details
-- **[architecture.md](./docs/architecture.md)** - Architecture & Design
-- **[WORKFLOW.md](./docs/WORKFLOW.md)** - Screen-by-Screen Workflows
-- **[CLAUDE.md](./CLAUDE.md)** - Development Guidelines & Team Collaboration
-- **[GITHUB_RULES.md](./GITHUB_RULES.md)** - GitHub Rules & 4-Track Branching Guidelines (`backend1`, `backend2`, `frontend1`, `frontend2`)
-- **[1_BACKEND.md](./1_BACKEND.md)** - Backend Track 1 Tasks
-- **[2_BACKEND.md](./2_BACKEND.md)** - Backend Track 2 Tasks
-- **[1_FRONTEND.md](./1_FRONTEND.md)** - Frontend Track 1 Tasks
-- **[2_FRONTEND.md](./2_FRONTEND.md)** - Frontend Track 2 Tasks
-
-**Before implementing any feature, read the relevant documentation.**
-
----
-
-## 🤝 Contributing
-
-### For Team Members
-
-1. Read **CLAUDE.md** for complete guidelines
-2. Follow commit conventions strictly
-3. Write tests for business logic
-4. Create one branch per feature
-5. Commit frequently (after each discrete feature)
-6. Open PR to `main` branch
-
-### Code Review Checklist
-
-Before approving any PR:
-
-- [ ] Feature works as specified in docs
-- [ ] Business rules enforced correctly
-- [ ] Proper error handling
-- [ ] TypeScript types (no `any`)
-- [ ] Tests written and passing
-- [ ] Commit messages follow conventions
-- [ ] No hardcoded secrets or mock data
-
----
-
-## 🔐 Security
-
-- Passwords hashed with bcrypt (12 rounds)
-- Role-based access control enforced server-side
-- Contact data isolated by session contactId
-- Payment webhook signature verification
-- Input validation with Zod
-- SQL injection prevention via Prisma
-- HTTPS enforced everywhere
-- Security headers configured in next.config.js
-
-Report security issues to: [security contact email]
-
----
-
-## 📝 License
-
-[Specify License]
-
----
-
-## 🙏 Acknowledgments
-
-Built with:
-- [Next.js](https://nextjs.org/) by Vercel
-- [Prisma](https://www.prisma.io/) ORM
-- [shadcn/ui](https://ui.shadcn.com/) components
-- [Anthropic Claude](https://www.anthropic.com/) for AI assistance
-
----
-
-## 📞 Support
-
-- **Documentation:** `/docs` directory
-- **Issues:** [GitHub Issues Link]
-- **Team Chat:** [Slack/Discord Link]
-
----
-
-**Built with ❤️ for small businesses**
+This project is licensed under the [MIT License](LICENSE).

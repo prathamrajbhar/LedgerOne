@@ -1,0 +1,998 @@
+{
+  "company": {
+    "companyName": "Maharaja Heritage Furniture Solutions Pvt. Ltd.",
+    "address": "Maharaja House, 42 Link Road, Andheri West, Mumbai, Maharashtra 400053",
+    "baseCurrency": "INR",
+    "fiscalYearStartMonth": 4,
+    "poNumberPrefix": "PO",
+    "billNumberPrefix": "BILL",
+    "soNumberPrefix": "SO",
+    "invoiceNumberPrefix": "INV",
+    "jeNumberPrefix": "JE"
+  },
+  "categories": [
+    "Living Room",
+    "Bedroom",
+    "Dining Room",
+    "Executive Office",
+    "Decor & Lighting",
+    "Raw Materials",
+    "Services",
+    "Combos"
+  ],
+  "chart_of_accounts": [
+    {
+      "code": "1000",
+      "name": "Cash on Hand (Main Vault)",
+      "type": "CASH"
+    },
+    {
+      "code": "1010",
+      "name": "HDFC Bank Current Account - 5020001",
+      "type": "BANK"
+    },
+    {
+      "code": "1020",
+      "name": "ICICI Bank Operations Account - 001205",
+      "type": "BANK"
+    },
+    {
+      "code": "1050",
+      "name": "Accounts Receivable (Debtors Ledger)",
+      "type": "ASSET"
+    },
+    {
+      "code": "1200",
+      "name": "Finished Furniture Inventory",
+      "type": "ASSET"
+    },
+    {
+      "code": "1210",
+      "name": "Raw Timber & Hardware Stock",
+      "type": "ASSET"
+    },
+    {
+      "code": "1500",
+      "name": "Woodworking Machinery & Tools",
+      "type": "ASSET"
+    },
+    {
+      "code": "1510",
+      "name": "Accumulated Depreciation - Machinery",
+      "type": "ASSET"
+    },
+    {
+      "code": "2000",
+      "name": "Accounts Payable (Creditors Ledger)",
+      "type": "LIABILITY"
+    },
+    {
+      "code": "2050",
+      "name": "GST Output Tax Payable (18%)",
+      "type": "LIABILITY"
+    },
+    {
+      "code": "2051",
+      "name": "GST Output Tax Payable (12%)",
+      "type": "LIABILITY"
+    },
+    {
+      "code": "2052",
+      "name": "GST Output Tax Payable (28%)",
+      "type": "LIABILITY"
+    },
+    {
+      "code": "2060",
+      "name": "GST Input Tax Credit (Receivable)",
+      "type": "ASSET"
+    },
+    {
+      "code": "3000",
+      "name": "Promoters Equity & Capital",
+      "type": "CAPITAL"
+    },
+    {
+      "code": "3010",
+      "name": "Retained Earnings & Reserves",
+      "type": "CAPITAL"
+    },
+    {
+      "code": "4000",
+      "name": "Domestic Furniture Sales Revenue",
+      "type": "INCOME"
+    },
+    {
+      "code": "4010",
+      "name": "Architectural Design & Custom Fitouts",
+      "type": "INCOME"
+    },
+    {
+      "code": "5000",
+      "name": "Cost of Goods Sold - Timber & Materials",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "5010",
+      "name": "Factory Direct Labour & Carpentry",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6000",
+      "name": "Showroom Lease & Warehouse Rent",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6010",
+      "name": "Pan-India Freight & Logistics",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6020",
+      "name": "Omnichannel Advertising & Brand Promotion",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6030",
+      "name": "Executive & Support Staff Salaries",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6040",
+      "name": "Electricity, Generator & Utilities",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "6050",
+      "name": "Depreciation Expense on Fixed Assets",
+      "type": "EXPENSES"
+    },
+    {
+      "code": "7010",
+      "name": "Bank Charges & Payment Gateway Processing",
+      "type": "OTHER_EXPENSES"
+    }
+  ],
+  "tax_rates": [
+    {
+      "name": "GST 0% (Exempt Agricultural Timber)",
+      "percentage": 0.0,
+      "applicability": "BOTH"
+    },
+    {
+      "name": "GST 5% (Job Work & Basic Processing)",
+      "percentage": 5.0,
+      "applicability": "BOTH"
+    },
+    {
+      "name": "GST 12% (Standard Furniture & Woodcraft)",
+      "percentage": 12.0,
+      "applicability": "BOTH"
+    },
+    {
+      "name": "GST 18% (Premium Designer & Upholstered Furniture)",
+      "percentage": 18.0,
+      "applicability": "BOTH"
+    },
+    {
+      "name": "GST 28% (Luxury Carved & Brass Inlay Heirlooms)",
+      "percentage": 28.0,
+      "applicability": "BOTH"
+    }
+  ],
+  "analytic_accounts": [
+    {
+      "name": "Mumbai Flagship Experience Center",
+      "type": "INCOME"
+    },
+    {
+      "name": "Bengaluru Koramangala Studio",
+      "type": "INCOME"
+    },
+    {
+      "name": "Delhi NCR Design Gallery",
+      "type": "INCOME"
+    },
+    {
+      "name": "Direct-to-Consumer Online Channel",
+      "type": "INCOME"
+    },
+    {
+      "name": "B2B Hospitality & Corporate Projects",
+      "type": "INCOME"
+    },
+    {
+      "name": "Jodhpur Central Woodcraft Factory",
+      "type": "EXPENSES"
+    },
+    {
+      "name": "Raw Timber Sourcing & Seasoning",
+      "type": "EXPENSES"
+    },
+    {
+      "name": "Pan-India Logistics & Delivery",
+      "type": "EXPENSES"
+    },
+    {
+      "name": "Marketing & Festive Campaigns",
+      "type": "EXPENSES"
+    }
+  ],
+  "journals": [
+    {
+      "code": "SALES",
+      "name": "Customer Sales Journal",
+      "type": "SALES",
+      "accountCode": "4000"
+    },
+    {
+      "code": "PURCHASE",
+      "name": "Vendor Purchase Journal",
+      "type": "PURCHASE",
+      "accountCode": "5000"
+    },
+    {
+      "code": "HDFC",
+      "name": "HDFC Current Account Journal",
+      "type": "BANK",
+      "accountCode": "1010"
+    },
+    {
+      "code": "CASH",
+      "name": "Main Office Petty Cash Journal",
+      "type": "CASH",
+      "accountCode": "1000"
+    }
+  ],
+  "products": [
+    {
+      "name": "Sheesham Solid Wood 3-Seater Sofa",
+      "category": "Living Room",
+      "type": "GOODS",
+      "sku": "FUR-LIV-001",
+      "cost": 18500,
+      "salesPrice": 34000,
+      "stock": 25,
+      "reorderPoint": 5,
+      "material": "Sheesham / Fabric"
+    },
+    {
+      "name": "Teakwood Nesting Coffee Tables (Set of 2)",
+      "category": "Living Room",
+      "type": "GOODS",
+      "sku": "FUR-LIV-002",
+      "cost": 6200,
+      "salesPrice": 12500,
+      "stock": 40,
+      "reorderPoint": 8,
+      "material": "Burma Teak"
+    },
+    {
+      "name": "Handcrafted TV Console with Rattan Weave",
+      "category": "Living Room",
+      "type": "GOODS",
+      "sku": "FUR-LIV-003",
+      "cost": 12000,
+      "salesPrice": 22900,
+      "stock": 18,
+      "reorderPoint": 4,
+      "material": "Mango Wood / Cane"
+    },
+    {
+      "name": "Velvet Upholstered Wingback Lounge Chair",
+      "category": "Living Room",
+      "type": "GOODS",
+      "sku": "FUR-LIV-004",
+      "cost": 9500,
+      "salesPrice": 18900,
+      "stock": 30,
+      "reorderPoint": 6,
+      "material": "Sheesham / Velvet"
+    },
+    {
+      "name": "Rajasthani Carved Jharokha Wall Mirror",
+      "category": "Decor & Lighting",
+      "type": "GOODS",
+      "sku": "FUR-DEC-001",
+      "cost": 3800,
+      "salesPrice": 8500,
+      "stock": 50,
+      "reorderPoint": 10,
+      "material": "Antiqued Teak"
+    },
+    {
+      "name": "King Size Sheesham Bed with Hydraulic Storage",
+      "category": "Bedroom",
+      "type": "GOODS",
+      "sku": "FUR-BED-001",
+      "cost": 24000,
+      "salesPrice": 48000,
+      "stock": 20,
+      "reorderPoint": 4,
+      "material": "Solid Sheesham"
+    },
+    {
+      "name": "Solid Mango Wood 4-Door Wardrobe",
+      "category": "Bedroom",
+      "type": "GOODS",
+      "sku": "FUR-BED-002",
+      "cost": 28000,
+      "salesPrice": 56000,
+      "stock": 12,
+      "reorderPoint": 3,
+      "material": "Kiln-Dried Mango Wood"
+    },
+    {
+      "name": "Cane & Teak Bedside Table with Drawer",
+      "category": "Bedroom",
+      "type": "GOODS",
+      "sku": "FUR-BED-003",
+      "cost": 3500,
+      "salesPrice": 7800,
+      "stock": 60,
+      "reorderPoint": 12,
+      "material": "Teak / Natural Cane"
+    },
+    {
+      "name": "Minimalist Dressing Table with Beveled Mirror",
+      "category": "Bedroom",
+      "type": "GOODS",
+      "sku": "FUR-BED-004",
+      "cost": 8500,
+      "salesPrice": 16900,
+      "stock": 22,
+      "reorderPoint": 5,
+      "material": "Sheesham Wood"
+    },
+    {
+      "name": "6-Seater Solid Teak Dining Table",
+      "category": "Dining Room",
+      "type": "GOODS",
+      "sku": "FUR-DIN-001",
+      "cost": 21000,
+      "salesPrice": 42000,
+      "stock": 15,
+      "reorderPoint": 3,
+      "material": "Plantation Teak"
+    },
+    {
+      "name": "Hand-Carved Dining Chairs (Pair)",
+      "category": "Dining Room",
+      "type": "GOODS",
+      "sku": "FUR-DIN-002",
+      "cost": 5500,
+      "salesPrice": 11000,
+      "stock": 45,
+      "reorderPoint": 8,
+      "material": "Teak / Cushioned"
+    },
+    {
+      "name": "Buffet Sideboard Storage Credenza",
+      "category": "Dining Room",
+      "type": "GOODS",
+      "sku": "FUR-DIN-003",
+      "cost": 16500,
+      "salesPrice": 32000,
+      "stock": 14,
+      "reorderPoint": 3,
+      "material": "Rosewood Veneer"
+    },
+    {
+      "name": "Ergonomic High-Back Executive Leather Chair",
+      "category": "Executive Office",
+      "type": "GOODS",
+      "sku": "FUR-OFF-001",
+      "cost": 8200,
+      "salesPrice": 15900,
+      "stock": 35,
+      "reorderPoint": 7,
+      "material": "Top-Grain Leather / Chrome"
+    },
+    {
+      "name": "Solid Wood Executive Desk with Cable Tray",
+      "category": "Executive Office",
+      "type": "GOODS",
+      "sku": "FUR-OFF-002",
+      "cost": 15000,
+      "salesPrice": 29500,
+      "stock": 16,
+      "reorderPoint": 4,
+      "material": "Hardwood Sheesham"
+    },
+    {
+      "name": "Modular Open Display Bookshelf 5-Tier",
+      "category": "Executive Office",
+      "type": "GOODS",
+      "sku": "FUR-OFF-003",
+      "cost": 7500,
+      "salesPrice": 14900,
+      "stock": 28,
+      "reorderPoint": 6,
+      "material": "Mango Wood / Steel"
+    },
+    {
+      "name": "Kiln-Dried C.P. Teak Timber Planks (cu ft)",
+      "category": "Raw Materials",
+      "type": "GOODS",
+      "sku": "RAW-TEAK-001",
+      "cost": 2800,
+      "salesPrice": 3500,
+      "stock": 250,
+      "reorderPoint": 50,
+      "material": "Central Province Teak"
+    },
+    {
+      "name": "Seasoned Sheesham Wood Blocks (cu ft)",
+      "category": "Raw Materials",
+      "type": "GOODS",
+      "sku": "RAW-SHEESH-001",
+      "cost": 1800,
+      "salesPrice": 2400,
+      "stock": 300,
+      "reorderPoint": 60,
+      "material": "North Indian Sheesham"
+    },
+    {
+      "name": "Architectural Antique Brass Handles (Box of 20)",
+      "category": "Raw Materials",
+      "type": "GOODS",
+      "sku": "RAW-BRASS-001",
+      "cost": 2200,
+      "salesPrice": 3200,
+      "stock": 120,
+      "reorderPoint": 25,
+      "material": "Solid Cast Brass"
+    },
+    {
+      "name": "Heavy-Duty Soft-Close Drawer Runners (Pair)",
+      "category": "Raw Materials",
+      "type": "GOODS",
+      "sku": "RAW-HDW-001",
+      "cost": 650,
+      "salesPrice": 950,
+      "stock": 400,
+      "reorderPoint": 80,
+      "material": "Zinc Plated Steel"
+    },
+    {
+      "name": "Premium Royal Velvet Upholstery Fabric (Meter)",
+      "category": "Raw Materials",
+      "type": "GOODS",
+      "sku": "RAW-FAB-001",
+      "cost": 450,
+      "salesPrice": 750,
+      "stock": 500,
+      "reorderPoint": 100,
+      "material": "High-GSM Velvet"
+    },
+    {
+      "name": "Custom Furniture Assembly & Polishing Service",
+      "category": "Services",
+      "type": "SERVICE",
+      "sku": "SRV-ASM-001",
+      "cost": 1500,
+      "salesPrice": 3500,
+      "stock": 999,
+      "reorderPoint": 0,
+      "material": "Labour & Lacquer"
+    },
+    {
+      "name": "Annual Furniture Maintenance Contract (AMC)",
+      "category": "Services",
+      "type": "SERVICE",
+      "sku": "SRV-AMC-001",
+      "cost": 3000,
+      "salesPrice": 7500,
+      "stock": 999,
+      "reorderPoint": 0,
+      "material": "Service Warranty"
+    },
+    {
+      "name": "Master Suite Complete Bedroom Ensemble",
+      "category": "Combos",
+      "type": "COMBO",
+      "sku": "CMB-BED-001",
+      "cost": 55000,
+      "salesPrice": 105000,
+      "stock": 8,
+      "reorderPoint": 2,
+      "material": "Complete Sheesham Suite"
+    }
+  ],
+  "contacts": [
+    {
+      "name": "Rajesh Sharma",
+      "type": "CUSTOMER",
+      "email": "rajesh.sharma.blr@yopmail.com",
+      "phone": "+91 98765 43210",
+      "address": "125, MG Road, Indiranagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560065",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Priya Sundaram",
+      "type": "CUSTOMER",
+      "email": "pri.yesundaram.delhi@yopmail.com",
+      "phone": "+91 91234 56789",
+      "address": "34, Netaji Subhash Marg, Paharganj",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110021",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Anita Menon",
+      "type": "CUSTOMER",
+      "email": "anita.menon.mum@yopmail.com",
+      "phone": "+91 90123 45678",
+      "address": "22, Vikhroli Phase 1, JW Vihar",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400058",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Suresh Patel",
+      "type": "CUSTOMER",
+      "email": "suresh.patel.pune@yopmail.com",
+      "phone": "+91 96112 34567",
+      "address": "7, Pratibha Vihar, Deccan",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincodE": "411028",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Kavita Rao",
+      "type": "CUSTOMER",
+      "email": "kavita.rao.chennai@yopmail.com",
+      "phone": "+91 98000 12345",
+      "address": "18, Anna Nagar, Periyar",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600018",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Vijay Kumar",
+      "type": "CUSTOMER",
+      "email": "vijay.kumar.hyde@yopmail.com",
+      "phone": "+91 97654 32109",
+      "address": "57, Industrial Area, Kondapur",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "pincode": "500072",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Manish Singh",
+      "type": "CUSTOMER",
+      "email": "manish.singh.sur@yopmail.com",
+      "phone": "+91 99100 54321",
+      "address": "80, Nano Nagar, Bhojpur",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "395006",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Deepa Iyer",
+      "type": "CUSTOMER",
+      "email": "deepa.iyer.jaipur@yopmail.com",
+      "phone": "+91 91200 98765",
+      "address": "15, City Light, Near Jaswant Thada",
+      "city": "Jaipur",
+      "state": "Rajasthan",
+      "pincode": "302002",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Rohan Gupta",
+      "type": "CUSTOMER",
+      "email": "rohan.gupta.ahmedabad@yopmail.com",
+      "phone": "+91 98721 65432",
+      "address": "23, Patel Road, Bopal",
+      "city": "Ahmedabad",
+      "state": "Gujarat",
+      "pincode": "380001",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Anjali Kaur",
+      "type": "CUSTOMER",
+      "email": "anjali.kaur.delhi@yopmail.com",
+      "phone": "+91 92500 11223",
+      "address": "9, Central Park, Vasant Kunj",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110070",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Arjun Mehta",
+      "type": "CUSTOMER",
+      "email": "arjun.mehta.pune@yopmail.com",
+      "phone": "+91 89901 23456",
+      "address": "12, Swargate, East",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411001",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Savitha Raman",
+      "type": "CUSTOMER",
+      "email": "savitha.raman.chennai@yopmail.com",
+      "phone": "+91 94765 10293",
+      "address": "3, Thiruvanmiyur, First Main Road",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600025",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Mohan Lohia",
+      "type": "CUSTOMER",
+      "email": "mohan.lohia.bom@yopmail.com",
+      "phone": "+91 96543 21000",
+      "address": "5, MG Road, nedola",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400004",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Rashmi Desai",
+      "type": "CUSTOMER",
+      "email": "rashmi.desaah.jaipur@yopmail.com",
+      "phone": "+91 99500 11100",
+      "address": "45, H.M. Road, New Ban",
+      "city": "Jaipur",
+      "state": "Rajasthan",
+      "pincode": "302004",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Irina Benoy",
+      "type": "CUSTOMER",
+      "email": "irina.b.enoy.delhi@yopmail.com",
+      "phone": "+91 93210 54321",
+      "address": "19, Sir Thomas, Saket",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110016",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Sunrise Timber Supply",
+      "type": "VENDOR",
+      "email": "s.unrise.timber.tap@yopmail.com",
+      "phone": "+91 95678 90123",
+      "address": "78, Industrial Estate, YSr Colony",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "pincode": "500066",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Woodcraft Solutions Pvt Ltd",
+      "type": "VENDOR",
+      "email": "wood.craft.sol.pvt@yopmail.com",
+      "phone": "+91 98761 54321",
+      "address": "32, Plot No 21, Pimpri Industrial Area",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411027",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Aristocrat Interiors",
+      "type": "VENDOR",
+      "email": "arist.ocrat.int.delhi@yopmail.com",
+      "phone": "+91 90789 13579",
+      "address": "10, Kalyan Marg, Hauz Khas",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110048",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Galaxy Furnishings",
+      "type": "VENDOR",
+      "email": "gal.lax.fur.delhi@yopmail.com",
+      "phone": "+91 91900 45678",
+      "address": "4, Rashtrapati Bhawan, New Delhi",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110001",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Eclipse Modular Design",
+      "type": "VENDOR",
+      "email": "e.clipse.mod.delhi@yopmail.com",
+      "phone": "+91 92765 43210",
+      "address": "89, LV Marg, DLF Phase II",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110021",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "CedarWood Crafts",
+      "type": "VENDOR",
+      "email": "ced.ar.wood.craft@yopmail.com",
+      "phone": "+91 91273 21012",
+      "address": "21, Green Meadow, Anand Nagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560080",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Silk Thread Interiors",
+      "type": "VENDOR",
+      "email": "sil.k.thread.int@yopmail.com",
+      "phone": "+91 98752 12345",
+      "address": "18, College Road, Vempati",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "pincode": "500081",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Golden Deck Flooring",
+      "type": "VENDOR",
+      "email": "gold.en.deck.floor@yopmail.com",
+      "phone": "+91 92580 23456",
+      "address": "15, 2nd Phase, Kalyanapuram",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "395004",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Urban Palette Design",
+      "type": "VENDOR",
+      "email": "ur.ban.pale.t.design@yopmail.com",
+      "phone": "+91 97213 45678",
+      "address": "7, Laxmibai Road, Sarita Vihar",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400011",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Nili Materials",
+      "type": "VENDOR",
+      "email": "nil.i.materials.blog@yopmail.com",
+      "phone": "+91 98587 12345",
+      "address": "24, Ashoka Ground, Nalli",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560016",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Lohan Craft Interiors",
+      "type": "BOTH",
+      "email": "loh.an.craft.int@yopmail.com",
+      "phone": "+91 98720 23456",
+      "address": "5, Joyland Road, Lalbagh",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560017",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Vivekananda Furniture Co",
+      "type": "BOTH",
+      "email": "vive.kand.furniturec@yopmail.com",
+      "phone": "+91 98456 98765",
+      "address": "3, Prakriti Park, Malama",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600080",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Sofas & Serenity",
+      "type": "BOTH",
+      "email": "so.fas.serene.delhi@yopmail.com",
+      "phone": "+91 91234 56789",
+      "address": "12, Zakir Hurst, Karol Bagh",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110099",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Aarav Enterprises",
+      "type": "CUSTOMER",
+      "email": "aarav.enterprises.mum@yopmail.com",
+      "phone": "+91 91123 45678",
+      "address": "88, Elphinstone Road, Colaba",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "pincode": "400005",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Sheesham Heritage Woodcraft",
+      "type": "CUSTOMER",
+      "email": "sheesh.ah.wo.wcraft@yopmail.com",
+      "phone": "+91 90876 54321",
+      "address": "42, 100 Feet Road, Indiranagar",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560048",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Godrej Living Solutions",
+      "type": "CUSTOMER",
+      "email": "god.rej.live.solu.delhi@yopmail.com",
+      "phone": "+91 95000 12345",
+      "address": "1, CBRE Tower, DHAKA",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110001",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Trident Interiors",
+      "type": "CUSTOMER",
+      "email": "tri.dent.int.pune@yopmail.com",
+      "phone": "+91 96210 98761",
+      "address": "65, Venkatesh Street, Wai",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "412101",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Nirvana Designs",
+      "type": "CUSTOMER",
+      "email": "ni.ra.nva.design.chennai@yopmail.com",
+      "phone": "+91 93678 12356",
+      "address": "2, T. Nagar, Purasawalkam",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600016",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Mitra Builders",
+      "type": "CUSTOMER",
+      "email": "mi.tra.builders.sur@yopmail.com",
+      "phone": "+91 95500 67891",
+      "address": "101, Kavi Road, Surat",
+      "city": "Surat",
+      "state": "Gujarat",
+      "pincode": "395011",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Red Cumin Interiors",
+      "type": "CUSTOMER",
+      "email": "red.cum.intr.patan@yopmail.com",
+      "phone": "+91 91235 67000",
+      "address": "9, Jackson Road, Pune",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411019",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Blue Aqua Furniture",
+      "type": "CUSTOMER",
+      "email": "blu.eaqua.furni.delhi@yopmail.com",
+      "phone": "+91 92100 54321",
+      "address": "10, RB Select, Computer City",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110018",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Golconda Homeware",
+      "type": "CUSTOMER",
+      "email": "g.co.ll.con.ahome.ware@yopmail.com",
+      "phone": "+91 93412 39876",
+      "address": "15, L. N. Tashkent, Secunderabad",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "pincode": "500100",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Taj Mahal Finery",
+      "type": "CUSTOMER",
+      "email": "ta.j.mahal.fine.ry.punjab@yopmail.com",
+      "phone": "+91 98760 54321",
+      "address": "22, Nandi Gardens, Dia Road",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110029",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Spectrum Interiors",
+      "type": "CUSTOMER",
+      "email": "sp.e.c.trum.in.tr.gov@yopmail.com",
+      "phone": "+91 90234 56783",
+      "address": "5, Sanctum Way, Utsav Rd",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560038",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Casa Elegancia",
+      "type": "CUSTOMER",
+      "email": "ca.sa.el.e.gan.cia.chennai@yopmail.com",
+      "phone": "+91 98701 23456",
+      "address": "18, Siddhanath Road, Race Course",
+      "city": "Chennai",
+      "state": "Tamil Nadu",
+      "pincode": "600013",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Horizon Bistro Interiors",
+      "type": "CUSTOMER",
+      "email": "ho.riz.on.bi.stro.int@yopmail.com",
+      "phone": "+91 90321 65478",
+      "address": "7, Orchid Street, Poincarrie",
+      "city": "Hyderabad",
+      "state": "Telangana",
+      "pincode": "500078",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Marble Magic",
+      "type": "CUSTOMER",
+      "email": "mar.ble.ma.gic.pune@yopmail.com",
+      "phone": "+91 93456 98765",
+      "address": "10, Haffkine, Sadashiv Nagar",
+      "city": "Pune",
+      "state": "Maharashtra",
+      "pincode": "411037",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Eden Furnishings",
+      "type": "CUSTOMER",
+      "email": "user@yopmail.com",
+      "phone": "+91 98234 56789",
+      "address": "3, CBD, Whitefield",
+      "city": "Bengaluru",
+      "state": "Karnataka",
+      "pincode": "560062",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "AJ Interiors",
+      "type": "CUSTOMER",
+      "email": "aj.int.oor.patna@yopmail.com",
+      "phone": "+91 94321 56789",
+      "address": "15, XYZ Road, Patna",
+      "city": "Patna",
+      "state": "Bihar",
+      "pincode": "800013",
+      "portalPassword": "PortalUser123!"
+    },
+    {
+      "name": "Eclipse Modular Design",
+      "type": "VENDOR",
+      "email": "e.clipsis-fold.delhx@yopmail.com",
+      "phone": "+91 98743 21096",
+      "address": "8, Lakhnavi Marg, Nariman Nagar",
+      "city": "New Delhi",
+      "state": "Delhi",
+      "pincode": "110032",
+      "portalPassword": "PortalUser123!"
+    }
+  ]
+}
