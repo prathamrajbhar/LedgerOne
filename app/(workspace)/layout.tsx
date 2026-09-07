@@ -26,21 +26,25 @@ export default async function WorkspaceLayout({
   const userEmail = session.user.email;
   const mustChangePassword = Boolean(session.user.mustChangePassword);
 
-  // Fetch current avatar from DB
-  let userAvatar: string | null = null;
-  try {
-    const { prisma } = await import("@/lib/prisma");
-    const dbUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      include: { contact: { select: { profileImage: true } } },
-    });
-    userAvatar =
-      (dbUser as unknown as { avatarUrl?: string | null })?.avatarUrl ||
-      dbUser?.contact?.profileImage ||
-      null;
-  } catch {
-    userAvatar = null;
-  }
+  // Fetch current avatar from DB (deduplicated per render pass)
+  const getUserAvatar = React.cache(async (userId: string) => {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const dbUser = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { contact: { select: { profileImage: true } } },
+      });
+      return (
+        (dbUser as unknown as { avatarUrl?: string | null })?.avatarUrl ||
+        dbUser?.contact?.profileImage ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  });
+
+  const userAvatar = await getUserAvatar(session.user.id);
 
   return (
     <WorkspaceLayoutClient

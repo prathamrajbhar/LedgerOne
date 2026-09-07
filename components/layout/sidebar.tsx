@@ -160,6 +160,7 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
                         <Link
                           key={item.name}
                           href={item.href}
+                          prefetch={true}
                           onClick={onClose}
                           className={cn(
                             "flex items-center justify-between px-3 py-2 rounded-lg text-xs font-normal transition-all group",
