@@ -54,14 +54,13 @@ export async function GET(
     const pdfBuffer = await generateInvoicePDF(invoiceWithSettings);
 
     // Return PDF as downloadable file
-    return new NextResponse(pdfBuffer as any, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="Invoice-${invoice.invoiceNumber}.pdf"`,
       },
     });
-  } catch (error) {
-    console.error("Error generating invoice PDF:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to generate invoice PDF" },
       { status: 500 }

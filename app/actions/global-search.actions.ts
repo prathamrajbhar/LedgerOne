@@ -286,7 +286,6 @@ export async function globalSearchAction(query: string): Promise<{
 
     return { success: true, data: results };
   } catch (error) {
-    console.error("Global search error:", error);
     return {
       success: false,
       data: [],

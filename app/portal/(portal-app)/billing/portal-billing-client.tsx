@@ -8,14 +8,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import {
   Receipt,
   CreditCard,
-  ArrowRight,
   TrendingUp,
   AlertCircle,
   CheckCircle2,
   Clock,
   Download,
-  Search,
-  ExternalLink,
 } from "lucide-react";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
 import { toast } from "sonner";

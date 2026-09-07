@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { CheckCircle } from "lucide-react";
-import { confirmPurchaseOrderAction } from "@/app/actions/purchase.actions";
+import { CheckCircle, FileText, Eye, Loader2 } from "lucide-react";
+import { confirmPurchaseOrderAction, createBillFromPurchaseOrderAction } from "@/app/actions/purchase.actions";
 import { toast } from "sonner";
 
 interface PurchaseOrderData {
@@ -16,6 +18,7 @@ interface PurchaseOrderData {
   total: unknown;
   _count?: { lines: number };
   lines?: unknown[];
+  vendorBills?: Array<{ id: string; billNumber: string; status: string }>;
 }
 
 interface PurchaseOrderRowProps {
@@ -23,7 +26,9 @@ interface PurchaseOrderRowProps {
 }
 
 export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
+  const router = useRouter();
   const [isConfirming, setIsConfirming] = React.useState(false);
+  const [isCreatingBill, setIsCreatingBill] = React.useState(false);
 
   const handleConfirm = async () => {
     setIsConfirming(true);
@@ -42,7 +47,25 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
     }
   };
 
+  const handleCreateBill = async () => {
+    setIsCreatingBill(true);
+    try {
+      const result = await createBillFromPurchaseOrderAction(po.id);
+      if (result.success && result.data) {
+        toast.success(`Vendor bill #${result.data.billNumber} created from PO`);
+        router.push("/bills");
+      } else {
+        toast.error(result.error || "Failed to create vendor bill from PO");
+      }
+    } catch {
+      toast.error("An error occurred creating vendor bill");
+    } finally {
+      setIsCreatingBill(false);
+    }
+  };
+
   const lineCount = po._count?.lines || po.lines?.length || 0;
+  const hasBills = po.vendorBills && po.vendorBills.length > 0;
 
   return (
     <tr className="hover:bg-primary-light/30">
@@ -60,21 +83,54 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
         ₹{Number(po.total).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       <td className="py-3.5 px-4 text-center">
-        <StatusBadge status={po.status} />
+        <StatusBadge status={hasBills ? "BILLED" : po.status} />
       </td>
       <td className="py-3.5 px-4 text-center">
-        {po.status === "DRAFT" && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleConfirm}
-            disabled={isConfirming}
-            className="text-xs"
-          >
-            <CheckCircle className="h-3.5 w-3.5 mr-1" />
-            {isConfirming ? "Confirming..." : "Confirm"}
-          </Button>
-        )}
+        <div className="flex items-center justify-center gap-2">
+          {po.status === "DRAFT" && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleConfirm}
+              disabled={isConfirming}
+              className="text-xs"
+            >
+              {isConfirming ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+              )}
+              {isConfirming ? "Confirming..." : "Confirm"}
+            </Button>
+          )}
+
+          {po.status === "CONFIRMED" && !hasBills && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCreateBill}
+              disabled={isCreatingBill}
+              className="text-xs gap-1.5 text-navy border-navy hover:bg-navy hover:text-white"
+            >
+              {isCreatingBill ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+              ) : (
+                <FileText className="h-3.5 w-3.5 mr-1" />
+              )}
+              {isCreatingBill ? "Creating..." : "Create Vendor Bill"}
+            </Button>
+          )}
+
+          {hasBills && (
+            <Link
+              href="/bills"
+              className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              View Bill
+            </Link>
+          )}
+        </div>
       </td>
     </tr>
   );

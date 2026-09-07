@@ -10,6 +10,7 @@ import { getProductsAction } from "@/app/actions/product.actions";
 import { getTaxRatesAction } from "@/app/actions/tax-rate.actions";
 import { DocumentStatus, PaymentStatus } from "@prisma/client";
 import type { Contact, Product } from "@prisma/client";
+import type { InvoiceWithRelations } from "./invoices-types";
 
 interface PageProps {
   searchParams: {
@@ -24,21 +25,26 @@ interface PageProps {
 
 async function InvoicesPageContent({ searchParams }: PageProps) {
   // Fetch all data in parallel
-  const [invoicesRes, customersRes, productsRes, taxRes, soRes] =
+  const [invoicesRes, contactsRes, productsRes, taxRes, soRes] =
     await Promise.all([
-      getInvoicesAction({ limit: 1000 }),
-      getContactsAction({ type: "CUSTOMER", limit: 1000 }),
-      getProductsAction({ limit: 1000 }),
+      getInvoicesAction({ limit: 500 }),
+      getContactsAction({ type: "CUSTOMER", limit: 100 }),
+      getProductsAction({ limit: 100 }),
       getTaxRatesAction(),
-      getSalesOrdersAction({ limit: 1000 }),
+      getSalesOrdersAction(),
     ]);
 
   // Extract data
-  const allInvoices =
-    invoicesRes.success && invoicesRes.data ? invoicesRes.data.data : [];
+  const rawInvoiceData =
+    invoicesRes.success && invoicesRes.data ? invoicesRes.data : null;
+  const allInvoices: InvoiceWithRelations[] = Array.isArray(rawInvoiceData)
+    ? (rawInvoiceData as unknown as InvoiceWithRelations[])
+    : Array.isArray((rawInvoiceData as { data?: unknown[] })?.data)
+      ? ((rawInvoiceData as { data: InvoiceWithRelations[] }).data)
+      : [];
   const customers =
-    customersRes.success && customersRes.data
-      ? ((customersRes.data as { contacts?: Contact[] }).contacts || [])
+    contactsRes.success && contactsRes.data
+      ? ((contactsRes.data as { contacts?: Contact[] }).contacts || [])
       : [];
   const products =
     productsRes.success && productsRes.data
@@ -56,7 +62,7 @@ async function InvoicesPageContent({ searchParams }: PageProps) {
       : [];
 
   // Apply server-side filtering based on URL params
-  const filteredInvoices = allInvoices.filter((inv: any) => {
+  const filteredInvoices = allInvoices.filter((inv: InvoiceWithRelations) => {
     // Search filter
     if (searchParams.search) {
       const q = searchParams.search.toLowerCase();

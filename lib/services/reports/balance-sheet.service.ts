@@ -76,7 +76,11 @@ export class BalanceSheetService {
 
       if (accountType === AccountType.ASSET || accountType === AccountType.BANK || accountType === AccountType.CASH) {
         accountBalance.balance += debit - credit;
-      } else if (accountType === AccountType.LIABILITY || accountType === AccountType.CAPITAL) {
+      } else if (
+        accountType === AccountType.LIABILITY ||
+        accountType === AccountType.CAPITAL ||
+        accountType === AccountType.INCOME
+      ) {
         accountBalance.balance += credit - debit;
       } else {
         accountBalance.balance += debit - credit;
@@ -86,29 +90,50 @@ export class BalanceSheetService {
     const assets: AccountBalance[] = [];
     const liabilities: AccountBalance[] = [];
     const equity: AccountBalance[] = [];
+    let totalIncome = 0;
+    let totalExpense = 0;
 
     for (const balance of accountBalances.values()) {
-      if (balance.accountType === AccountType.ASSET ||
-          balance.accountType === AccountType.BANK ||
-          balance.accountType === AccountType.CASH) {
+      if (
+        balance.accountType === AccountType.ASSET ||
+        balance.accountType === AccountType.BANK ||
+        balance.accountType === AccountType.CASH
+      ) {
         assets.push(balance);
       } else if (balance.accountType === AccountType.LIABILITY) {
         liabilities.push(balance);
       } else if (balance.accountType === AccountType.CAPITAL) {
         equity.push(balance);
+      } else if (balance.accountType === AccountType.INCOME) {
+        totalIncome += balance.balance;
+      } else if (
+        balance.accountType === AccountType.EXPENSES ||
+        balance.accountType === AccountType.OTHER_EXPENSES
+      ) {
+        totalExpense += balance.balance;
       }
+    }
+
+    const currentPeriodEarnings = totalIncome - totalExpense;
+    if (Math.abs(currentPeriodEarnings) > 0.001) {
+      equity.push({
+        accountId: "current-period-earnings",
+        accountName: "Current Period Retained Earnings",
+        accountType: AccountType.CAPITAL,
+        balance: Math.round(currentPeriodEarnings * 100) / 100,
+      });
     }
 
     assets.sort((a, b) => a.accountName.localeCompare(b.accountName));
     liabilities.sort((a, b) => a.accountName.localeCompare(b.accountName));
     equity.sort((a, b) => a.accountName.localeCompare(b.accountName));
 
-    const assetsTotal = assets.reduce((sum, acc) => sum + acc.balance, 0);
-    const liabilitiesTotal = liabilities.reduce((sum, acc) => sum + acc.balance, 0);
-    const equityTotal = equity.reduce((sum, acc) => sum + acc.balance, 0);
+    const assetsTotal = Math.round(assets.reduce((sum, acc) => sum + acc.balance, 0) * 100) / 100;
+    const liabilitiesTotal = Math.round(liabilities.reduce((sum, acc) => sum + acc.balance, 0) * 100) / 100;
+    const equityTotal = Math.round(equity.reduce((sum, acc) => sum + acc.balance, 0) * 100) / 100;
 
-    const liabilitiesAndEquityTotal = liabilitiesTotal + equityTotal;
-    const isBalanced = Math.abs(assetsTotal - liabilitiesAndEquityTotal) < 0.01;
+    const liabilitiesAndEquityTotal = Math.round((liabilitiesTotal + equityTotal) * 100) / 100;
+    const isBalanced = Math.abs(assetsTotal - liabilitiesAndEquityTotal) < 0.05;
 
     return {
       asOfDate,

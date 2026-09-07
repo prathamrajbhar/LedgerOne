@@ -7,7 +7,6 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
 import { signIn } from "next-auth/react";
-import { getPostLoginRedirectAction } from "@/app/actions/auth.actions";
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -17,13 +16,18 @@ function LoginForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // Display error message if user was automatically logged out
   useEffect(() => {
     const error = searchParams.get("error");
     if (error === "SessionExpired") {
       toast.error("Your session has expired. Please log in again.", {
         duration: 5000,
       });
+
+      if (typeof window !== "undefined") {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("error");
+        window.history.replaceState({}, "", url.pathname + url.search);
+      }
     }
   }, [searchParams]);
 
@@ -50,14 +54,11 @@ function LoginForm() {
 
       if (result?.ok) {
         toast.success("Welcome back!");
-        // Determine correct landing page based on role (Portal vs Workspace)
-        const targetUrl = await getPostLoginRedirectAction(loginId);
-        // Hard navigation guarantees fresh cookies in request headers across middleware on production
-        window.location.href = targetUrl || "/dashboard";
+        const callbackUrl = searchParams.get("callbackUrl");
+        window.location.href = callbackUrl || "/";
         return;
       }
-    } catch (error) {
-      console.error("Login error:", error);
+    } catch {
       toast.error("An error occurred during login. Please try again.");
     } finally {
       setLoading(false);
@@ -65,8 +66,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-[575px] max-h-[calc(100dvh-70px)] max-h-[calc(100svh-70px)] mb-6 sm:mb-8 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-6 sm:p-8 lg:p-[48px] flex flex-col justify-between overflow-hidden">
-      {/* Header with Title & Subtitle */}
+    <div className="w-full max-w-[575px] max-h-[calc(100dvh-70px)] max-h-[calc(100svh-70px)] my-4 sm:my-6 lg:my-0 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-5 sm:p-8 lg:p-[48px] flex flex-col justify-between overflow-y-auto lg:overflow-hidden">
       <div className="flex-shrink-0">
         <h2 className="text-2xl sm:text-[28px] font-bold text-[#0F2942] tracking-tight leading-tight">
           Welcome Back
@@ -76,9 +76,7 @@ function LoginForm() {
         </p>
       </div>
 
-      {/* Login Form */}
       <form onSubmit={handleSubmit} className="space-y-[clamp(10px,1.6vh,16px)] pt-2 flex-1 flex flex-col justify-center min-h-0">
-        {/* LOGIN ID FIELD */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-[#0F2942] block">
             Login ID or Email
@@ -98,7 +96,6 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* PASSWORD FIELD */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-[#0F2942] block">
@@ -134,7 +131,6 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* REMEMBER ME */}
         <div className="flex items-center gap-2 pt-0.5">
           <input
             type="checkbox"
@@ -152,7 +148,6 @@ function LoginForm() {
           </label>
         </div>
 
-        {/* SIGN-IN BUTTON: ~54px height, dark navy */}
         <button
           type="submit"
           disabled={loading}
@@ -163,7 +158,6 @@ function LoginForm() {
         </button>
       </form>
 
-      {/* DIVIDER: horizontal line — "OR" — horizontal line */}
       <div className="relative my-2 sm:my-2.5 flex-shrink-0">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-[#E2E8F0]" />
@@ -175,7 +169,6 @@ function LoginForm() {
         </div>
       </div>
 
-      {/* REGISTRATION */}
       <div className="text-center text-xs text-[#526477] pt-0.5 flex-shrink-0">
         Don&apos;t have an accountant account?{" "}
         <Link

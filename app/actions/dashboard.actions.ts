@@ -1,62 +1,23 @@
 "use server";
 
-import { DocumentStatus, PaymentStatus, AccountType, JournalEntryStatus, UserRole } from "@prisma/client";
-import { getCurrentUser } from "@/lib/auth/session";
-import { prisma } from "@/lib/prisma";
+import {
+  dashboardService,
+  DashboardKPIs,
+  MonthlyOverviewData,
+  ExpenseBreakdownItem,
+  RecentTransaction,
+  InventoryStatus,
+  OutstandingPayments,
+} from "@/lib/services/dashboard.service";
 
-export interface DashboardKPIs {
-  totalRevenue: number;
-  totalExpenses: number;
-  netProfit: number;
-  accountsReceivable: number;
-  accountsPayable: number;
-  cashBalance: number;
-  revenueChange: number;
-  expensesChange: number;
-  profitChange: number;
-  receivableChange: number;
-  payableChange: number;
-  cashChange: number;
-}
-
-export interface MonthlyOverviewData {
-  month: string;
-  revenue: number;
-  expenses: number;
-  profit: number;
-}
-
-export interface ExpenseBreakdownItem {
-  name: string;
-  value: number;
-  amount: string;
-  rawAmount: number;
-  color: string;
-}
-
-export interface RecentTransaction {
-  id: string;
-  date: string;
-  code: string;
-  party: string;
-  category: string;
-  amount: string;
-  status: string;
-}
-
-export interface InventoryStatus {
-  totalProducts: number;
-  lowStock: number;
-  inStock: number;
-  outOfStock: number;
-}
-
-export interface OutstandingPayments {
-  overdueInvoices: { count: number; amount: number };
-  pendingInvoices: { count: number; amount: number };
-  receivables: { count: number; amount: number };
-  payables: { count: number; amount: number };
-}
+export type {
+  DashboardKPIs,
+  MonthlyOverviewData,
+  ExpenseBreakdownItem,
+  RecentTransaction,
+  InventoryStatus,
+  OutstandingPayments,
+};
 
 /**
  * Get Dashboard KPIs with comparison to previous period
@@ -66,119 +27,8 @@ export async function getDashboardKPIsAction(
   endDate: Date
 ): Promise<DashboardKPIs> {
   try {
-    // Calculate previous period dates
-    const periodDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-    const prevStartDate = new Date(startDate);
-    prevStartDate.setDate(prevStartDate.getDate() - periodDays);
-    const prevEndDate = new Date(startDate);
-    prevEndDate.setDate(prevEndDate.getDate() - 1);
-
-    // Total Revenue: Sum of confirmed customer invoices
-    const [currentRevenue, previousRevenue] = await Promise.all([
-      prisma.customerInvoice.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          invoiceDate: { gte: startDate, lte: endDate },
-        },
-        _sum: { total: true },
-      }),
-      prisma.customerInvoice.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          invoiceDate: { gte: prevStartDate, lte: prevEndDate },
-        },
-        _sum: { total: true },
-      }),
-    ]);
-
-    const totalRevenue = Number(currentRevenue._sum.total || 0);
-    const prevRevenue = Number(previousRevenue._sum.total || 0);
-    const revenueChange = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
-
-    // Total Expenses: Sum of confirmed vendor bills
-    const [currentExpenses, previousExpenses] = await Promise.all([
-      prisma.vendorBill.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          billDate: { gte: startDate, lte: endDate },
-        },
-        _sum: { total: true },
-      }),
-      prisma.vendorBill.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          billDate: { gte: prevStartDate, lte: prevEndDate },
-        },
-        _sum: { total: true },
-      }),
-    ]);
-
-    const totalExpenses = Number(currentExpenses._sum.total || 0);
-    const prevExpenses = Number(previousExpenses._sum.total || 0);
-    const expensesChange = prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : 0;
-
-    // Net Profit
-    const netProfit = totalRevenue - totalExpenses;
-    const prevProfit = prevRevenue - prevExpenses;
-    const profitChange = prevProfit !== 0 ? ((netProfit - prevProfit) / Math.abs(prevProfit)) * 100 : 0;
-
-    // Accounts Receivable: Outstanding invoices
-    const receivables = await prisma.customerInvoice.aggregate({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-      },
-      _sum: { amountDue: true },
-    });
-
-    const accountsReceivable = Number(receivables._sum.amountDue || 0);
-
-    // Accounts Payable: Outstanding bills
-    const payables = await prisma.vendorBill.aggregate({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-      },
-      _sum: { amountDue: true },
-    });
-
-    const accountsPayable = Number(payables._sum.amountDue || 0);
-
-    // Cash Balance: Sum of Bank and Cash account balances from journal entries
-    const cashAccounts = await prisma.chartOfAccount.findMany({
-      where: { type: { in: [AccountType.BANK, AccountType.CASH] } },
-      select: { id: true },
-    });
-
-    const cashAccountIds = cashAccounts.map((acc) => acc.id);
-
-    // Calculate balance for cash accounts (debit - credit)
-    const cashEntries = await prisma.journalEntryLine.aggregate({
-      where: {
-        accountId: { in: cashAccountIds },
-        journalEntry: { status: JournalEntryStatus.POSTED },
-      },
-      _sum: { debit: true, credit: true },
-    });
-
-    const cashBalance = Number(cashEntries._sum.debit || 0) - Number(cashEntries._sum.credit || 0);
-
-    return {
-      totalRevenue,
-      totalExpenses,
-      netProfit,
-      accountsReceivable,
-      accountsPayable,
-      cashBalance,
-      revenueChange,
-      expensesChange,
-      profitChange,
-      receivableChange: 0,
-      payableChange: 0,
-      cashChange: 0,
-    };
-  } catch (error) {
-    console.error("Error fetching dashboard KPIs:", error);
+    return await dashboardService.getKPIs(startDate, endDate);
+  } catch {
     return {
       totalRevenue: 0,
       totalExpenses: 0,
@@ -202,70 +52,22 @@ export async function getDashboardKPIsAction(
 export async function getMonthlyOverviewAction(
   period: "6" | "12" | "ytd" | number = 6
 ): Promise<MonthlyOverviewData[]> {
-  const result: MonthlyOverviewData[] = [];
-  const today = new Date();
-
   try {
-    let monthsCount = typeof period === "number" ? period : period === "12" ? 12 : 6;
-    if (period === "ytd") {
-      // Indian FY starts in April (month index 3)
-      const fyStartMonth = 3;
-      const curMonth = today.getMonth();
-      monthsCount = curMonth >= fyStartMonth ? curMonth - fyStartMonth + 1 : (12 - fyStartMonth) + curMonth + 1;
-    }
-
-    for (let i = monthsCount - 1; i >= 0; i--) {
-      const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const startDate = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-      const endDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59, 999);
-
-      const monthName = monthDate.toLocaleDateString("en-US", { month: "short" });
-
-      // Revenue for this month
-      const revenueData = await prisma.customerInvoice.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          invoiceDate: { gte: startDate, lte: endDate },
-        },
-        _sum: { total: true },
-      });
-
-      // Expenses for this month
-      const expensesData = await prisma.vendorBill.aggregate({
-        where: {
-          status: DocumentStatus.CONFIRMED,
-          billDate: { gte: startDate, lte: endDate },
-        },
-        _sum: { total: true },
-      });
-
-      const revenue = Number(revenueData._sum.total || 0);
-      const expenses = Number(expensesData._sum.total || 0);
-      const profit = revenue - expenses;
-
-      result.push({
-        month: monthName,
-        revenue,
-        expenses,
-        profit,
-      });
-    }
-
-    return result;
-  } catch (error) {
-    console.error("Error fetching monthly overview:", error);
-    const fallback: MonthlyOverviewData[] = [];
+    return await dashboardService.getMonthlyOverview(period);
+  } catch {
+    const fallbackList: MonthlyOverviewData[] = [];
     const count = typeof period === "number" ? period : 6;
-    for (let i = count - 1; i >= 0; i--) {
-      const monthDate = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      fallback.push({
+    const today = new Date();
+    for (let offset = count - 1; offset >= 0; offset--) {
+      const monthDate = new Date(today.getFullYear(), today.getMonth() - offset, 1);
+      fallbackList.push({
         month: monthDate.toLocaleDateString("en-US", { month: "short" }),
         revenue: 0,
         expenses: 0,
         profit: 0,
       });
     }
-    return fallback;
+    return fallbackList;
   }
 }
 
@@ -277,95 +79,8 @@ export async function getExpenseBreakdownAction(
   endDate: Date
 ): Promise<ExpenseBreakdownItem[]> {
   try {
-    // 1. Get confirmed bills in requested date range
-    const bills = await prisma.vendorBill.findMany({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        billDate: { gte: startDate, lte: endDate },
-      },
-      include: {
-        lines: {
-          include: {
-            analyticAccount: true,
-            product: true,
-          },
-        },
-      },
-      take: 500, // Limit to prevent performance issues
-    });
-
-    // 2. Also check manual posted expense entries in journal within the date range
-    const manualExpenseEntries = await prisma.journalEntry.findMany({
-      where: {
-        source: "MANUAL",
-        status: JournalEntryStatus.POSTED,
-        accountingDate: { gte: startDate, lte: endDate },
-      },
-      include: {
-        lines: {
-          include: {
-            account: true,
-            partner: true,
-          },
-        },
-      },
-      take: 500, // Limit to prevent performance issues
-    });
-
-    // Group by analytic account or category name
-    const expenseMap = new Map<string, number>();
-    let totalExpenses = 0;
-
-    for (const bill of bills) {
-      for (const line of bill.lines) {
-        const categoryName = line.analyticAccount?.name || line.product?.name || "Materials & Supplies";
-        const lineTotal = Number(line.lineTotal);
-        expenseMap.set(categoryName, (expenseMap.get(categoryName) || 0) + lineTotal);
-        totalExpenses += lineTotal;
-      }
-    }
-
-    for (const entry of manualExpenseEntries) {
-      for (const line of entry.lines) {
-        if (Number(line.debit) > 0 && (line.account.type === "EXPENSES" || line.account.type === "OTHER_EXPENSES")) {
-          const cat = line.partner?.name || line.account.name || "Operating Expenses";
-          const debitAmt = Number(line.debit);
-          expenseMap.set(cat, (expenseMap.get(cat) || 0) + debitAmt);
-          totalExpenses += debitAmt;
-        }
-      }
-    }
-
-    // Curated rich color palette for visualization
-    const colors = [
-      "#16324F", // Deep Navy
-      "#167C80", // Persian Green
-      "#2E9E96", // Soft Teal
-      "#4EA8DE", // Sky Blue
-      "#7209B7", // Vivid Purple
-      "#8E9AAF", // Slate Grey
-      "#F4A261", // Warm Coral
-      "#2A9D8F", // Emerald
-      "#E76F51", // Burnt Sienna
-    ];
-    const breakdown: ExpenseBreakdownItem[] = [];
-
-    let colorIndex = 0;
-    for (const [name, amount] of Array.from(expenseMap.entries()).sort((a, b) => b[1] - a[1])) {
-      const percentage = totalExpenses > 0 ? (amount / totalExpenses) * 100 : 0;
-      breakdown.push({
-        name,
-        value: parseFloat(percentage.toFixed(1)),
-        amount: `₹${amount.toLocaleString("en-IN")}`,
-        rawAmount: amount,
-        color: colors[colorIndex % colors.length],
-      });
-      colorIndex++;
-    }
-
-    return breakdown;
-  } catch (error) {
-    console.error("Error fetching expense breakdown:", error);
+    return await dashboardService.getExpenseBreakdown(startDate, endDate);
+  } catch {
     return [];
   }
 }
@@ -373,59 +88,12 @@ export async function getExpenseBreakdownAction(
 /**
  * Get recent transactions from journal entries
  */
-export async function getRecentTransactionsAction(limit: number = 10): Promise<RecentTransaction[]> {
+export async function getRecentTransactionsAction(
+  limit: number = 10
+): Promise<RecentTransaction[]> {
   try {
-    const entries = await prisma.journalEntry.findMany({
-      where: { status: JournalEntryStatus.POSTED },
-      include: {
-        invoice: { include: { customer: true } },
-        vendorBill: { include: { vendor: true } },
-        invoicePayment: { include: { invoice: { include: { customer: true } } } },
-        billPayment: true,
-      },
-      orderBy: { accountingDate: "desc" },
-      take: limit,
-    });
-
-    return entries.map((entry) => {
-      let code = entry.entryNumber;
-      let party = "";
-      let category = "Journal Entry";
-      let status = "POSTED";
-
-      // Determine transaction type and party
-      if (entry.invoice) {
-        code = entry.invoice.invoiceNumber;
-        party = `Customer: ${entry.invoice.customer.name}`;
-        category = "Sales";
-        status = entry.invoice.paymentStatus;
-      } else if (entry.vendorBill) {
-        code = entry.vendorBill.billNumber;
-        party = `Supplier: ${entry.vendorBill.vendor.name}`;
-        category = "Purchase";
-        status = entry.vendorBill.paymentStatus;
-      } else if (entry.invoicePayment) {
-        party = `Payment from ${entry.invoicePayment.invoice.customer.name}`;
-        category = "Payment";
-        status = "RECEIVED";
-      } else if (entry.billPayment) {
-        party = `Bill Payment`;
-        category = "Payment";
-        status = "PAID";
-      }
-
-      return {
-        id: entry.id,
-        date: entry.accountingDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }),
-        code,
-        party,
-        category,
-        amount: `₹${Number(entry.totalDebit).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        status,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching recent transactions:", error);
+    return await dashboardService.getRecentTransactions(limit);
+  } catch {
     return [];
   }
 }
@@ -435,18 +103,8 @@ export async function getRecentTransactionsAction(limit: number = 10): Promise<R
  */
 export async function getInventoryStatusAction(): Promise<InventoryStatus> {
   try {
-    const totalProducts = await prisma.product.count({
-      where: { isArchived: false },
-    });
-
-    return {
-      totalProducts,
-      lowStock: 0,
-      inStock: totalProducts,
-      outOfStock: 0,
-    };
-  } catch (error) {
-    console.error("Error fetching inventory status:", error);
+    return await dashboardService.getInventoryStatus();
+  } catch {
     return {
       totalProducts: 0,
       lowStock: 0,
@@ -461,70 +119,8 @@ export async function getInventoryStatusAction(): Promise<InventoryStatus> {
  */
 export async function getOutstandingPaymentsAction(): Promise<OutstandingPayments> {
   try {
-    const today = new Date();
-
-    // Overdue Invoices
-    const overdueInvoices = await prisma.customerInvoice.findMany({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-        dueDate: { lt: today },
-      },
-      select: { amountDue: true },
-    });
-
-    // Pending Invoices (not overdue)
-    const pendingInvoices = await prisma.customerInvoice.findMany({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-        dueDate: { gte: today },
-      },
-      select: { amountDue: true },
-    });
-
-    // Total Receivables
-    const allReceivables = await prisma.customerInvoice.findMany({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-      },
-      select: { amountDue: true, customerId: true },
-    });
-
-    // Total Payables
-    const allPayables = await prisma.vendorBill.findMany({
-      where: {
-        status: DocumentStatus.CONFIRMED,
-        paymentStatus: { in: [PaymentStatus.NOT_PAID, PaymentStatus.PARTIAL] },
-      },
-      select: { amountDue: true, vendorId: true },
-    });
-
-    // Count unique customers and vendors
-    const uniqueCustomers = new Set(allReceivables.map((r) => r.customerId)).size;
-    const uniqueVendors = new Set(allPayables.map((p) => p.vendorId)).size;
-
-    return {
-      overdueInvoices: {
-        count: overdueInvoices.length,
-        amount: overdueInvoices.reduce((sum, inv) => sum + Number(inv.amountDue), 0),
-      },
-      pendingInvoices: {
-        count: pendingInvoices.length,
-        amount: pendingInvoices.reduce((sum, inv) => sum + Number(inv.amountDue), 0),
-      },
-      receivables: {
-        count: uniqueCustomers,
-        amount: allReceivables.reduce((sum, inv) => sum + Number(inv.amountDue), 0),
-      },
-      payables: {
-        count: uniqueVendors,
-        amount: allPayables.reduce((sum, bill) => sum + Number(bill.amountDue), 0),
-      },
-    };
-  } catch (error) {
-    console.error("Error fetching outstanding payments:", error);
+    return await dashboardService.getOutstandingPayments();
+  } catch {
     return {
       overdueInvoices: { count: 0, amount: 0 },
       pendingInvoices: { count: 0, amount: 0 },
@@ -537,37 +133,16 @@ export async function getOutstandingPaymentsAction(): Promise<OutstandingPayment
 /**
  * Get current user greeting data
  */
-export async function getUserGreetingAction(): Promise<{ greeting: string; userName: string }> {
-  let user = null;
+export async function getUserGreetingAction(): Promise<{
+  greeting: string;
+  userName: string;
+}> {
   try {
-    user = await getCurrentUser();
-    if (!user) {
-      const dbUser = await prisma.user.findFirst({
-        where: {
-          role: { in: [UserRole.ADMINISTRATOR, UserRole.ACCOUNTANT] },
-          isActive: true,
-        },
-        orderBy: { createdAt: "asc" },
-      });
-      if (dbUser) {
-        user = { name: dbUser.name || dbUser.loginId };
-      }
-    }
+    return await dashboardService.getUserGreeting();
   } catch {
-    user = null;
+    return {
+      greeting: "Good morning",
+      userName: "Administrator",
+    };
   }
-
-  const hour = new Date().getHours();
-
-  let greeting = "Good morning";
-  if (hour >= 12 && hour < 17) {
-    greeting = "Good afternoon";
-  } else if (hour >= 17) {
-    greeting = "Good evening";
-  }
-
-  return {
-    greeting,
-    userName: user?.name || "Administrator",
-  };
 }

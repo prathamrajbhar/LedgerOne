@@ -2,11 +2,10 @@
 
 import * as React from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, FileText, User, Filter } from "lucide-react";
-import { getGeneralLedgerAction, getAccountBalanceAction } from "@/app/actions/general-ledger.actions";
+import { ArrowLeft, Calendar, FileText, User } from "lucide-react";
+import { getGeneralLedgerAction } from "@/app/actions/general-ledger.actions";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import { AccountType } from "@prisma/client";
@@ -67,16 +66,19 @@ export default function GeneralLedgerPage() {
       });
 
       if (result.success && result.data) {
-        const data = result.data as any;
+        const data = result.data as unknown as {
+          account: AccountInfo;
+          lines: GeneralLedgerLine[];
+          summary: { totalDebit: number; totalCredit: number; balance: number; lineCount: number };
+        };
         setAccount(data.account);
         setLines(data.lines);
         setSummary(data.summary);
       } else {
         toast.error(result.error || "Failed to load general ledger");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load general ledger");
-      console.error(error);
     } finally {
       setLoading(false);
     }

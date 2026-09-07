@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 import {
   User,
@@ -233,28 +234,32 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
       <Card className="border border-border bg-white shadow-card rounded-2xl overflow-hidden">
         <div className="h-28 relative overflow-hidden bg-gradient-to-r from-navy via-[#1F456E] to-teal group">
           {bannerUrl && (
-            <img
+            <Image
               src={bannerUrl}
               alt="Profile Banner"
+              fill
+              unoptimized
               className="absolute inset-0 w-full h-full object-cover"
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
 
           {/* Top Right Controls */}
-          <div className="absolute top-3 right-3 flex items-center gap-2">
+          <div className="absolute top-3 right-3 flex items-center gap-1.5 sm:gap-2 flex-wrap justify-end max-w-[80%]">
             <button
               type="button"
               onClick={() => setBannerModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition-colors shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-black/60 hover:bg-black/80 text-white backdrop-blur-xs transition-colors shadow-xs cursor-pointer"
               title="Change header banner"
             >
               <Sparkles className="h-3.5 w-3.5 text-teal" />
-              <span>Change Banner</span>
+              <span className="hidden xs:inline">Change Banner</span>
+              <span className="xs:hidden">Banner</span>
             </button>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white/90 text-navy backdrop-blur-none shadow-xs">
+            <span className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-semibold bg-white/90 text-navy backdrop-blur-none shadow-xs">
               <CheckCircle2 className="h-3.5 w-3.5 text-teal" />
-              Active Workspace User
+              <span className="hidden sm:inline">Active Workspace User</span>
+              <span className="sm:hidden">Active</span>
             </span>
           </div>
         </div>
@@ -273,10 +278,12 @@ export function ProfileClient({ initialProfile }: ProfileClientProps) {
                 />
                 <div className="h-24 w-24 rounded-2xl bg-white p-1 border-2 border-white shadow-md flex-shrink-0 relative overflow-hidden">
                   {avatarUrl ? (
-                    <img
+                    <Image
                       src={avatarUrl}
                       alt={name}
-                      className="h-full w-full rounded-xl object-cover"
+                      fill
+                      unoptimized
+                      className="rounded-xl object-cover"
                     />
                   ) : (
                     <div className="h-full w-full rounded-xl bg-navy text-white flex items-center justify-center text-2xl font-bold tracking-tight">

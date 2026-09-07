@@ -9,13 +9,21 @@ import { ConflictError, NotFoundError } from "../utils/errors";
 
 
 
+import { hash } from "bcryptjs";
+import { UserRole } from "@prisma/client";
+
 export interface CreateContactInput {
   name: string;
   type: ContactType;
   email: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
   profileImage?: string;
+  createPortalUser?: boolean;
+  portalPassword?: string;
 }
 
 export interface UpdateContactInput extends Partial<CreateContactInput> {
@@ -41,9 +49,56 @@ export class ContactService {
       throw new ConflictError("Email already exists");
     }
 
+    const { createPortalUser, portalPassword, ...contactData } = input;
     const contact = await prisma.contact.create({
-      data: input,
+      data: contactData,
     });
+
+    if (createPortalUser) {
+      const prefix = contact.type === ContactType.VENDOR ? "vend" : "cust";
+      const latestPortalUser = await prisma.user.findFirst({
+        where: {
+          role: UserRole.CONTACT,
+          loginId: { startsWith: prefix },
+        },
+        orderBy: { loginId: "desc" },
+        select: { loginId: true },
+      });
+
+      let nextNumber = 1;
+      if (latestPortalUser?.loginId) {
+        const match = latestPortalUser.loginId.match(new RegExp(`^${prefix}(\\d+)$`));
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+      const generatedLoginId = `${prefix}${String(nextNumber).padStart(3, "0")}`;
+      const plainPassword = portalPassword?.trim() || "Portal@123";
+      const hashedPassword = await hash(plainPassword, 12);
+
+      const portalUser = await prisma.user.create({
+        data: {
+          loginId: generatedLoginId,
+          email: contact.email,
+          password: hashedPassword,
+          name: contact.name,
+          role: UserRole.CONTACT,
+          mustChangePassword: false,
+          contact: {
+            connect: { id: contact.id },
+          },
+        },
+      });
+
+      return {
+        ...contact,
+        user: portalUser,
+        portalCredentials: {
+          loginId: generatedLoginId,
+          password: plainPassword,
+        },
+      };
+    }
 
     return contact;
   }

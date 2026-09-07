@@ -16,7 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -116,7 +116,7 @@ export default async function ContactDetailPage({ params }: { params: { id: stri
                 </Button>
               </Link>
             )}
-            {contact.type === "VENDOR" && (
+            {isVendor && (
               <Link href="/bills">
                 <Button size="sm" className="bg-navy hover:bg-navy-hover text-white gap-1.5 text-xs">
                   <Receipt className="h-3.5 w-3.5" />

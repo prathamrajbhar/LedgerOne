@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { DocumentStatus } from "@prisma/client";
 import { SerializedBillData } from "./types";
 import { useBillDetail } from "./use-bill-detail";
@@ -11,13 +12,13 @@ import { BillLineItemsTable } from "./components/bill-line-items-table";
 import { BillFinancialBreakdown } from "./components/bill-financial-breakdown";
 import { BillAccountingEntry } from "./components/bill-accounting-entry";
 import { BillAuditLogsTable } from "./components/bill-audit-logs-table";
-import { BillPaymentModal } from "./components/bill-payment-modal";
 
 interface BillDetailClientProps {
   initialBill: SerializedBillData;
 }
 
 export function BillDetailClient({ initialBill }: BillDetailClientProps) {
+  const router = useRouter();
   const {
     bill,
     emailLogs,
@@ -25,27 +26,19 @@ export function BillDetailClient({ initialBill }: BillDetailClientProps) {
     cancelling,
     downloading,
     sendingReminder,
-    openPaymentModal,
-    setOpenPaymentModal,
-    paymentAmount,
-    setPaymentAmount,
-    paymentMethod,
-    setPaymentMethod,
-    paymentDate,
-    setPaymentDate,
-    paymentNote,
-    setPaymentNote,
-    recordingPayment,
     displayStatus,
     handleConfirmBill,
     handleCancelBill,
     handleDownloadPDF,
     handleSendReminder,
-    handleRecordPayment,
   } = useBillDetail(initialBill);
 
   const isConfirmed = bill.status === DocumentStatus.CONFIRMED;
   const hasDue = bill.amountDue > 0;
+
+  const navigateToRecordPayment = () => {
+    router.push(`/payments/new?billId=${bill.id}&returnUrl=/bills/${bill.id}`);
+  };
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -61,10 +54,7 @@ export function BillDetailClient({ initialBill }: BillDetailClientProps) {
         onPrint={() => window.print()}
         onConfirmBill={handleConfirmBill}
         onSendReminder={handleSendReminder}
-        onOpenPaymentModal={() => {
-          setPaymentAmount(bill.amountDue.toString());
-          setOpenPaymentModal(true);
-        }}
+        onOpenPaymentModal={navigateToRecordPayment}
         onCancelBill={handleCancelBill}
       />
 
@@ -77,7 +67,7 @@ export function BillDetailClient({ initialBill }: BillDetailClientProps) {
       {/* 4. Purchased Products & Material Lines */}
       <BillLineItemsTable lines={bill.lines} />
 
-      {/* 5. Payments List & Financial Summary */}
+      {/* 5. Payments List & Financial Breakdown */}
       <BillFinancialBreakdown
         total={bill.total}
         amountPaid={bill.amountPaid}
@@ -85,10 +75,7 @@ export function BillDetailClient({ initialBill }: BillDetailClientProps) {
         hasDue={hasDue}
         isConfirmed={isConfirmed}
         payments={bill.payments}
-        onOpenPaymentModal={() => {
-          setPaymentAmount(bill.amountDue.toString());
-          setOpenPaymentModal(true);
-        }}
+        onOpenPaymentModal={navigateToRecordPayment}
       />
 
       {/* 6. Accounting Double Entry Posting */}
@@ -96,23 +83,6 @@ export function BillDetailClient({ initialBill }: BillDetailClientProps) {
 
       {/* 7. Historical Email Reminders Audit Log */}
       <BillAuditLogsTable emailLogs={emailLogs} />
-
-      {/* 8. Modal: Record Vendor Payment */}
-      <BillPaymentModal
-        open={openPaymentModal}
-        onOpenChange={setOpenPaymentModal}
-        bill={bill}
-        paymentAmount={paymentAmount}
-        setPaymentAmount={setPaymentAmount}
-        paymentMethod={paymentMethod}
-        setPaymentMethod={setPaymentMethod}
-        paymentDate={paymentDate}
-        setPaymentDate={setPaymentDate}
-        paymentNote={paymentNote}
-        setPaymentNote={setPaymentNote}
-        recordingPayment={recordingPayment}
-        onSubmit={handleRecordPayment}
-      />
     </div>
   );
 }

@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import Image from "next/image";
 import { ContactType } from "@prisma/client";
 
 interface PortalHeaderProps {
@@ -72,10 +73,12 @@ export default function PortalHeader({
             <button className="flex items-center gap-2.5 pl-1.5 pr-2 py-1 rounded-lg hover:bg-surface-subtle transition-colors text-left">
               <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-navy text-white text-xs font-semibold overflow-hidden border border-border">
                 {contactAvatar ? (
-                  <img
+                  <Image
                     src={contactAvatar}
                     alt={displayName}
-                    className="h-full w-full object-cover"
+                    fill
+                    unoptimized
+                    className="object-cover"
                   />
                 ) : (
                   <span>{initials}</span>

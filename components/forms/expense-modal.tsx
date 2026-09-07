@@ -46,36 +46,43 @@ export function ExpenseModal({ open, onOpenChange, onSuccess }: ExpenseModalProp
   );
 
   React.useEffect(() => {
-    if (open) {
-      loadDropdownData();
-    }
+    if (!open) return;
+
+    let isMounted = true;
+    const loadDropdownData = async () => {
+      const [accountsResult, analyticsResult, journalsResult] = await Promise.all([
+        getExpenseAccountsAction(),
+        getAnalyticAccountsAction(),
+        getBankCashJournalsAction(),
+      ]);
+
+      if (!isMounted) return;
+
+      if (accountsResult.success && accountsResult.data) {
+        setExpenseAccounts(accountsResult.data);
+        if (accountsResult.data.length > 0) {
+          setExpenseAccountId((prev) => prev || accountsResult.data![0].id);
+        }
+      }
+
+      if (analyticsResult.success && analyticsResult.data) {
+        setAnalyticAccounts(analyticsResult.data);
+      }
+
+      if (journalsResult.success && journalsResult.data) {
+        setJournals(journalsResult.data);
+        if (journalsResult.data.length > 0) {
+          setJournalId((prev) => prev || journalsResult.data![0].id);
+        }
+      }
+    };
+
+    loadDropdownData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [open]);
-
-  const loadDropdownData = async () => {
-    const [accountsResult, analyticsResult, journalsResult] = await Promise.all([
-      getExpenseAccountsAction(),
-      getAnalyticAccountsAction(),
-      getBankCashJournalsAction(),
-    ]);
-
-    if (accountsResult.success && accountsResult.data) {
-      setExpenseAccounts(accountsResult.data);
-      if (accountsResult.data.length > 0 && !expenseAccountId) {
-        setExpenseAccountId(accountsResult.data[0].id);
-      }
-    }
-
-    if (analyticsResult.success && analyticsResult.data) {
-      setAnalyticAccounts(analyticsResult.data);
-    }
-
-    if (journalsResult.success && journalsResult.data) {
-      setJournals(journalsResult.data);
-      if (journalsResult.data.length > 0 && !journalId) {
-        setJournalId(journalsResult.data[0].id);
-      }
-    }
-  };
 
   const handleAiParsedExpense = (raw: unknown) => {
     const data = raw as ParsedExpenseResult;

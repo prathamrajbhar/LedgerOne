@@ -54,14 +54,12 @@ export async function signUpAction(data: SignUpFormData): Promise<ActionResult> 
     try {
       const roleLabel = user.role === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
       await emailService.sendWelcomeEmail(user.email, user.name || user.loginId, roleLabel);
-    } catch (emailError) {
-      // Log but don't fail the signup if email fails
-      console.error("Failed to send welcome email:", emailError);
+    } catch {
+      // Don't fail the signup if optional email delivery fails
     }
 
     return { success: true };
   } catch (error: unknown) {
-    console.error("Sign up error:", error);
 
     const err = error as Error & { name?: string };
 

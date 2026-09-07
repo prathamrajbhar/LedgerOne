@@ -35,8 +35,7 @@ export async function getTaxRatesAction(params?: ListTaxRatesParams): Promise<Ta
       success: true,
       data: transformedData,
     };
-  } catch (error) {
-    console.error("Error fetching tax rates:", error);
+  } catch {
     return {
       success: false,
       error: "Failed to fetch tax rates. Please try again.",
@@ -66,7 +65,6 @@ export async function getTaxRateByIdAction(id: string): Promise<TaxRateActionRes
         error: "Tax rate not found",
       };
     }
-    console.error("Error fetching tax rate:", error);
     return {
       success: false,
       error: "Failed to fetch tax rate details. Please try again.",
@@ -105,7 +103,6 @@ export async function createTaxRateAction(input: CreateTaxRateInput): Promise<Ta
         error: error.message,
       };
     }
-    console.error("Error creating tax rate:", error);
     return {
       success: false,
       error: "Failed to create tax rate. Please try again.",
@@ -150,7 +147,6 @@ export async function updateTaxRateAction(input: UpdateTaxRateInput): Promise<Ta
         error: error.message,
       };
     }
-    console.error("Error updating tax rate:", error);
     return {
       success: false,
       error: "Failed to update tax rate. Please try again.",
@@ -184,7 +180,6 @@ export async function deleteTaxRateAction(id: string): Promise<TaxRateActionResu
         error: error.message,
       };
     }
-    console.error("Error deleting tax rate:", error);
     return {
       success: false,
       error: "Failed to delete tax rate. Please try again.",

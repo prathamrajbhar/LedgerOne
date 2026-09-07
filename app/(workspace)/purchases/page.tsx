@@ -1,8 +1,9 @@
 import * as React from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
-import { FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Plus } from "lucide-react";
 import { getPurchaseOrdersAction } from "@/app/actions/purchase.actions";
-import { PurchaseOrderForm } from "./purchase-order-form";
 import { PurchaseOrdersTable } from "./purchase-orders-table";
 
 export default async function PurchasesPage() {
@@ -33,7 +34,14 @@ export default async function PurchasesPage() {
       <PageHeader
         title="Purchase Orders"
         description="Procure raw timber, foam, upholstery fabrics, hardware fittings, and track vendor procurement."
-        actions={<PurchaseOrderForm />}
+        actions={
+          <Link href="/purchases/new">
+            <Button className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer">
+              <Plus className="h-4 w-4" />
+              New Purchase Order
+            </Button>
+          </Link>
+        }
       />
 
       {serializedPOs.length === 0 ? (
@@ -43,7 +51,12 @@ export default async function PurchasesPage() {
           <p className="text-sm text-muted-foreground mb-4">
             Create your first purchase order to start tracking vendor purchases.
           </p>
-          <PurchaseOrderForm />
+          <Link href="/purchases/new">
+            <Button className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer">
+              <Plus className="h-4 w-4" />
+              Create Purchase Order
+            </Button>
+          </Link>
         </div>
       ) : (
         <PurchaseOrdersTable purchaseOrders={serializedPOs} />

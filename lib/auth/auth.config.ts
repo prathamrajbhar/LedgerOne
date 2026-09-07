@@ -5,6 +5,10 @@ import { UserRole } from "@prisma/client";
 import { authService } from "@/lib/services/auth.service";
 import { prisma } from "@/lib/prisma";
 import { checkUserStatus } from "./user-status";
+import { refreshTokenService } from "@/lib/services/refresh-token.service";
+
+const ACCESS_TOKEN_TTL_MS = 15 * 60 * 1000;
+const STATUS_CHECK_INTERVAL_MS = 60 * 1000;
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -45,45 +49,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       },
     }),
-    // Portal login (Contact) - uses email
-    CredentialsProvider({
-      id: "portal-credentials",
-      name: "Portal Login",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const result = await authService.authenticateContact({
-            email: credentials.email as string,
-            password: credentials.password as string,
-          });
-
-          // Only allow CONTACT role
-          if (result.role !== UserRole.CONTACT || !result.contact) {
-            return null;
-          }
-
-          return {
-            id: result.id,
-            email: result.email,
-            name: result.name,
-            role: result.role,
-            contactId: result.contact.id,
-            contactType: result.contact.type,
-            contactName: result.contact.name,
-            mustChangePassword: result.mustChangePassword,
-          };
-        } catch {
-          return null;
-        }
-      },
-    }),
   ],
   session: {
     strategy: "jwt",
@@ -95,16 +60,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user, trigger, session }) {
-      // Initial sign in - populate token
+      // Initial sign in - populate token & generate initial refresh token
       if (user) {
         token.id = user.id;
         token.role = user.role;
         token.mustChangePassword = user.mustChangePassword;
-        // Add contact info for portal users
         if (user.contactId) {
           token.contactId = user.contactId;
           token.contactType = user.contactType;
           token.contactName = user.contactName;
+        }
+
+        try {
+          const refreshTokenRecord = await refreshTokenService.generateRefreshToken(user.id);
+          token.refreshToken = refreshTokenRecord.rawToken;
+          token.accessTokenExpires = Date.now() + ACCESS_TOKEN_TTL_MS;
+          token.lastStatusCheck = Date.now();
+        } catch {
+          return null;
         }
       }
 
@@ -115,9 +88,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // CRITICAL SECURITY CHECK: Validate user status on every request
-      // This ensures deactivated/deleted users are logged out across all devices
-      if (token.id && token.role) {
+      if (!token.id || !token.role) {
+        return null;
+      }
+
+      const now = Date.now();
+
+      // Throttled status check: validate user active status every 60s
+      const shouldCheckStatus = !token.lastStatusCheck || now - token.lastStatusCheck > STATUS_CHECK_INTERVAL_MS;
+      if (shouldCheckStatus) {
         try {
           const status = await checkUserStatus(
             token.id as string,
@@ -125,23 +104,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.contactId as string | undefined
           );
 
-          // If user should be logged out, return null to invalidate the token
           if (status.shouldLogout) {
-            console.warn(
-              `User ${token.id} session invalidated:`,
-              !status.exists
-                ? "User deleted"
-                : !status.isActive
-                  ? "User deactivated"
-                  : status.isContactArchived
-                    ? "Contact archived"
-                    : "Access revoked"
-            );
+            await refreshTokenService.revokeAllUserTokens(token.id as string);
             return null;
           }
-        } catch (error) {
-          // On error checking status, invalidate session for security
-          console.error("Error validating user session:", error);
+          token.lastStatusCheck = now;
+        } catch {
+          return null;
+        }
+      }
+
+      // Refresh Token Rotation: If access token expired, rotate refresh token
+      const isAccessTokenExpired = token.accessTokenExpires ? now >= token.accessTokenExpires : false;
+      if (isAccessTokenExpired) {
+        if (!token.refreshToken) {
+          return null;
+        }
+
+        try {
+          const rotated = await refreshTokenService.rotateRefreshToken(token.refreshToken);
+          token.refreshToken = rotated.rawToken;
+          token.accessTokenExpires = Date.now() + ACCESS_TOKEN_TTL_MS;
+        } catch {
           return null;
         }
       }
@@ -151,7 +135,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       // If token is null (user was logged out), return null session
       if (!token) {
-        return null as any;
+        return null as unknown as typeof session;
       }
 
       if (session.user) {

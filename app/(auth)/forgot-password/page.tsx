@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Mail, ArrowRight, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";

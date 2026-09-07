@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { JournalEntryStatus, JournalEntrySource } from "@prisma/client";
+import { JournalEntryStatus } from "@prisma/client";
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     const entries = await prisma.journalEntry.findMany({
       where: {
@@ -85,8 +85,7 @@ export async function POST(req: NextRequest) {
         "Content-Disposition": `attachment; filename="transactions-ledger-${new Date().toISOString().split("T")[0]}.csv"`,
       },
     });
-  } catch (error) {
-    console.error("Export transactions error:", error);
+  } catch {
     return new NextResponse("Failed to export transactions", { status: 500 });
   }
 }

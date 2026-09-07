@@ -292,7 +292,6 @@ export async function deleteUserAction(userId: string): Promise<UserManagementRe
     revalidatePath("/settings/users-management");
     return { success: true };
   } catch (error) {
-    console.error("Delete user error:", error);
     const message = error instanceof Error ? error.message : "Failed to delete user";
     return { success: false, error: message };
   }

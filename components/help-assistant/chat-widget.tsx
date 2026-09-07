@@ -360,7 +360,7 @@ export function HelpAssistantWidget() {
       `}</style>
 
       {/* Floating Toggle Button Container with Ground Shadow Reflection */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-center">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-center">
         {/* Dynamic Ground Shadow Reflection */}
         {!open && (
           <div className="absolute -bottom-1 w-9 h-2 rounded-full bg-teal/25 blur-xs pointer-events-none animate-shadow-pulse" />
@@ -371,7 +371,7 @@ export function HelpAssistantWidget() {
           onClick={() => setOpen(!open)}
           onMouseEnter={() => setIsBtnHovered(true)}
           onMouseLeave={() => setIsBtnHovered(false)}
-          className={`flex h-14 w-14 items-center justify-center rounded-full text-navy shadow-[0_8px_25px_rgba(22,50,79,0.22),0_0_15px_rgba(22,124,128,0.2)] hover:shadow-[0_12px_32px_rgba(22,50,79,0.3),0_0_22px_rgba(22,124,128,0.35)] transition-all duration-300 transform hover:scale-105 active:scale-95 border-2 border-teal relative group ${
+          className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-full text-navy shadow-[0_8px_25px_rgba(22,50,79,0.22),0_0_15px_rgba(22,124,128,0.2)] hover:shadow-[0_12px_32px_rgba(22,50,79,0.3),0_0_22px_rgba(22,124,128,0.35)] transition-all duration-300 transform hover:scale-105 active:scale-95 border-2 border-teal relative group ${
             open
               ? "!bg-navy text-white border-navy"
               : "animate-robo-jump bg-gradient-to-br from-white via-[#F4F8FA] to-[#E6EFF6]"
@@ -382,7 +382,7 @@ export function HelpAssistantWidget() {
             <X className="h-5 w-5 text-white transition-transform duration-300" />
           ) : (
             <div className="relative flex items-center justify-center">
-              <RobotIcon size={36} isHovered={isBtnHovered} isThinking={loading} isOpen={open} />
+              <RobotIcon size={32} isHovered={isBtnHovered} isThinking={loading} isOpen={open} />
             </div>
           )}
         </button>
@@ -390,7 +390,7 @@ export function HelpAssistantWidget() {
 
       {/* Main Chat Widget Drawer Container with Premium Backdrop Elevation & Smooth Exit Animation */}
       <Card
-        className={`fixed bottom-[84px] right-6 z-50 w-[420px] max-w-[calc(100vw-2rem)] h-[580px] max-h-[calc(100vh-100px)] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border border-border bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-out origin-bottom-right ${
+        className={`fixed bottom-[72px] right-3 sm:bottom-[84px] sm:right-6 z-50 w-[calc(100vw-1.5rem)] sm:w-[420px] max-w-[calc(100vw-1.5rem)] sm:max-w-[calc(100vw-2rem)] h-[540px] sm:h-[580px] max-h-[calc(100vh-85px)] sm:max-h-[calc(100vh-100px)] flex flex-col shadow-[0_20px_60px_-15px_rgba(22,50,79,0.35),0_0_25px_rgba(22,124,128,0.15)] hover:shadow-[0_25px_70px_-15px_rgba(22,50,79,0.45),0_0_30px_rgba(22,124,128,0.25)] border border-border bg-white rounded-2xl overflow-hidden transition-all duration-300 ease-out origin-bottom-right ${
           open
             ? "scale-100 opacity-100 translate-y-0 pointer-events-auto"
             : "scale-90 opacity-0 translate-y-6 pointer-events-none"

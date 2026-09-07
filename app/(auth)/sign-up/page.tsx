@@ -3,15 +3,16 @@
 import * as React from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Lock, User, Mail, Building, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { signUpAction } from "@/app/actions/auth.actions";
 import { UserRole } from "@prisma/client";
+import { RoleSelector } from "./role-selector";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const [role, setRole] = useState<UserRole>(UserRole.ADMINISTRATOR);
   const [name, setName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [loginId, setLoginId] = useState("");
@@ -28,7 +29,6 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
-
     try {
       const result = await signUpAction({
         name,
@@ -36,7 +36,7 @@ export default function SignUpPage() {
         email,
         password,
         companyName: companyName || undefined,
-        role: UserRole.ACCOUNTANT,
+        role,
       });
 
       if (!result.success) {
@@ -44,31 +44,30 @@ export default function SignUpPage() {
         return;
       }
 
-      toast.success("Account created successfully! Please sign in.");
+      const roleLabel = role === UserRole.ADMINISTRATOR ? "Administrator" : "Accountant";
+      toast.success(`${roleLabel} account created successfully! Please sign in.`);
       router.push("/login");
-    } catch (error) {
-      console.error("Sign up error:", error);
+    } catch {
       toast.error("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  const isRoleAdmin = role === UserRole.ADMINISTRATOR;
+
   return (
     <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-5 sm:p-6 space-y-3.5 backdrop-blur-sm">
-      {/* Header with Title and Logo Badge */}
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
-          Create Account
-        </h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">Create Account</h2>
         <p className="text-xs text-muted-foreground leading-relaxed mt-1">
           Set up your LedgerOne workspace and manage your furniture business.
         </p>
       </div>
 
-      {/* Registration Form */}
       <form onSubmit={handleSubmit} className="space-y-2.5 pt-0.5">
-        {/* Full Name */}
+        <RoleSelector role={role} onChange={setRole} disabled={loading} />
+
         <div className="space-y-1">
           <label className="text-xs font-semibold text-foreground block">
             Full Name <span className="text-destructive">*</span>
@@ -86,10 +85,9 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {/* Furniture Business / Firm Name */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-foreground block">
-            Furniture Business / Firm Name
+            {isRoleAdmin ? "Furniture Business / Firm Name" : "Organization"}
           </label>
           <div className="relative">
             <Building className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
@@ -103,14 +101,13 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {/* Login ID */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-foreground block">
             Login ID (6-12 chars) <span className="text-destructive">*</span>
           </label>
           <input
             type="text"
-            placeholder="e.g. user_lead01"
+            placeholder={isRoleAdmin ? "e.g. admin002" : "e.g. acct002"}
             value={loginId}
             onChange={(e) => setLoginId(e.target.value)}
             className="w-full h-9 px-3 rounded-xl bg-[#E1EAFD]/90 hover:bg-[#E1EAFD] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#193552]/20 text-xs font-mono text-foreground placeholder:text-muted-foreground transition-all outline-none"
@@ -118,7 +115,6 @@ export default function SignUpPage() {
           />
         </div>
 
-        {/* Official Email */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-foreground block">
             Official Email <span className="text-destructive">*</span>
@@ -136,7 +132,6 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {/* Password */}
         <div className="space-y-1">
           <label className="text-xs font-semibold text-foreground block">
             Password (min 8 characters) <span className="text-destructive">*</span>
@@ -154,7 +149,7 @@ export default function SignUpPage() {
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="absolute right-3 top-2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -162,36 +157,28 @@ export default function SignUpPage() {
           </div>
         </div>
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-10 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
         >
-          {loading ? "Creating Workspace..." : "Create Account"}
+          {loading ? "Creating Account..." : `Create ${isRoleAdmin ? "Administrator" : "Accountant"} Account`}
           {!loading && <ArrowRight className="h-3.5 w-3.5" />}
         </button>
       </form>
 
-      {/* OR Divider */}
       <div className="relative my-2.5">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-border/70" />
         </div>
         <div className="relative flex justify-center text-[10px] uppercase">
-          <span className="bg-[#FAFBFE] px-3 text-muted-foreground font-semibold tracking-wider">
-            OR
-          </span>
+          <span className="bg-[#FAFBFE] px-3 text-muted-foreground font-semibold tracking-wider">OR</span>
         </div>
       </div>
 
-      {/* Sign In Footer Link */}
       <div className="text-center text-xs text-muted-foreground pt-0.5">
         Already have a workspace account?{" "}
-        <Link
-          href="/login"
-          className="font-semibold text-[#1F73B7] hover:underline"
-        >
+        <Link href="/login" className="font-semibold text-[#1F73B7] hover:underline">
           Sign In
         </Link>
       </div>

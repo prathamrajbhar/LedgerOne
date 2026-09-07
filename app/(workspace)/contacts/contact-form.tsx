@@ -8,7 +8,7 @@ import { FormInput } from "@/components/forms/form-input";
 import { FormSelect } from "@/components/forms/form-select";
 import { FormTextarea } from "@/components/forms/form-textarea";
 import { PhoneInput } from "@/components/ui/phone-input";
-import { ArrowLeft, Save, Users, MapPin, Building2 } from "lucide-react";
+import { ArrowLeft, Save, Users, MapPin, Building2, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { createContactAction, updateContactAction } from "@/app/actions/contact.actions";
@@ -21,6 +21,10 @@ export interface ContactFormDataShape {
   email?: string;
   phone?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  profileImage?: string;
 }
 
 interface ContactFormProps {
@@ -33,7 +37,7 @@ interface ContactFormProps {
 
 export function ContactForm({
   initialData,
-  isEdit,
+  isEdit = false,
   isModal = false,
   onSuccess,
   onCancel,
@@ -51,6 +55,12 @@ export function ContactForm({
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     address: initialData?.address || "",
+    city: initialData?.city || "",
+    state: initialData?.state || "",
+    pincode: initialData?.pincode || "",
+    profileImage: initialData?.profileImage || "",
+    createPortalUser: false,
+    portalPassword: "",
   });
 
   const backUrl =
@@ -98,6 +108,12 @@ export function ContactForm({
         email: formData.email.trim(),
         phone: formData.phone.trim() || undefined,
         address: formData.address.trim() || undefined,
+        city: formData.city.trim() || undefined,
+        state: formData.state.trim() || undefined,
+        pincode: formData.pincode.trim() || undefined,
+        profileImage: formData.profileImage.trim() || undefined,
+        createPortalUser: formData.createPortalUser,
+        portalPassword: formData.portalPassword.trim() || undefined,
       };
 
       let result;
@@ -113,11 +129,19 @@ export function ContactForm({
       }
 
       if (result.success) {
-        toast.success(
-          isEdit
-            ? `Contact "${formData.name}" updated successfully.`
-            : `Contact "${formData.name}" created successfully.`
-        );
+        const creds = (result.data as { portalCredentials?: { loginId: string; password: string } })?.portalCredentials;
+        if (creds) {
+          toast.success(
+            `Contact "${formData.name}" created! Portal Login: ${creds.loginId} (Password: ${creds.password})`,
+            { duration: 8000 }
+          );
+        } else {
+          toast.success(
+            isEdit
+              ? `Contact "${formData.name}" updated successfully.`
+              : `Contact "${formData.name}" created successfully.`
+          );
+        }
         if (isModal) {
           onSuccess?.();
         } else {
@@ -135,8 +159,7 @@ export function ContactForm({
           setErrors({ name: result.error });
         }
       }
-    } catch (error) {
-      console.error("Error saving contact:", error);
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -302,8 +325,91 @@ export function ContactForm({
               placeholder="Enter full office, showroom, or warehouse address..."
               rows={3}
             />
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <FormInput
+                label="City"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                placeholder="e.g. Mumbai"
+              />
+              <FormInput
+                label="State"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                placeholder="e.g. Maharashtra"
+              />
+              <FormInput
+                label="Pincode"
+                value={formData.pincode}
+                onChange={(e) => setFormData({ ...formData, pincode: e.target.value })}
+                placeholder="e.g. 400001"
+              />
+            </div>
+
+            <FormInput
+              label="Profile Image URL"
+              value={formData.profileImage}
+              onChange={(e) => setFormData({ ...formData, profileImage: e.target.value })}
+              placeholder="https://example.com/avatar.jpg"
+            />
           </CardContent>
         </Card>
+
+        {/* Section 3: Portal Access (New Contact only) */}
+        {!isEdit && (
+          <Card className="bg-white border-border shadow-card rounded-2xl overflow-hidden">
+            <CardHeader className="p-5 sm:p-6 bg-surface-subtle/50 border-b border-border/80">
+              <div className="flex items-center gap-2.5">
+                <div className="h-7 w-7 rounded-lg bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center">
+                  <UserPlus className="h-3.5 w-3.5 text-[#2563EB]" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-bold text-foreground">
+                    Portal User Access
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground">
+                    Enable self-service login so this contact can view their invoices/bills and make payment.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 sm:p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="createPortalUser"
+                  checked={formData.createPortalUser}
+                  onChange={(e) => setFormData({ ...formData, createPortalUser: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-navy focus:ring-navy"
+                />
+                <label htmlFor="createPortalUser" className="text-xs font-semibold text-foreground cursor-pointer">
+                  Create portal login user account now
+                </label>
+              </div>
+
+              {formData.createPortalUser && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground block mb-1">
+                      Generated Login ID
+                    </label>
+                    <div className="text-xs font-mono bg-muted p-2 rounded border border-border">
+                      Auto-generated ({formData.type === "VENDOR" ? "vend..." : "cust..."})
+                    </div>
+                  </div>
+                  <FormInput
+                    label="Initial Password"
+                    type="password"
+                    value={formData.portalPassword}
+                    onChange={(e) => setFormData({ ...formData, portalPassword: e.target.value })}
+                    placeholder="Leave empty for default: Portal@123"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 pt-1">

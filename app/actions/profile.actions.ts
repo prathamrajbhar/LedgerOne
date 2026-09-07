@@ -126,7 +126,6 @@ export async function getUserProfileAction(): Promise<{
       },
     };
   } catch (error) {
-    console.error("Error fetching user profile:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to load user profile",
@@ -194,7 +193,6 @@ export async function updateUserProfileAction(input: {
     revalidatePath("/profile");
     return { success: true };
   } catch (error) {
-    console.error("Error updating profile:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update profile",
@@ -260,7 +258,6 @@ export async function updatePasswordAction(input: {
     revalidatePath("/profile");
     return { success: true };
   } catch (error) {
-    console.error("Error updating password:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update password",

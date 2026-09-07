@@ -23,6 +23,7 @@ import {
 import { GlobalSearchDialog } from "@/components/ui/global-search";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
+import Image from "next/image";
 import { UserRole } from "@prisma/client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -104,11 +105,14 @@ export function Navbar({
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
-            className="flex items-center w-full max-w-md h-9 px-3 rounded-lg border border-border bg-white text-xs text-muted-foreground hover:border-border-strong hover:bg-surface-subtle transition-all justify-between text-left"
+            className="flex items-center w-full max-w-md h-9 px-2.5 sm:px-3 rounded-lg border border-border bg-white text-xs text-muted-foreground hover:border-border-strong hover:bg-surface-subtle transition-all justify-between text-left"
           >
             <div className="flex items-center gap-2 text-muted-foreground overflow-hidden">
               <Search className="h-3.5 w-3.5 flex-shrink-0 text-muted-foreground" />
-              <span className="truncate">Search customers, invoices, products, transactions...</span>
+              <span className="truncate text-xs">
+                <span className="hidden sm:inline">Search customers, invoices, products, transactions...</span>
+                <span className="sm:hidden">Search workspace...</span>
+              </span>
             </div>
             <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
               <kbd className="inline-flex h-4 items-center rounded border border-border bg-surface-subtle px-1.5 font-mono text-[9px] font-medium text-muted-foreground">
@@ -169,10 +173,12 @@ export function Navbar({
               <button className="flex items-center gap-2.5 pl-1.5 pr-2 py-1 rounded-lg hover:bg-surface-subtle transition-colors text-left">
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-navy text-white text-xs font-semibold overflow-hidden border border-border">
                   {userAvatar ? (
-                    <img
+                    <Image
                       src={userAvatar}
                       alt={displayName}
-                      className="h-full w-full object-cover"
+                      fill
+                      unoptimized
+                      className="object-cover"
                     />
                   ) : (
                     <span>{initials}</span>

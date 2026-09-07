@@ -172,16 +172,6 @@ export function ProductsTable({ products, onStockAdjust: _onStockAdjust }: Produ
     setConfirmDialog((prev) => ({ ...prev, open: false }));
   };
 
-  const handleRestore = async (id: string, name: string) => {
-    const res = await restoreProductAction(id);
-    if (res.success) {
-      toast.success(`Product "${name}" restored to active catalog`);
-      router.refresh();
-    } else {
-      toast.error(res.error || "Failed to restore product");
-    }
-  };
-
   type ProductSortColumn = "name" | "category" | "material" | "cost" | "salesPrice" | "stock" | "status";
   const { sortedItems: sortedProducts, sortState, handleSort } = useTableSort<FurnitureProductItem, ProductSortColumn>(
     products,

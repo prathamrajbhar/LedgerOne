@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -10,14 +11,13 @@ import {
   getExpensesAction,
   ExpenseRecord,
 } from "@/app/actions/expense.actions";
-import { ExpenseModal } from "@/components/forms/expense-modal";
 import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 export default function ExpensesPage() {
+  const router = useRouter();
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
   const [search, setSearch] = React.useState("");
-  const [openModal, setOpenModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   // Fetch expenses on mount
@@ -73,19 +73,13 @@ export default function ExpensesPage() {
         description="Record production costs, raw timber supplies, workshop utilities, and staff logistics."
         actions={
           <Button
-            onClick={() => setOpenModal(true)}
-            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm"
+            onClick={() => router.push("/expenses/new")}
+            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Record Expense
           </Button>
         }
-      />
-
-      <ExpenseModal
-        open={openModal}
-        onOpenChange={setOpenModal}
-        onSuccess={loadExpenses}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -129,48 +123,50 @@ export default function ExpensesPage() {
             {search ? "No expenses found matching your search" : "No expenses recorded yet. Click 'Record Expense' to add one."}
           </div>
         ) : (
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortableTableHead columnKey="code" currentSort={sortState} onSort={handleSort}>
-                  Entry #
-                </SortableTableHead>
-                <SortableTableHead columnKey="description" currentSort={sortState} onSort={handleSort}>
-                  Description
-                </SortableTableHead>
-                <SortableTableHead columnKey="expenseAccount" currentSort={sortState} onSort={handleSort}>
-                  Expense Account
-                </SortableTableHead>
-                <SortableTableHead columnKey="analyticAccount" currentSort={sortState} onSort={handleSort}>
-                  Analytic
-                </SortableTableHead>
-                <SortableTableHead columnKey="date" currentSort={sortState} onSort={handleSort}>
-                  Date
-                </SortableTableHead>
-                <SortableTableHead columnKey="paymentMethod" currentSort={sortState} onSort={handleSort}>
-                  Method
-                </SortableTableHead>
-                <SortableTableHead columnKey="amount" currentSort={sortState} onSort={handleSort} align="right">
-                  Amount (₹)
-                </SortableTableHead>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sortedExpenses.map((e) => (
-                <tr key={e.id} className="hover:bg-primary-light/30 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{e.code}</td>
-                  <td className="py-3.5 px-4 font-semibold text-foreground">{e.description}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{e.expenseAccount}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{e.analyticAccount || "-"}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{e.date}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{e.paymentMethod}</td>
-                  <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                    ₹{e.amount.toLocaleString("en-IN")}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs min-w-[700px]">
+              <thead>
+                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <SortableTableHead columnKey="code" currentSort={sortState} onSort={handleSort}>
+                    Entry #
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="description" currentSort={sortState} onSort={handleSort}>
+                    Description
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="expenseAccount" currentSort={sortState} onSort={handleSort}>
+                    Expense Account
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="analyticAccount" currentSort={sortState} onSort={handleSort}>
+                    Analytic
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="date" currentSort={sortState} onSort={handleSort}>
+                    Date
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="paymentMethod" currentSort={sortState} onSort={handleSort}>
+                    Method
+                  </SortableTableHead>
+                  <SortableTableHead columnKey="amount" currentSort={sortState} onSort={handleSort} align="right">
+                    Amount (₹)
+                  </SortableTableHead>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedExpenses.map((e) => (
+                  <tr key={e.id} className="hover:bg-primary-light/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{e.code}</td>
+                    <td className="py-3.5 px-4 font-semibold text-foreground">{e.description}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{e.expenseAccount}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{e.analyticAccount || "-"}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{e.date}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{e.paymentMethod}</td>
+                    <td className="py-3.5 px-4 text-right font-bold text-foreground">
+                      ₹{e.amount.toLocaleString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

@@ -16,7 +16,6 @@ import {
   Lock,
   Landmark,
   Banknote,
-  Sparkles,
 } from "lucide-react";
 import {
   processPortalInvoicePaymentAction,
@@ -26,9 +25,45 @@ import {
 import { toast } from "sonner";
 import { PaymentMethod } from "@prisma/client";
 
+interface RazorpayFailedResponse {
+  error?: {
+    description?: string;
+  };
+}
+
+interface RazorpayInstance {
+  open: () => void;
+  on: (event: string, handler: (resp: RazorpayFailedResponse) => void) => void;
+}
+
+interface RazorpayOptions {
+  key: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  order_id: string;
+  image?: string;
+  prefill?: {
+    name?: string;
+    email?: string;
+  };
+  theme?: {
+    color?: string;
+  };
+  modal?: {
+    ondismiss?: () => void;
+  };
+  handler: (response: {
+    razorpay_payment_id: string;
+    razorpay_order_id: string;
+    razorpay_signature: string;
+  }) => void;
+}
+
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
   }
 }
 
@@ -63,7 +98,7 @@ export function PortalPayClient({ invoice }: { invoice: PortalInvoiceData }) {
   const amountToPay = payOption === "FULL" ? invoice.amountDue : parseFloat(customAmount) || 0;
 
   const handleRazorpayPayment = async () => {
-    if (typeof window === "undefined" || !window.Razorpay) {
+    if (!razorpayLoaded && (typeof window === "undefined" || !window.Razorpay)) {
       toast.error("Razorpay SDK is loading. Please try again in a moment.");
       return;
     }
@@ -76,7 +111,7 @@ export function PortalPayClient({ invoice }: { invoice: PortalInvoiceData }) {
         amount: amountToPay,
       });
 
-      if (!orderRes.success || !orderRes.orderId) {
+      if (!orderRes.success || !orderRes.orderId || !orderRes.keyId || !orderRes.amount) {
         toast.error(orderRes.error || "Failed to initialize payment gateway");
         setSubmitting(false);
         return;
@@ -135,12 +170,12 @@ export function PortalPayClient({ invoice }: { invoice: PortalInvoiceData }) {
 
       // 3. Open Razorpay modal
       const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", function (resp: any) {
+      rzp.on("payment.failed", function (resp: RazorpayFailedResponse) {
         toast.error(resp.error?.description || "Payment failed at gateway");
         setSubmitting(false);
       });
       rzp.open();
-    } catch (err) {
+    } catch {
       toast.error("Failed to connect with Razorpay");
       setSubmitting(false);
     }

@@ -26,7 +26,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     searchParams?.to
   );
 
-  const { startDate, endDate, label, range, start, end } = periodInfo;
+  const { label, range, start, end } = periodInfo;
 
   // Fetch all dashboard data in parallel
   const [

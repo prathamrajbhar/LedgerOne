@@ -3,6 +3,7 @@
 import { salesOrderService, CreateSalesOrderInput, ListSalesOrdersParams } from "@/lib/services/sales-order.service";
 import { customerInvoiceService, CreateStandaloneInvoiceInput, ListCustomerInvoicesParams } from "@/lib/services/customer-invoice.service";
 import { DocumentStatus, PaymentStatus } from "@prisma/client";
+import { requirePermission } from "@/lib/auth/guard";
 
 function serialize<T>(data: T): T {
   return JSON.parse(JSON.stringify(data));
@@ -10,6 +11,7 @@ function serialize<T>(data: T): T {
 
 export async function getSalesOrdersAction(params?: ListSalesOrdersParams) {
   try {
+    await requirePermission("sales:read");
     const result = await salesOrderService.list(params || {});
     return { success: true, data: serialize(result) };
   } catch (error: unknown) {
@@ -20,7 +22,11 @@ export async function getSalesOrdersAction(params?: ListSalesOrdersParams) {
 
 export async function createSalesOrderAction(input: CreateSalesOrderInput) {
   try {
-    const salesOrder = await salesOrderService.create(input);
+    const { user } = await requirePermission("sales:write");
+    const salesOrder = await salesOrderService.create({
+      ...input,
+      createdById: input.createdById || user.id,
+    });
     return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
     const err = error as Error;
@@ -30,6 +36,7 @@ export async function createSalesOrderAction(input: CreateSalesOrderInput) {
 
 export async function confirmSalesOrderAction(id: string) {
   try {
+    await requirePermission("sales:confirm");
     const salesOrder = await salesOrderService.confirm({ id });
     return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
@@ -40,6 +47,7 @@ export async function confirmSalesOrderAction(id: string) {
 
 export async function cancelSalesOrderAction(id: string) {
   try {
+    await requirePermission("sales:cancel");
     const salesOrder = await salesOrderService.cancel(id);
     return { success: true, data: serialize(salesOrder) };
   } catch (error: unknown) {
@@ -50,7 +58,8 @@ export async function cancelSalesOrderAction(id: string) {
 
 export async function createInvoiceFromSalesOrderAction(salesOrderId: string, invoiceDate?: Date, dueDate?: Date, userId?: string) {
   try {
-    const invoice = await customerInvoiceService.createFromSalesOrder(salesOrderId, invoiceDate, dueDate, userId);
+    const { user } = await requirePermission("sales:write");
+    const invoice = await customerInvoiceService.createFromSalesOrder(salesOrderId, invoiceDate, dueDate, userId || user.id);
     return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
@@ -60,7 +69,11 @@ export async function createInvoiceFromSalesOrderAction(salesOrderId: string, in
 
 export async function createStandaloneInvoiceAction(input: CreateStandaloneInvoiceInput) {
   try {
-    const invoice = await customerInvoiceService.createStandalone(input);
+    const { user } = await requirePermission("sales:write");
+    const invoice = await customerInvoiceService.createStandalone({
+      ...input,
+      createdById: input.createdById || user.id,
+    });
     return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
@@ -70,7 +83,8 @@ export async function createStandaloneInvoiceAction(input: CreateStandaloneInvoi
 
 export async function confirmInvoiceAction(id: string, userId?: string) {
   try {
-    const invoice = await customerInvoiceService.confirm(id, userId);
+    const { user } = await requirePermission("sales:confirm");
+    const invoice = await customerInvoiceService.confirm(id, userId || user.id);
     return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
     const err = error as Error;
@@ -80,6 +94,7 @@ export async function confirmInvoiceAction(id: string, userId?: string) {
 
 export async function cancelInvoiceAction(id: string) {
   try {
+    await requirePermission("sales:cancel");
     const invoice = await customerInvoiceService.cancel(id);
     return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
@@ -98,6 +113,7 @@ export async function getInvoicesAction(params?: {
   limit?: number;
 }) {
   try {
+    await requirePermission("sales:read");
     const listParams: ListCustomerInvoicesParams = {
       customerId: params?.customerId,
       status: params?.status,
@@ -118,6 +134,7 @@ export async function getInvoicesAction(params?: {
 
 export async function getInvoiceByIdAction(id: string) {
   try {
+    await requirePermission(["sales:read", "portal:read"]);
     const invoice = await customerInvoiceService.findById(id);
     return { success: true, data: serialize(invoice) };
   } catch (error: unknown) {
@@ -128,6 +145,7 @@ export async function getInvoiceByIdAction(id: string) {
 
 export async function downloadInvoicePDFAction(invoiceId: string) {
   try {
+    await requirePermission(["sales:read", "portal:read"]);
     const invoice = await customerInvoiceService.findById(invoiceId);
     if (!invoice) {
       return { success: false, error: "Invoice not found" };
@@ -138,4 +156,3 @@ export async function downloadInvoicePDFAction(invoiceId: string) {
     return { success: false, error: err.message || "Failed to download invoice" };
   }
 }
-

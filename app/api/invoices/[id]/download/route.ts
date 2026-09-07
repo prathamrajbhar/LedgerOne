@@ -50,8 +50,7 @@ export async function GET(
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
     });
-  } catch (error) {
-    console.error("PDF download error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Failed to generate PDF" },
       { status: 500 }

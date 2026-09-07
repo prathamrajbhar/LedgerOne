@@ -57,7 +57,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: reply });
   } catch (error) {
-    console.error("Help assistant API error:", error);
 
     // Handle specific error messages from the help assistant
     if (error instanceof Error) {

@@ -72,8 +72,7 @@ export async function getProductsSummary(searchQuery?: string, _context?: AuthCo
         salesPrice: `₹${Number(p.salesPrice).toLocaleString("en-IN")}`,
       })),
     };
-  } catch (error) {
-    console.error("Error in getProductsSummary DB tool:", error);
+  } catch {
     return { success: false, error: "Failed to fetch products summary from database" };
   }
 }
@@ -121,8 +120,7 @@ export async function getContactsSummary(typeFilter?: "CUSTOMER" | "VENDOR", con
         phone: c.phone || "N/A",
       })),
     };
-  } catch (error) {
-    console.error("Error in getContactsSummary DB tool:", error);
+  } catch {
     return { success: false, error: "Failed to fetch contacts summary from database" };
   }
 }
@@ -195,8 +193,7 @@ export async function getInvoicesSummary(context?: AuthContext) {
         paymentStatus: i.paymentStatus,
       })),
     };
-  } catch (error) {
-    console.error("Error in getInvoicesSummary DB tool:", error);
+  } catch {
     return { success: false, error: "Failed to fetch invoices summary from database" };
   }
 }
@@ -277,8 +274,7 @@ export async function getBillsAndOrdersSummary(context?: AuthContext) {
         status: s.status,
       })),
     };
-  } catch (error) {
-    console.error("Error in getBillsAndOrdersSummary DB tool:", error);
+  } catch {
     return { success: false, error: "Failed to fetch bills/orders summary from database" };
   }
 }
@@ -331,8 +327,7 @@ export async function getFinancialOverview(context?: AuthContext) {
       totalChartOfAccounts: accounts.length,
       accountTypesBreakdown: accountTypeCounts,
     };
-  } catch (error) {
-    console.error("Error in getFinancialOverview DB tool:", error);
+  } catch {
     return { success: false, error: "Failed to fetch financial overview from database" };
   }
 }

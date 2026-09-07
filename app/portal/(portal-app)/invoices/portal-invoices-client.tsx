@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { requireCustomerAccess } from "@/lib/auth/portal-session";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Search, CreditCard, Download, Loader2 } from "lucide-react";
+import { CreditCard, Download, Loader2 } from "lucide-react";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
 import { toast } from "sonner";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";

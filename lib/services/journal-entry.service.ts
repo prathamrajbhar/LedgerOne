@@ -13,6 +13,7 @@ import { UnbalancedEntryError, ValidationError, NotFoundError } from "../utils/e
 export interface CreateJournalEntryInput {
   journalId: string;
   accountingDate: Date;
+  reference?: string;
   lines: JournalEntryLineInput[];
   userId: string;
 }
@@ -28,6 +29,7 @@ export interface AutoGenerateEntryInput {
   source: JournalEntrySource;
   journalId: string;
   accountingDate: Date;
+  reference?: string;
   tx?: Prisma.TransactionClient;
   lines: JournalEntryLineInput[];
   sourceDocumentId: string;
@@ -61,6 +63,7 @@ export class JournalEntryService {
           entryNumber,
           journalId: input.journalId,
           accountingDate: input.accountingDate,
+          reference: input.reference || null,
           status: JournalEntryStatus.DRAFT,
           source: JournalEntrySource.MANUAL,
           totalDebit,
@@ -115,6 +118,7 @@ export class JournalEntryService {
         entryNumber,
         journalId: input.journalId,
         accountingDate: input.accountingDate,
+        reference: input.reference || null,
         status: JournalEntryStatus.POSTED, // Auto entries are posted immediately
         source: input.source,
         totalDebit,

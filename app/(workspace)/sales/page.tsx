@@ -177,8 +177,9 @@ export default function SalesOrdersPage() {
                 No sales orders found matching &quot;{search}&quot;
               </div>
             ) : (
-              <table className="w-full text-left text-xs">
-                <thead>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs min-w-[640px]">
+                  <thead>
                   <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
                     <SortableTableHead
                       columnKey="soNumber"
@@ -291,8 +292,9 @@ export default function SalesOrdersPage() {
                   })}
                 </tbody>
               </table>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
         </div>
       )}
 

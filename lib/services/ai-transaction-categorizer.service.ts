@@ -103,8 +103,7 @@ Return ONLY a valid raw JSON object (strictly NO markdown code blocks, no backti
           reasoning: parsed.reasoning || `Categorized under ${matchedAccount.name} based on memo context.`,
           isAiGenerated: true,
         };
-      } catch (err) {
-        console.warn("Gemini AI categorization failed, falling back to smart heuristic matcher:", err);
+      } catch {
       }
     }
 

@@ -274,8 +274,7 @@ Return ONLY raw JSON (no backticks, no markdown) with schema:
           recommendations: parsed.recommendations || ["Review active high-capacity accounts.", "Pause non-essential purchase orders for near-capacity accounts."],
           isAiGenerated: true,
         };
-      } catch (err) {
-        console.warn("Gemini budget advisor AI failed, falling back to heuristic recommendations:", err);
+      } catch {
       }
     }
 

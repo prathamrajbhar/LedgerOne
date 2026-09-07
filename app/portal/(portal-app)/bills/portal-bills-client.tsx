@@ -1,12 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Search, Download, Loader2 } from "lucide-react";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
-import { toast } from "sonner";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 interface BillLineItem {

@@ -238,6 +238,34 @@ export class BudgetService {
       throw new NotFoundError("Budget not found");
     }
 
+    if (budget.status === BudgetStatus.CONFIRMED) {
+      const refreshedLines = await Promise.all(
+        budget.lines.map(async (line) => {
+          const achieved = await this.computeAchievement(
+            line.analyticAccountId,
+            line.type,
+            budget.startDate,
+            budget.endDate
+          );
+          const achievedPercent = line.committedAmount.isZero()
+            ? new Decimal(0)
+            : achieved.div(line.committedAmount).mul(100);
+          const amountToAchieve = line.committedAmount.sub(achieved);
+
+          return {
+            ...line,
+            achievedAmount: achieved,
+            achievedPercent,
+            amountToAchieve,
+          };
+        })
+      );
+      return {
+        ...budget,
+        lines: refreshedLines,
+      };
+    }
+
     return budget;
   }
 
@@ -284,7 +312,38 @@ export class BudgetService {
       orderBy: { createdAt: "desc" },
     });
 
-    return budgets;
+    return Promise.all(
+      budgets.map(async (budget) => {
+        if (budget.status !== BudgetStatus.CONFIRMED) {
+          return budget;
+        }
+        const refreshedLines = await Promise.all(
+          budget.lines.map(async (line) => {
+            const achieved = await this.computeAchievement(
+              line.analyticAccountId,
+              line.type,
+              budget.startDate,
+              budget.endDate
+            );
+            const achievedPercent = line.committedAmount.isZero()
+              ? new Decimal(0)
+              : achieved.div(line.committedAmount).mul(100);
+            const amountToAchieve = line.committedAmount.sub(achieved);
+
+            return {
+              ...line,
+              achievedAmount: achieved,
+              achievedPercent,
+              amountToAchieve,
+            };
+          })
+        );
+        return {
+          ...budget,
+          lines: refreshedLines,
+        };
+      })
+    );
   }
 
   // Private helpers

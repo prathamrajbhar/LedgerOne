@@ -84,8 +84,7 @@ export function GlobalSearchDialog({
           setResults(res.data);
           setSelectedIndex(0);
         }
-      } catch (err) {
-        console.error("Global search failed:", err);
+      } catch {
       } finally {
         setLoading(false);
       }

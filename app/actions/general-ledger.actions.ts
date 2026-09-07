@@ -36,7 +36,6 @@ export async function getGeneralLedgerAction(params: GeneralLedgerParams): Promi
       data: serializedLedger,
     };
   } catch (error) {
-    console.error("Error fetching general ledger:", error);
     const message = error instanceof Error ? error.message : "Failed to fetch general ledger";
     return {
       success: false,
@@ -65,7 +64,6 @@ export async function getAccountBalanceAction(accountId: string, asOfDate?: Date
       data: serializedBalance,
     };
   } catch (error) {
-    console.error("Error fetching account balance:", error);
     const message = error instanceof Error ? error.message : "Failed to fetch account balance";
     return {
       success: false,

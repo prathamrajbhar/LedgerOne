@@ -80,9 +80,8 @@ export async function checkUserStatus(
       isContactArchived: false,
       shouldLogout: false,
     };
-  } catch (error) {
+  } catch {
     // On error, log out for safety
-    console.error("Error checking user status:", error);
     return {
       exists: false,
       isActive: false,

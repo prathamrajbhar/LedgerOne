@@ -4,7 +4,6 @@ import * as React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FormInput } from "@/components/forms/form-input";
-import { FormSelect } from "@/components/forms/form-select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, Save } from "lucide-react";
 import { toast } from "sonner";
@@ -207,8 +206,7 @@ export function SalesOrderForm({ open, onOpenChange, onSuccess }: SalesOrderForm
       } else {
         toast.error(result.error || "Failed to create sales order");
       }
-    } catch (error) {
-      console.error("Error creating sales order:", error);
+    } catch {
       toast.error("An unexpected error occurred");
     } finally {
       setLoading(false);

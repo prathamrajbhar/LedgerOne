@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Check, Image as ImageIcon, Sparkles, X } from "lucide-react";
+import Image from "next/image";
+import { Check, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { PROFILE_BANNER_PRESETS, ProfileBannerPreset } from "@/lib/constants/profile-banners";
+import { PROFILE_BANNER_PRESETS } from "@/lib/constants/profile-banners";
 
 interface BannerSelectorModalProps {
   open: boolean;
@@ -70,10 +71,12 @@ export function BannerSelectorModal({
                   }`}
                 >
                   <div className="h-24 w-full relative overflow-hidden bg-slate-100">
-                    <img
+                    <Image
                       src={preset.url}
                       alt={preset.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      fill
+                      unoptimized
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                     {isSelected && (

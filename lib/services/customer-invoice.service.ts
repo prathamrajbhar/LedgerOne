@@ -525,30 +525,89 @@ export class CustomerInvoiceService {
       },
     });
 
-    // Generate Journal Entry #1:
-    // Line 1: Debit Accounts Receivable (total) with partnerId = customerId
-    // Line 2: Credit Income Account (total)
+    // Calculate subtotal and tax amounts
+    const totalTax = invoice.lines.reduce(
+      (sum, l) => sum.add(l.taxAmount || 0),
+      new Prisma.Decimal(0)
+    );
+    const subtotal = invoice.total.sub(totalTax);
+
+    // Find tax liability account if tax is present
+    let taxAccount: { id: string } | null = null;
+    if (totalTax.greaterThan(0)) {
+      taxAccount = await prisma.chartOfAccount.findFirst({
+        where: {
+          type: AccountType.LIABILITY,
+          OR: [
+            { name: { contains: "Tax", mode: "insensitive" } },
+            { name: { contains: "GST", mode: "insensitive" } },
+            { name: { contains: "Payable", mode: "insensitive" } },
+          ],
+        },
+      });
+      if (!taxAccount) {
+        taxAccount = await prisma.chartOfAccount.findFirst({
+          where: { type: AccountType.LIABILITY },
+        });
+      }
+    }
+
+    const journalLines = [
+      {
+        accountId: arAccount.id,
+        partnerId: invoice.customerId,
+        debit: invoice.total,
+        credit: new Prisma.Decimal(0),
+      },
+    ];
+
+    if (totalTax.greaterThan(0) && taxAccount) {
+      journalLines.push(
+        {
+          accountId: incomeAccount.id,
+          partnerId: invoice.customerId,
+          debit: new Prisma.Decimal(0),
+          credit: subtotal,
+        },
+        {
+          accountId: taxAccount.id,
+          partnerId: invoice.customerId,
+          debit: new Prisma.Decimal(0),
+          credit: totalTax,
+        }
+      );
+    } else {
+      journalLines.push({
+        accountId: incomeAccount.id,
+        partnerId: invoice.customerId,
+        debit: new Prisma.Decimal(0),
+        credit: invoice.total,
+      });
+    }
+
+    // Generate Journal Entry #1
     await journalEntryService.autoGenerate({
       source: JournalEntrySource.CUSTOMER_INVOICE,
       journalId: journal.id,
       accountingDate: invoice.invoiceDate,
       sourceDocumentId: invoice.id,
       userId: actionUserId,
-      lines: [
-        {
-          accountId: arAccount.id,
-          partnerId: invoice.customerId,
-          debit: invoice.total,
-          credit: new Prisma.Decimal(0),
-        },
-        {
-          accountId: incomeAccount.id,
-          partnerId: invoice.customerId,
-          debit: new Prisma.Decimal(0),
-          credit: invoice.total,
-        },
-      ],
+      lines: journalLines,
     });
+
+    // Decrement stock for goods products
+    for (const line of invoice.lines) {
+      if (line.product.type === "GOODS") {
+        await prisma.product.update({
+          where: { id: line.productId },
+          data: {
+            stock: {
+              decrement: Math.round(Number(line.quantity)),
+            },
+          },
+        });
+      }
+    }
 
     return confirmedInvoice;
   }
@@ -559,6 +618,13 @@ export class CustomerInvoiceService {
   async cancel(id: string) {
     const invoice = await prisma.customerInvoice.findUnique({
       where: { id },
+      include: {
+        lines: {
+          include: {
+            product: true,
+          },
+        },
+      },
     });
 
     if (!invoice) {
@@ -567,6 +633,22 @@ export class CustomerInvoiceService {
 
     if (invoice.status === DocumentStatus.CANCELLED) {
       throw new ConflictError("Invoice is already cancelled");
+    }
+
+    // Revert stock if previously confirmed
+    if (invoice.status === DocumentStatus.CONFIRMED) {
+      for (const line of invoice.lines) {
+        if (line.product.type === "GOODS") {
+          await prisma.product.update({
+            where: { id: line.productId },
+            data: {
+              stock: {
+                increment: Math.round(Number(line.quantity)),
+              },
+            },
+          });
+        }
+      }
     }
 
     return prisma.customerInvoice.update({
@@ -655,6 +737,11 @@ export class CustomerInvoiceService {
           },
         },
         gatewayTransactions: true,
+        emailLogs: {
+          orderBy: {
+            sentAt: "desc",
+          },
+        },
       },
     });
 

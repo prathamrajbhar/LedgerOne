@@ -13,10 +13,9 @@ import {
   UpdateJournalInput,
   ListJournalsParams,
 } from "@/lib/services/journal.service";
-import { AccountType, JournalType, PrismaClient } from "@prisma/client";
+import { AccountType, JournalType } from "@prisma/client";
 import { requireRole } from "@/lib/auth/session";
-
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
 
 export interface ActionResult<T = unknown> {
@@ -50,8 +49,7 @@ export async function getChartOfAccountsAction(params?: {
       success: true,
       data: accounts,
     };
-  } catch (error) {
-    console.error("Error fetching chart of accounts:", error);
+  } catch {
     return {
       success: false,
       error: "Failed to fetch chart of accounts. Please try again.",
@@ -76,7 +74,6 @@ export async function getAccountByIdAction(id: string): Promise<ActionResult> {
         error: "Account not found",
       };
     }
-    console.error("Error fetching account:", error);
     return {
       success: false,
       error: "Failed to fetch account details. Please try again.",
@@ -132,7 +129,6 @@ export async function createAccountAction(input: CreateAccountInput): Promise<Ac
       };
     }
 
-    console.error("Error creating account:", error);
     return {
       success: false,
       error: "Failed to create account. Please try again.",
@@ -180,7 +176,6 @@ export async function updateAccountAction(input: UpdateAccountInput): Promise<Ac
       };
     }
 
-    console.error("Error updating account:", error);
     return {
       success: false,
       error: "Failed to update account. Please try again.",
@@ -213,7 +208,6 @@ export async function archiveAccountAction(id: string): Promise<ActionResult> {
       };
     }
 
-    console.error("Error archiving account:", error);
     return {
       success: false,
       error: "Failed to archive account. Please try again.",
@@ -247,7 +241,6 @@ export async function restoreAccountAction(id: string): Promise<ActionResult> {
       };
     }
 
-    console.error("Error restoring account:", error);
     return {
       success: false,
       error: "Failed to restore account. Please try again.",
@@ -357,8 +350,7 @@ export async function getSelectableAccountsAction(type?: AccountType): Promise<A
       success: true,
       data: accounts,
     };
-  } catch (error) {
-    console.error("Error fetching selectable accounts:", error);
+  } catch {
     return {
       success: false,
       error: "Failed to fetch accounts. Please try again.",
@@ -389,8 +381,7 @@ export async function getJournalsAction(params?: {
       success: true,
       data: journals,
     };
-  } catch (error) {
-    console.error("Error fetching journals:", error);
+  } catch {
     return {
       success: false,
       error: "Failed to fetch journals. Please try again.",
@@ -415,7 +406,6 @@ export async function getJournalByIdAction(id: string): Promise<ActionResult> {
         error: "Journal not found",
       };
     }
-    console.error("Error fetching journal:", error);
     return {
       success: false,
       error: "Failed to fetch journal details. Please try again.",
@@ -478,7 +468,6 @@ export async function createJournalAction(input: CreateJournalInput): Promise<Ac
       };
     }
 
-    console.error("Error creating journal:", error);
     return {
       success: false,
       error: "Failed to create journal. Please try again.",
@@ -526,7 +515,6 @@ export async function updateJournalAction(input: UpdateJournalInput): Promise<Ac
       };
     }
 
-    console.error("Error updating journal:", error);
     return {
       success: false,
       error: "Failed to update journal. Please try again.",
@@ -559,7 +547,6 @@ export async function deleteJournalAction(id: string): Promise<ActionResult> {
       };
     }
 
-    console.error("Error deleting journal:", error);
     return {
       success: false,
       error: "Failed to delete journal. Please try again.",

@@ -1,23 +1,23 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
-import { Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
   getPaymentsAction,
   PaymentRecord,
 } from "@/app/actions/payment.actions";
-import { PaymentModal } from "@/components/forms/payment-modal";
 
 import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 
 export default function PaymentsPage() {
+  const router = useRouter();
   const [payments, setPayments] = React.useState<PaymentRecord[]>([]);
   const [search, setSearch] = React.useState("");
-  const [openModal, setOpenModal] = React.useState(false);
   const [loading, setLoading] = React.useState(true);
 
   const loadPayments = React.useCallback(async () => {
@@ -64,19 +64,13 @@ export default function PaymentsPage() {
         description="Record customer receipts, vendor disbursements, and view bank account clearing vouchers."
         actions={
           <Button
-            onClick={() => setOpenModal(true)}
-            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm"
+            onClick={() => router.push("/payments/new")}
+            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Record Payment
           </Button>
         }
-      />
-
-      <PaymentModal
-        open={openModal}
-        onOpenChange={setOpenModal}
-        onSuccess={loadPayments}
       />
 
       <div className="flex items-center gap-3">
@@ -100,84 +94,86 @@ export default function PaymentsPage() {
             {search ? "No payments found matching your search" : "No payments recorded yet"}
           </div>
         ) : (
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                <SortableTableHead
-                  columnKey="ref"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Payment #
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="party"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Party / Counterparty
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="documentNumber"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Document
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="method"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Mode
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="date"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Date
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="account"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  className="py-3.5 px-4"
-                >
-                  Account
-                </SortableTableHead>
-                <SortableTableHead
-                  columnKey="amount"
-                  currentSort={sortState}
-                  onSort={handleSort}
-                  align="right"
-                  className="py-3.5 px-4"
-                >
-                  Amount (₹)
-                </SortableTableHead>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sortedPayments.map((row) => (
-                <tr key={row.id} className="hover:bg-primary-light/30 transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-bold text-navy">{row.ref}</td>
-                  <td className="py-3.5 px-4 font-semibold text-foreground">{row.party}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{row.documentNumber}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{row.method}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{row.date}</td>
-                  <td className="py-3.5 px-4 text-muted-foreground">{row.account}</td>
-                  <td className={`py-3.5 px-4 text-right font-bold ${row.direction === "INBOUND" ? "text-success" : "text-destructive"}`}>
-                    {row.direction === "INBOUND" ? "+" : "-"}₹{row.amount.toLocaleString("en-IN")}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs min-w-[700px]">
+              <thead>
+                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <SortableTableHead
+                    columnKey="ref"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Payment #
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="party"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Party / Counterparty
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="documentNumber"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Document
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="method"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Mode
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="date"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Date
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="account"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Account
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="amount"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    align="right"
+                    className="py-3.5 px-4"
+                  >
+                    Amount (₹)
+                  </SortableTableHead>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedPayments.map((row) => (
+                  <tr key={row.id} className="hover:bg-primary-light/30 transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{row.ref}</td>
+                    <td className="py-3.5 px-4 font-semibold text-foreground">{row.party}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{row.documentNumber}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{row.method}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{row.date}</td>
+                    <td className="py-3.5 px-4 text-muted-foreground">{row.account}</td>
+                    <td className={`py-3.5 px-4 text-right font-bold ${row.direction === "INBOUND" ? "text-success" : "text-destructive"}`}>
+                      {row.direction === "INBOUND" ? "+" : "-"}₹{row.amount.toLocaleString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

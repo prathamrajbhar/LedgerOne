@@ -3,31 +3,48 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
   });
-  const { pathname } = request.nextUrl;
+
+  // Handle root route cleanly without false session expired errors
+  if (pathname === "/") {
+    if (token) {
+      const dest = token.role === "CONTACT" ? "/portal/dashboard" : "/dashboard";
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   // Public routes that don't need authentication
   const publicRoutes = ["/login", "/portal/login", "/sign-up", "/signup", "/forgot-password", "/reset-password"];
   const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
   if (isPublicRoute) {
+    if (token && (pathname === "/login" || pathname === "/portal/login")) {
+      const dest = token.role === "CONTACT" ? "/portal/dashboard" : "/dashboard";
+      return NextResponse.redirect(new URL(dest, request.url));
+    }
     return NextResponse.next();
   }
 
   // Redirect to appropriate login if not authenticated or session invalidated
   if (!token) {
-    // Determine which login page based on the route being accessed
     const isPortalRoute = pathname.startsWith("/portal");
     const loginUrl = isPortalRoute ? "/portal/login" : "/login";
-
-    // Add error parameter to show user why they were logged out
     const url = new URL(loginUrl, request.url);
 
-    // Only add error if they were on a protected route (not just landing on site)
-    if (!isPublicRoute) {
+    // Only flag SessionExpired if the client actually had a session cookie that expired or was revoked
+    const hasSessionCookie =
+      request.cookies.has("next-auth.session-token") ||
+      request.cookies.has("__Secure-next-auth.session-token") ||
+      request.cookies.has("authjs.session-token") ||
+      request.cookies.has("__Secure-authjs.session-token");
+
+    if (hasSessionCookie) {
       url.searchParams.set("error", "SessionExpired");
     }
 
@@ -48,10 +65,19 @@ export async function middleware(request: NextRequest) {
     "/payments",
     "/analytic-accounts",
     "/sales",
+    "/purchases",
     "/purchase",
+    "/bills",
+    "/invoices",
+    "/inventory",
+    "/expenses",
+    "/financial-reports",
+    "/tax-rates",
+    "/transactions",
+    "/users",
     "/budgets",
     "/reports",
-    "/settings"
+    "/settings",
   ];
 
   const isWorkspaceRoute = workspaceRoutes.some((route) => pathname.startsWith(route));
@@ -63,9 +89,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // ADMINISTRATOR-only routes per docs/rbac.md
-    // All routes under /settings/* are ADMINISTRATOR only
     if (pathname.startsWith("/settings") && userRole !== "ADMINISTRATOR") {
-      // ACCOUNTANT trying to access ADMINISTRATOR-only routes
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
@@ -73,7 +97,6 @@ export async function middleware(request: NextRequest) {
   // Portal routes - only CONTACT
   if (pathname.startsWith("/portal") && !pathname.startsWith("/portal/login")) {
     if (userRole !== "CONTACT") {
-      // ADMINISTRATOR and ACCOUNTANT should go to workspace
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }
@@ -83,14 +106,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - api routes
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files
-     */
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|public).*)",
   ],
 };

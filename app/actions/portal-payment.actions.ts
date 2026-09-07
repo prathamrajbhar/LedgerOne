@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCustomerAccess } from "@/lib/auth/portal-session";
 import { paymentService } from "@/lib/services/payment.service";
-import { PaymentMethod, PaymentGatewayStatus } from "@prisma/client";
+import { PaymentMethod } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { prisma } from "@/lib/prisma";
 import { razorpayClient } from "@/lib/payments/razorpay-client";
@@ -102,7 +102,7 @@ export async function verifyPortalRazorpayPaymentAction(input: {
   amount: number;
 }): Promise<PortalPaymentResult> {
   try {
-    const portalSession = await requireCustomerAccess();
+    await requireCustomerAccess();
 
     // Verify HMAC-SHA256 signature
     const isValid = razorpayClient.verifyPaymentSignature(

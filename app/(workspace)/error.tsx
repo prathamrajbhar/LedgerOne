@@ -11,10 +11,6 @@ interface GlobalErrorProps {
 }
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
-  React.useEffect(() => {
-    // Log exception for telemetry
-    console.error("Application runtime exception:", error);
-  }, [error]);
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center p-6">

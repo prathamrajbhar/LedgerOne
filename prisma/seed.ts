@@ -87,16 +87,16 @@ async function main() {
 
   await cleanDatabase();
 
-  // S3 Banner presets from lib/constants/profile-banners.ts
+  // Banner presets from lib/constants/profile-banners.ts
   const banners = [
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-01.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-02.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-03.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-04.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-05.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-06.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-07.jpg",
-    "http://10.120.27.85:4566/odoohackathon/presets/banner-08.jpg",
+    "/presets/banner-01.svg",
+    "/presets/banner-02.svg",
+    "/presets/banner-03.svg",
+    "/presets/banner-04.svg",
+    "/presets/banner-05.svg",
+    "/presets/banner-06.svg",
+    "/presets/banner-07.svg",
+    "/presets/banner-08.svg",
   ];
 
   // ============================================================================
@@ -299,6 +299,72 @@ async function main() {
   }
 
   const productsData = [
+    // Problem Statement Master Products (Urban Furniture Accounting System)
+    {
+      name: "Wooden Chair",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "WD-CHR-001",
+      material: "Solid Seasoned Teak Wood",
+      dimensions: "18\"W x 20\"D x 36\"H",
+      salesPrice: 4500,
+      cost: 2200,
+      stock: 25,
+      reorderPoint: 5,
+      image: "https://images.unsplash.com/photo-1503602642458-232111445657?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Office Chair",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Office & Workspace")!.id,
+      sku: "OF-CHR-001",
+      material: "Ergonomic Lumbar Mesh & High-Density Molded Foam",
+      dimensions: "24\"W x 24\"D x 40\"H",
+      salesPrice: 8500,
+      cost: 4200,
+      stock: 30,
+      reorderPoint: 8,
+      image: "https://images.unsplash.com/photo-1580481077195-c990be10459c?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Wooden Table",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "WD-TBL-001",
+      material: "Handcrafted Solid Sheesham Wood",
+      dimensions: "48\"W x 24\"D x 30\"H",
+      salesPrice: 14000,
+      cost: 7500,
+      stock: 12,
+      reorderPoint: 3,
+      image: "https://images.unsplash.com/photo-1533090161767-e6ffed986c88?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Sofa",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Living Room Furniture")!.id,
+      sku: "SF-3ST-001",
+      material: "Belgian Linen Upholstery, Hardwood Frame",
+      dimensions: "80\"W x 35\"D x 34\"H",
+      salesPrice: 32000,
+      cost: 17000,
+      stock: 10,
+      reorderPoint: 3,
+      image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=500&auto=format&fit=crop&q=80",
+    },
+    {
+      name: "Dining Table",
+      type: ProductType.GOODS,
+      categoryId: categoriesMap.get("Dining Room Suites")!.id,
+      sku: "DN-TBL-001",
+      material: "Solid Oak 6-Seater Table",
+      dimensions: "72\"W x 36\"D x 30\"H",
+      salesPrice: 28000,
+      cost: 15000,
+      stock: 8,
+      reorderPoint: 2,
+      image: "https://images.unsplash.com/photo-1617806118233-18e1de247200?w=500&auto=format&fit=crop&q=80",
+    },
     // GOODS - Normal, Low-Stock, Out-of-Stock
     {
       name: "Royal Teak Wood 3-Seater Sofa",
@@ -616,6 +682,31 @@ async function main() {
   // ============================================================================
   console.log("👥 8. Creating Contacts (Vendors, Customers, Hybrid Partners)...");
   const contactsData = [
+    // Problem Statement Master Contacts
+    {
+      name: "Azure Furniture",
+      type: ContactType.VENDOR,
+      email: "orders@azurefurniture.com",
+      phone: "+91-98765-11223",
+      address: "Phase II Industrial Area, Okhla",
+      city: "New Delhi",
+      state: "Delhi",
+      pincode: "110020",
+      userId: null,
+      bannerUrl: banners[0],
+    },
+    {
+      name: "Rahul Sharma",
+      type: ContactType.VENDOR,
+      email: "rahul@azurefurniture.com",
+      phone: "+91-98765-44332",
+      address: "Warehouse 4, Furniture Enclave",
+      city: "New Delhi",
+      state: "Delhi",
+      pincode: "110020",
+      userId: null,
+      bannerUrl: banners[1],
+    },
     // VENDORS
     {
       name: "Rajendra Timber & Hardwood Suppliers",
@@ -655,6 +746,18 @@ async function main() {
     },
 
     // CUSTOMERS
+    {
+      name: "Nimesh Pathak",
+      type: ContactType.CUSTOMER,
+      email: "nimesh.pathak@gmail.com",
+      phone: "+91-98220-12345",
+      address: "42 Galaxy Apartments, Lokhandwala Complex, Andheri West",
+      city: "Mumbai",
+      state: "Maharashtra",
+      pincode: "400058",
+      userId: null,
+      bannerUrl: banners[2],
+    },
     {
       name: "Taj Palace & Luxury Hotels Group",
       type: ContactType.CUSTOMER,
@@ -736,6 +839,18 @@ async function main() {
   // A. PURCHASE CYCLE (PO, Vendor Bills, Payments, JE, BillEmailLogs)
   // ----------------------------------------------------------------------------
   const purchaseScenarios = [
+    // Problem Statement Section 7.2: Azure Furniture (PO -> Vendor Bill -> Bank Payment)
+    {
+      vendorName: "Azure Furniture",
+      date: new Date("2026-04-05"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      items: [
+        { sku: "WD-CHR-001", qty: 10, analytic: "Direct Raw Materials" },
+        { sku: "WD-TBL-001", qty: 5, analytic: "Direct Raw Materials" },
+      ],
+      paymentMethod: PaymentMethod.BANK,
+    },
     // Month 1: April 2026 (PAID)
     {
       vendorName: "Rajendra Timber & Hardwood Suppliers",
@@ -1008,6 +1123,18 @@ async function main() {
   // B. SALES CYCLE (SO, Customer Invoices, Payments, Razorpay, JEs, InvoiceEmailLogs)
   // ----------------------------------------------------------------------------
   const salesScenarios = [
+    // Problem Statement Section 7.3: Nimesh Pathak (5 Office Chairs, Invoice, Paid via Bank)
+    {
+      customerName: "Nimesh Pathak",
+      date: new Date("2026-04-12"),
+      status: DocumentStatus.CONFIRMED,
+      paymentStatus: PaymentStatus.PAID,
+      paymentSource: InvoicePaymentSource.MANUAL,
+      paymentMethod: PaymentMethod.BANK,
+      items: [
+        { sku: "OF-CHR-001", qty: 5, tax: "GST 18% (Commercial Furniture & Services)", analytic: "Delhi Flagship Showroom" },
+      ],
+    },
     // Month 1: April 2026 (PAID - Corporate)
     {
       customerName: "Taj Palace & Luxury Hotels Group",

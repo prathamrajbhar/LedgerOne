@@ -104,7 +104,6 @@ export async function POST(req: NextRequest) {
       message: "Profile photo uploaded successfully",
     });
   } catch (error) {
-    console.error("Profile photo upload error:", error);
     return NextResponse.json(
       {
         error:

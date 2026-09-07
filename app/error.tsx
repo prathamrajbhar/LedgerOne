@@ -12,7 +12,6 @@ export default function RootError({
   reset: () => void;
 }) {
   React.useEffect(() => {
-    console.error("Root application exception:", error);
   }, [error]);
 
   return (

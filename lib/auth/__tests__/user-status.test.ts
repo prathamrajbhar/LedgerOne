@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { checkUserStatus, validateUserAccess } from "../user-status";
 import { prisma } from "@/lib/prisma";
-import { UserRole, ContactType } from "@prisma/client";
+import { UserRole } from "@prisma/client";
 
 // Mock Prisma
 vi.mock("@/lib/prisma", () => ({
@@ -12,6 +12,8 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+const mockFindUnique = prisma.user.findUnique as unknown as ReturnType<typeof vi.fn>;
+
 describe("User Status Validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -19,7 +21,7 @@ describe("User Status Validation", () => {
 
   describe("checkUserStatus", () => {
     it("should return shouldLogout=true when user does not exist", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+      mockFindUnique.mockResolvedValue(null);
 
       const result = await checkUserStatus("user-123", UserRole.ADMINISTRATOR);
 
@@ -31,12 +33,12 @@ describe("User Status Validation", () => {
     });
 
     it("should return shouldLogout=true when user is deactivated", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: false,
         role: UserRole.ADMINISTRATOR,
         contact: null,
-      } as any);
+      });
 
       const result = await checkUserStatus("user-123", UserRole.ADMINISTRATOR);
 
@@ -48,12 +50,12 @@ describe("User Status Validation", () => {
     });
 
     it("should return shouldLogout=false when user is active", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: true,
         role: UserRole.ADMINISTRATOR,
         contact: null,
-      } as any);
+      });
 
       const result = await checkUserStatus("user-123", UserRole.ADMINISTRATOR);
 
@@ -66,7 +68,7 @@ describe("User Status Validation", () => {
     });
 
     it("should return shouldLogout=true when contact is archived", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: true,
         role: UserRole.CONTACT,
@@ -74,7 +76,7 @@ describe("User Status Validation", () => {
           id: "contact-123",
           isArchived: true,
         },
-      } as any);
+      });
 
       const result = await checkUserStatus(
         "user-123",
@@ -91,7 +93,7 @@ describe("User Status Validation", () => {
     });
 
     it("should return shouldLogout=false when contact is active", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: true,
         role: UserRole.CONTACT,
@@ -99,7 +101,7 @@ describe("User Status Validation", () => {
           id: "contact-123",
           isArchived: false,
         },
-      } as any);
+      });
 
       const result = await checkUserStatus(
         "user-123",
@@ -116,7 +118,7 @@ describe("User Status Validation", () => {
     });
 
     it("should return shouldLogout=true on database error", async () => {
-      vi.mocked(prisma.user.findUnique).mockRejectedValue(
+      mockFindUnique.mockRejectedValue(
         new Error("Database error")
       );
 
@@ -132,12 +134,12 @@ describe("User Status Validation", () => {
 
   describe("validateUserAccess", () => {
     it("should not throw when user is active", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: true,
         role: UserRole.ADMINISTRATOR,
         contact: null,
-      } as any);
+      });
 
       await expect(
         validateUserAccess("user-123", UserRole.ADMINISTRATOR)
@@ -145,7 +147,7 @@ describe("User Status Validation", () => {
     });
 
     it("should throw when user does not exist", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+      mockFindUnique.mockResolvedValue(null);
 
       await expect(
         validateUserAccess("user-123", UserRole.ADMINISTRATOR)
@@ -153,12 +155,12 @@ describe("User Status Validation", () => {
     });
 
     it("should throw when user is deactivated", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: false,
         role: UserRole.ADMINISTRATOR,
         contact: null,
-      } as any);
+      });
 
       await expect(
         validateUserAccess("user-123", UserRole.ADMINISTRATOR)
@@ -166,7 +168,7 @@ describe("User Status Validation", () => {
     });
 
     it("should throw when contact is archived", async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockFindUnique.mockResolvedValue({
         id: "user-123",
         isActive: true,
         role: UserRole.CONTACT,
@@ -174,7 +176,7 @@ describe("User Status Validation", () => {
           id: "contact-123",
           isArchived: true,
         },
-      } as any);
+      });
 
       await expect(
         validateUserAccess("user-123", UserRole.CONTACT, "contact-123")

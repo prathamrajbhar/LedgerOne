@@ -68,68 +68,70 @@ export function PurchaseOrdersTable({ purchaseOrders }: PurchaseOrdersTableProps
             {search ? "No purchase orders found matching your search" : "No purchase orders recorded yet"}
           </div>
         ) : (
-          <table className="w-full text-left text-xs">
-        <thead>
-          <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
-            <SortableTableHead
-              columnKey="poNumber"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-3.5 px-4"
-            >
-              PO Number
-            </SortableTableHead>
-            <SortableTableHead
-              columnKey="vendor"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-3.5 px-4"
-            >
-              Vendor
-            </SortableTableHead>
-            <SortableTableHead
-              columnKey="orderDate"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-3.5 px-4"
-            >
-              Order Date
-            </SortableTableHead>
-            <SortableTableHead
-              columnKey="lines"
-              currentSort={sortState}
-              onSort={handleSort}
-              className="py-3.5 px-4"
-            >
-              Line Items
-            </SortableTableHead>
-            <SortableTableHead
-              columnKey="total"
-              currentSort={sortState}
-              onSort={handleSort}
-              align="right"
-              className="py-3.5 px-4"
-            >
-              Total (₹)
-            </SortableTableHead>
-            <SortableTableHead
-              columnKey="status"
-              currentSort={sortState}
-              onSort={handleSort}
-              align="center"
-              className="py-3.5 px-4"
-            >
-              Status
-            </SortableTableHead>
-            <th className="py-3.5 px-4 text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border">
-          {sortedItems.map((po) => (
-            <PurchaseOrderRow key={po.id} po={po} />
-          ))}
-        </tbody>
-      </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs min-w-[640px]">
+              <thead>
+                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase">
+                  <SortableTableHead
+                    columnKey="poNumber"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    PO Number
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="vendor"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Vendor
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="orderDate"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Order Date
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="lines"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    className="py-3.5 px-4"
+                  >
+                    Line Items
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="total"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    align="right"
+                    className="py-3.5 px-4"
+                  >
+                    Total (₹)
+                  </SortableTableHead>
+                  <SortableTableHead
+                    columnKey="status"
+                    currentSort={sortState}
+                    onSort={handleSort}
+                    align="center"
+                    className="py-3.5 px-4"
+                  >
+                    Status
+                  </SortableTableHead>
+                  <th className="py-3.5 px-4 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {sortedItems.map((po) => (
+                  <PurchaseOrderRow key={po.id} po={po} />
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

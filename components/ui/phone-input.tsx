@@ -9,6 +9,7 @@ import {
 } from "@/lib/constants/countries";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronDown, Search, Check, X } from "lucide-react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 export interface PhoneInputProps {
@@ -87,16 +88,16 @@ export function CountryFlag({
   return (
     <span
       className={cn(
-        "inline-flex items-center justify-center shrink-0 w-5 h-3.5 overflow-hidden rounded-[2px] shadow-xs border border-border/60 bg-muted/20",
+        "relative inline-flex items-center justify-center shrink-0 w-5 h-3.5 overflow-hidden rounded-[2px] shadow-xs border border-border/60 bg-muted/20",
         className
       )}
     >
-      <img
+      <Image
         src={`https://flagcdn.com/w40/${code.toLowerCase()}.png`}
-        srcSet={`https://flagcdn.com/w80/${code.toLowerCase()}.png 2x`}
         alt={name}
-        className="w-full h-full object-cover"
-        loading="lazy"
+        fill
+        unoptimized
+        className="object-cover"
         onError={() => setImgError(true)}
       />
     </span>

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Boxes, AlertTriangle, CheckCircle2, XCircle, Plus } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import {
   getInventoryMetricsAction,
   getRestockAlertsAction,
@@ -31,6 +32,7 @@ interface RestockAlert {
 }
 
 export default function InventoryPage() {
+  const router = useRouter();
   const [metrics, setMetrics] = React.useState<InventoryMetrics>({
     total: 0,
     lowStock: 0,
@@ -63,16 +65,16 @@ export default function InventoryPage() {
       } else {
         toast.error(alertsResult.error || "Failed to load restock alerts");
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load inventory data");
-      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleReorderClick = (productName: string) => {
-    toast.success(`Purchase order draft created for "${productName}".`);
+    toast.info(`Navigating to Purchase Orders to procure "${productName}"...`);
+    router.push("/purchases");
   };
 
   const stockMetrics = [

@@ -281,25 +281,22 @@ export class PaymentService {
     // Attempt real Razorpay order creation
     try {
       const { razorpayClient } = await import("../payments/razorpay-client");
+      const invoiceIdentifier = invoice.invoiceNumber || invoice.id || "UNKNOWN";
       const razorpayOrder = await razorpayClient.createOrder({
         amount: Math.round(input.amount.toNumber() * 100), // Convert to paise
         currency: "INR",
-        receipt: `INV-${invoice.invoiceNumber.slice(-30)}`,
+        receipt: `INV-${invoiceIdentifier.slice(-30)}`,
         notes: {
           invoiceId: invoice.id,
           customerId: invoice.customerId,
-          invoiceNumber: invoice.invoiceNumber,
+          invoiceNumber: invoice.invoiceNumber || invoice.id,
         },
       });
 
       if (razorpayOrder?.id) {
         gatewayOrderId = razorpayOrder.id;
       }
-    } catch (err) {
-      console.warn(
-        "[PAYMENT GATEWAY] Could not create upstream Razorpay order, falling back to local order ID:",
-        err
-      );
+    } catch {
     }
 
     // Create gateway transaction record
@@ -345,7 +342,6 @@ export class PaymentService {
       });
 
       if (!isValid) {
-        console.warn("[PAYMENT GATEWAY] Webhook raw payload mismatch, skipping webhook verification for direct portal settlement");
       }
     } else {
       // Direct client verification or development
@@ -465,7 +461,7 @@ export class PaymentService {
         include: { customer: true },
       });
 
-      if (invoiceWithCustomer) {
+      if (invoiceWithCustomer && invoiceWithCustomer.customer) {
         const paymentDate = new Date().toLocaleDateString("en-IN", {
           year: "numeric",
           month: "long",
@@ -473,9 +469,9 @@ export class PaymentService {
         });
 
         await emailService.sendPaymentConfirmation(
-          invoiceWithCustomer.customer.name,
-          invoiceWithCustomer.customer.email,
-          invoiceWithCustomer.invoiceNumber,
+          invoiceWithCustomer.customer.name || "Customer",
+          invoiceWithCustomer.customer.email || "",
+          invoiceWithCustomer.invoiceNumber || invoiceWithCustomer.id,
           invoiceWithCustomer.total.toFixed(2),
           payment.amount.toFixed(2),
           paymentDate,
@@ -484,9 +480,8 @@ export class PaymentService {
           invoiceWithCustomer.id
         );
       }
-    } catch (emailError) {
+    } catch {
       // Log email failure but don't throw - payment is already confirmed
-      console.error("Failed to send payment confirmation email:", emailError);
     }
 
     return payment;

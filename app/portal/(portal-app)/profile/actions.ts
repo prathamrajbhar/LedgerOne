@@ -82,7 +82,6 @@ export async function updatePortalProfileAction(input: {
     revalidatePath("/portal/profile");
     return { success: true };
   } catch (error) {
-    console.error("Error updating portal profile:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update profile",
@@ -130,7 +129,6 @@ export async function updatePortalPasswordAction(input: {
     revalidatePath("/portal/profile");
     return { success: true };
   } catch (error) {
-    console.error("Error updating portal password:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to update password",

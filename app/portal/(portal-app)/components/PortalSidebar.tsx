@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { ContactType } from "@prisma/client";
 import {
   LayoutDashboard,
-  FileText,
   Receipt,
   CreditCard,
   History,

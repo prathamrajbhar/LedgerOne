@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Plus, Trash2, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { createPurchaseOrderAction, getAnalyticAccountsAction } from "@/app/actions/purchase.actions";
+import { createPurchaseOrderAction } from "@/app/actions/purchase.actions";
+import { getAnalyticAccountsAction } from "@/app/actions/analytic-account.actions";
 import { getContactsAction } from "@/app/actions/contact.actions";
 import { getProductsAction } from "@/app/actions/product.actions";
 
@@ -303,8 +304,9 @@ export function PurchaseOrderForm() {
               </div>
 
               <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-xs">
-                  <thead>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs min-w-[650px]">
+                    <thead>
                     <tr className="bg-muted/50 border-b">
                       <th className="py-2 px-3 text-left font-semibold">Product</th>
                       <th className="py-2 px-3 text-left font-semibold">Analytic Account</th>
@@ -399,6 +401,7 @@ export function PurchaseOrderForm() {
                 </table>
               </div>
             </div>
+          </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>

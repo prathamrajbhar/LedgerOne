@@ -61,7 +61,6 @@ export async function parseVendorBillAction(formData: FormData): Promise<AiParse
 
     return { success: true, data: parsed };
   } catch (error) {
-    console.error("Error in parseVendorBillAction:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to analyze document with AI",
@@ -114,7 +113,6 @@ export async function parseExpenseReceiptAction(formData: FormData): Promise<AiP
 
     return { success: true, data: parsed };
   } catch (error) {
-    console.error("Error in parseExpenseReceiptAction:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to parse receipt with AI",

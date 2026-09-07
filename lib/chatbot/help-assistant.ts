@@ -344,8 +344,7 @@ export class HelpAssistant {
 
       // If text empty, fall back to direct DB synthesis
       return await this.generateDatabaseFallbackResponse(message, context);
-    } catch (error) {
-      console.warn("Gemini API call failed or unavailable, using live DB synthesizer fallback:", error);
+    } catch {
       // Fallback guarantees accurate database answers even if Gemini key is not set or rate-limited!
       return await this.generateDatabaseFallbackResponse(message, context);
     }

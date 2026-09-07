@@ -44,12 +44,31 @@ model User {
   createdInvoices       CustomerInvoice[]
   createdJournalEntries JournalEntry[]
   createdBudgets        Budget[]
+  refreshTokens     RefreshToken[]
 
   @@index([email])
   @@index([loginId])
   @@index([role])
   @@index([isActive])
   @@map("users")
+}
+
+model RefreshToken {
+  id             String    @id @default(cuid())
+  tokenHash      String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  familyId       String
+  isRevoked      Boolean   @default(false)
+  replacedByHash String?
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@index([familyId])
+  @@map("refresh_tokens")
 }
 
 // ============================================================================
@@ -69,6 +88,9 @@ model Contact {
   email           String      @unique
   phone           String?
   address         String?     @db.Text
+  city            String?
+  state           String?
+  pincode         String?
   profileImage    String?
   bannerUrl       String?
   isArchived      Boolean     @default(false)
@@ -583,6 +605,7 @@ model JournalEntry {
   accountingDate  DateTime
   status          JournalEntryStatus @default(DRAFT)
   source          JournalEntrySource @default(MANUAL)
+  reference       String?
   totalDebit      Decimal           @db.Decimal(15, 2)
   totalCredit     Decimal           @db.Decimal(15, 2)
 

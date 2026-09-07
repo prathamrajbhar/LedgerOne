@@ -73,15 +73,6 @@ export async function POST(req: NextRequest) {
         // ========================================================================
 
         if (!paymentId) {
-          console.error(
-            "[PAYMENT WEBHOOK] Webhook missing payment ID. This is a critical error.",
-            {
-              eventType,
-              orderId,
-              transactionId: transaction.id,
-              payloadKeys: Object.keys(event.payload || {}),
-            }
-          );
           return NextResponse.json(
             {
               error: "Invalid webhook: missing payment ID",
@@ -106,8 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ status: "processed" }, { status: 200 });
-  } catch (error) {
-    console.error("Webhook processing error:", error);
+  } catch {
     return NextResponse.json(
       { error: "Webhook handler failed" },
       { status: 500 }

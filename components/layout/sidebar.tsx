@@ -47,30 +47,29 @@ export function Sidebar({ isOpen, onClose, userRole }: SidebarProps) {
     [pathname, fullCurrentUrl]
   );
 
-  // Accordion state: keep track of open sections
-  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>({});
+  // Accordion state: all sections expanded by default
+  const [openSections, setOpenSections] = React.useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    navSections.forEach((section) => {
+      initial[section.title] = true;
+    });
+    return initial;
+  });
 
-  // Auto-expand section that contains the active route
+  // Ensure any dynamically loaded or newly authorized sections are also expanded
   React.useEffect(() => {
     setOpenSections((prev) => {
+      let changed = false;
       const next = { ...prev };
-      let hasActive = false;
-
       navSections.forEach((section) => {
-        const hasActiveChild = section.items.some((item) => isItemActive(item));
-        if (hasActiveChild) {
+        if (next[section.title] === undefined) {
           next[section.title] = true;
-          hasActive = true;
+          changed = true;
         }
       });
-
-      if (!hasActive && Object.keys(next).length === 0) {
-        next["Overview"] = true;
-      }
-
-      return next;
+      return changed ? next : prev;
     });
-  }, [navSections, isItemActive]);
+  }, [navSections]);
 
   const toggleSection = (title: string) => {
     setOpenSections((prev) => ({

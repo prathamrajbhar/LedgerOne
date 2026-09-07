@@ -101,13 +101,11 @@ export class AuthService {
   async login(input: LoginInput) {
     const identifier = input.loginId.trim();
 
+    const isEmail = identifier.includes("@");
     const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { loginId: identifier },
-          { email: identifier },
-        ],
-      },
+      where: isEmail
+        ? { email: { equals: identifier, mode: "insensitive" } }
+        : { loginId: identifier },
       select: {
         id: true,
         loginId: true,
@@ -349,10 +347,6 @@ export class AuthService {
       // Log email failure but don't fail the entire operation
       // User is already created, admin can manually share credentials or resend
       emailError = error instanceof Error ? error.message : "Unknown email error";
-      console.error(
-        `Failed to send portal invitation email to ${contact.email} (Contact: ${contact.name}, LoginID: ${user.loginId}):`,
-        emailError
-      );
     }
 
     return {
@@ -408,7 +402,6 @@ export class AuthService {
       emailSent = true;
     } catch (error) {
       emailError = error instanceof Error ? error.message : "Failed to send email";
-      console.error(`Failed to resend portal invite to ${user.email}:`, emailError);
     }
 
     return {

@@ -1,12 +1,17 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { contactService, CreateContactInput, UpdateContactInput, ListContactsParams } from "@/lib/services/contact.service";
-import { ContactType, PrismaClient } from "@prisma/client";
+import { ContactType } from "@prisma/client";
 import { ValidationError, ConflictError, NotFoundError } from "@/lib/utils/errors";
-import { requireRole } from "@/lib/auth/session";
-
-const prisma = new PrismaClient();
+import { requirePermission } from "@/lib/auth/guard";
+import {
+  archiveContactAction as archiveContact,
+  restoreContactAction as restoreContact,
+  checkCanDeleteContactAction as checkCanDelete,
+  getContactUsageDetailsAction as getUsageDetails,
+  deleteContactDependencyAction as deleteDependency,
+  deleteContactAction as deleteContact,
+} from "./contact-management.actions";
 
 export interface ContactActionResult<T = unknown> {
   success: boolean;
@@ -14,9 +19,30 @@ export interface ContactActionResult<T = unknown> {
   error?: string;
 }
 
-/**
- * Get paginated list of contacts with optional filters
- */
+export async function archiveContactAction(id: string) {
+  return archiveContact(id);
+}
+
+export async function restoreContactAction(id: string) {
+  return restoreContact(id);
+}
+
+export async function checkCanDeleteContactAction(id: string) {
+  return checkCanDelete(id);
+}
+
+export async function getContactUsageDetailsAction(id: string) {
+  return getUsageDetails(id);
+}
+
+export async function deleteContactDependencyAction(type: string, id: string) {
+  return deleteDependency(type, id);
+}
+
+export async function deleteContactAction(id: string) {
+  return deleteContact(id);
+}
+
 export async function getContactsAction(params?: {
   search?: string;
   type?: ContactType;
@@ -25,6 +51,7 @@ export async function getContactsAction(params?: {
   limit?: number;
 }): Promise<ContactActionResult> {
   try {
+    await requirePermission("masters:read");
     const page = params?.page || 1;
     const limit = params?.limit || 25;
     const offset = (page - 1) * limit;
@@ -49,8 +76,7 @@ export async function getContactsAction(params?: {
         totalPages: Math.ceil(result.total / limit),
       },
     };
-  } catch (error) {
-    console.error("Error fetching contacts:", error);
+  } catch {
     return {
       success: false,
       error: "Failed to fetch contacts. Please try again.",
@@ -58,11 +84,9 @@ export async function getContactsAction(params?: {
   }
 }
 
-/**
- * Get a single contact by ID
- */
 export async function getContactByIdAction(id: string): Promise<ContactActionResult> {
   try {
+    await requirePermission("masters:read");
     const contact = await contactService.findById(id);
     return {
       success: true,
@@ -75,7 +99,6 @@ export async function getContactByIdAction(id: string): Promise<ContactActionRes
         error: "Contact not found",
       };
     }
-    console.error("Error fetching contact:", error);
     return {
       success: false,
       error: "Failed to fetch contact details. Please try again.",
@@ -83,257 +106,61 @@ export async function getContactByIdAction(id: string): Promise<ContactActionRes
   }
 }
 
-/**
- * Create a new contact
- */
 export async function createContactAction(input: CreateContactInput): Promise<ContactActionResult> {
   try {
-    // Validate required fields
+    await requirePermission("masters:write");
     if (!input.name?.trim()) {
-      return {
-        success: false,
-        error: "Contact name is required",
-      };
+      return { success: false, error: "Contact name is required" };
     }
-
     if (!input.email?.trim()) {
-      return {
-        success: false,
-        error: "Email address is required",
-      };
+      return { success: false, error: "Email address is required" };
     }
-
-    // Email format validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(input.email)) {
-      return {
-        success: false,
-        error: "Please enter a valid email address",
-      };
+      return { success: false, error: "Please enter a valid email address" };
     }
-
     if (!input.type) {
-      return {
-        success: false,
-        error: "Contact type is required",
-      };
+      return { success: false, error: "Contact type is required" };
     }
 
     const contact = await contactService.create(input);
-
-    return {
-      success: true,
-      data: contact,
-    };
+    return { success: true, data: contact };
   } catch (error) {
     if (error instanceof ConflictError) {
-      return {
-        success: false,
-        error: "A contact with this email already exists",
-      };
+      return { success: false, error: "A contact with this email already exists" };
     }
-
     if (error instanceof ValidationError) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
-
-    console.error("Error creating contact:", error);
-    return {
-      success: false,
-      error: "Failed to create contact. Please try again.",
-    };
+    return { success: false, error: "Failed to create contact. Please try again." };
   }
 }
 
-/**
- * Update an existing contact
- */
 export async function updateContactAction(input: UpdateContactInput): Promise<ContactActionResult> {
   try {
+    await requirePermission("masters:write");
     if (!input.id) {
-      return {
-        success: false,
-        error: "Contact ID is required",
-      };
+      return { success: false, error: "Contact ID is required" };
     }
-
-    // Email format validation if email is being updated
     if (input.email) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(input.email)) {
-        return {
-          success: false,
-          error: "Please enter a valid email address",
-        };
+        return { success: false, error: "Please enter a valid email address" };
       }
     }
 
     const contact = await contactService.update(input);
-
-    return {
-      success: true,
-      data: contact,
-    };
+    return { success: true, data: contact };
   } catch (error) {
     if (error instanceof NotFoundError) {
-      return {
-        success: false,
-        error: "Contact not found",
-      };
+      return { success: false, error: "Contact not found" };
     }
-
     if (error instanceof ConflictError) {
-      return {
-        success: false,
-        error: "A contact with this email already exists",
-      };
+      return { success: false, error: "A contact with this email already exists" };
     }
-
     if (error instanceof ValidationError) {
-      return {
-        success: false,
-        error: error.message,
-      };
+      return { success: false, error: error.message };
     }
-
-    console.error("Error updating contact:", error);
-    return {
-      success: false,
-      error: "Failed to update contact. Please try again.",
-    };
-  }
-}
-
-/**
- * Archive a contact (soft delete)
- */
-export async function archiveContactAction(id: string): Promise<ContactActionResult> {
-  try {
-    await contactService.archive(id);
-    return {
-      success: true,
-      data: { message: "Contact archived successfully" },
-    };
-  } catch (error) {
-    console.error("Error archiving contact:", error);
-    return {
-      success: false,
-      error: "Failed to archive contact. Please try again.",
-    };
-  }
-}
-
-/**
- * Restore an archived contact
- */
-export async function restoreContactAction(id: string): Promise<ContactActionResult> {
-  try {
-    await contactService.restore(id);
-    revalidatePath("/contacts");
-    return {
-      success: true,
-      data: { message: "Contact restored successfully" },
-    };
-  } catch (error) {
-    console.error("Error restoring contact:", error);
-    return {
-      success: false,
-      error: "Failed to restore contact. Please try again.",
-    };
-  }
-}
-
-/**
- * Check whether a contact can be hard-deleted or has linked transactions
- */
-export async function checkCanDeleteContactAction(id: string): Promise<ContactActionResult<{ canDelete: boolean }>> {
-  try {
-    const canDelete = await contactService.canDelete(id);
-    return {
-      success: true,
-      data: { canDelete },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to check contact usage";
-    return {
-      success: false,
-      error: message,
-    };
-  }
-}
-
-/**
- * Get detailed foreign key dependency breakdown for an archived contact
- */
-export async function getContactUsageDetailsAction(id: string): Promise<ContactActionResult<Awaited<ReturnType<typeof contactService.getUsageDetails>>>> {
-  try {
-    const details = await contactService.getUsageDetails(id);
-    return {
-      success: true,
-      data: details,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to get contact usage details";
-    return {
-      success: false,
-      error: message,
-    };
-  }
-}
-
-/**
- * Delete or unlink a specific blocking transaction dependency for a contact
- */
-export async function deleteContactDependencyAction(type: string, id: string): Promise<ContactActionResult> {
-  try {
-    await requireRole(["ADMINISTRATOR"]);
-    await contactService.deleteDependency(type, id);
-    revalidatePath("/contacts");
-    return {
-      success: true,
-      data: { message: "Related document removed successfully" },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to remove dependency";
-    return {
-      success: false,
-      error: message,
-    };
-  }
-}
-
-/**
- * Hard delete a contact (Administrator only, records with zero transactions)
- */
-export async function deleteContactAction(id: string): Promise<ContactActionResult> {
-  try {
-    await requireRole(["ADMINISTRATOR"]);
-
-    const canDelete = await contactService.canDelete(id);
-    if (!canDelete) {
-      return {
-        success: false,
-        error: "Cannot delete contact with linked sales orders, invoices, or bills. Please archive instead.",
-      };
-    }
-
-    await prisma.contact.delete({
-      where: { id },
-    });
-
-    revalidatePath("/contacts");
-    return {
-      success: true,
-      data: { message: "Contact deleted permanently" },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to delete contact";
-    return {
-      success: false,
-      error: message,
-    };
+    return { success: false, error: "Failed to update contact. Please try again." };
   }
 }

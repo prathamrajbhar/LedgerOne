@@ -40,7 +40,6 @@ export async function GET(
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Vendor bill PDF download error:", message, error);
     return NextResponse.json(
       { error: `Failed to generate vendor bill PDF: ${message}` },
       { status: 500 }

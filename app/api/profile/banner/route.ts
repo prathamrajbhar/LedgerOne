@@ -68,7 +68,6 @@ export async function POST(req: NextRequest) {
       message: "Banner updated successfully",
     });
   } catch (error) {
-    console.error("Banner update error:", error);
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Failed to update banner",

@@ -1,6 +1,7 @@
 import React from "react";
 import { Document, Page, Text, View, pdf } from "@react-pdf/renderer";
 import { CustomerInvoice, Contact, CustomerInvoiceLine, Product, CompanySettings } from "@prisma/client";
+import { Decimal } from "@prisma/client/runtime/library";
 import { invoicePdfStyles as styles } from "./invoice-pdf.styles";
 
 export interface InvoiceWithRelations extends CustomerInvoice {
@@ -8,11 +9,11 @@ export interface InvoiceWithRelations extends CustomerInvoice {
   salesOrder?: { id: string; soNumber: string } | null;
   lines: (CustomerInvoiceLine & {
     product?: Product | null;
-    taxRate?: { id: string; name: string; percentage: any } | null;
+    taxRate?: { id: string; name: string; percentage: number | string | Decimal } | null;
     analyticAccount?: { id: string; name: string } | null;
   })[];
   companySettings?: CompanySettings | null;
-  payments?: any[];
+  payments?: Array<{ amount?: number | string | Decimal; paymentDate?: string | Date; paymentMethod?: string }>;
 }
 
 /**

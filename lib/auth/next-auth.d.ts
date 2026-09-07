@@ -34,5 +34,8 @@ declare module "next-auth/jwt" {
     contactType?: ContactType;
     contactName?: string;
     mustChangePassword?: boolean;
+    refreshToken?: string;
+    accessTokenExpires?: number;
+    lastStatusCheck?: number;
   }
 }

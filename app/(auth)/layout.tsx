@@ -10,7 +10,7 @@ export default function AuthLayout({
 }) {
   return (
     <main
-      className="relative w-full h-[100dvh] h-[100svh] overflow-hidden bg-[#F6F8FB] font-sans flex flex-col justify-between selection:bg-[#167C80]/20 select-none"
+      className="relative w-full min-h-[100dvh] min-h-[100svh] lg:h-[100dvh] lg:h-[100svh] overflow-y-auto lg:overflow-hidden bg-[#F6F8FB] font-sans flex flex-col justify-between selection:bg-[#167C80]/20 select-none"
       style={{
         paddingTop: "max(14px, env(safe-area-inset-top))",
         paddingBottom: "max(14px, env(safe-area-inset-bottom))",
@@ -28,8 +28,8 @@ export default function AuthLayout({
       {/* Subtle readability overlay on mobile */}
       <div className="fixed inset-0 w-full h-full bg-white/20 lg:bg-transparent pointer-events-none z-0" />
 
-      {/* Main Inner Shell - Strictly fits viewport, with comfortable left and right margins */}
-      <div className="relative z-10 w-full h-full max-w-[1400px] mx-auto flex flex-col justify-between px-6 sm:px-12 lg:px-[100px] xl:px-[120px] overflow-hidden">
+      {/* Main Inner Shell - Strictly fits viewport on desktop, scrolls on mobile */}
+      <div className="relative z-10 w-full min-h-full lg:h-full max-w-[1400px] mx-auto flex flex-col justify-between px-4 sm:px-8 lg:px-[100px] xl:px-[120px] overflow-visible lg:overflow-hidden">
         {/* Top Header Bar: ~35px from top on desktop */}
         <header className="w-full flex items-start justify-between flex-shrink-0 pt-1 lg:pt-[15px]">
           {/* 1. TOP-LEFT BRANDING */}
