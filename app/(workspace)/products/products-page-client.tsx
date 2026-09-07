@@ -23,6 +23,7 @@ interface ProductsPageClientProps {
   initialPage: number;
   initialSearch: string;
   initialCategoryId: string;
+  initialStockStatus?: string;
   totalPages: number;
   totalItems: number;
 }
@@ -33,6 +34,7 @@ export function ProductsPageClient({
   initialPage,
   initialSearch,
   initialCategoryId,
+  initialStockStatus = "ALL",
   totalPages,
   totalItems,
 }: ProductsPageClientProps) {
@@ -44,8 +46,11 @@ export function ProductsPageClient({
   const [searchInput, setSearchInput] = React.useState(initialSearch);
   const isInitialMount = React.useRef(true);
   const [selectedCategory, setSelectedCategory] = React.useState(initialCategoryId || "ALL");
-  const [selectedStatus, setSelectedStatus] = React.useState<"ACTIVE" | "ARCHIVED">(
-    searchParams.get("status") === "ARCHIVED" ? "ARCHIVED" : "ACTIVE"
+  const [stockFilter, setStockFilter] = React.useState<string>(
+    initialStockStatus && initialStockStatus !== "ACTIVE" ? initialStockStatus : "ALL"
+  );
+  const [isArchivedTab, setIsArchivedTab] = React.useState<boolean>(
+    searchParams.get("status") === "ARCHIVED"
   );
 
   const updateSearchParams = React.useCallback(
@@ -86,6 +91,11 @@ export function ProductsPageClient({
   const handleCategoryChange = (categoryId: string) => {
     setSelectedCategory(categoryId);
     updateSearchParams({ category: categoryId, page: "1" });
+  };
+
+  const handleStockFilterChange = (stockStatus: string) => {
+    setStockFilter(stockStatus);
+    updateSearchParams({ status: stockStatus, page: "1" });
   };
 
   const handlePageChange = (page: number) => {
@@ -131,14 +141,14 @@ export function ProductsPageClient({
           />
         </div>
 
-        {/* Category Pills & View Mode */}
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end overflow-x-auto">
+        {/* Category, Stock Level & View Mode */}
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-between sm:justify-end overflow-x-auto">
           {/* Collection/Category Dropdown */}
           <Select
             value={selectedCategory}
             onValueChange={(val) => handleCategoryChange(val)}
           >
-            <SelectTrigger className="h-9 min-w-[150px] text-xs bg-white border-border text-foreground font-medium">
+            <SelectTrigger className="h-9 min-w-[140px] text-xs bg-white border-border text-foreground font-medium">
               <SelectValue placeholder="All Collections" />
             </SelectTrigger>
             <SelectContent>
@@ -150,15 +160,32 @@ export function ProductsPageClient({
             </SelectContent>
           </Select>
 
+          {/* Stock Level Filter Dropdown */}
+          <Select
+            value={stockFilter}
+            onValueChange={(val) => handleStockFilterChange(val)}
+          >
+            <SelectTrigger className="h-9 min-w-[130px] text-xs bg-white border-border text-foreground font-medium">
+              <SelectValue placeholder="All Stock" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Stock Levels</SelectItem>
+              <SelectItem value="IN_STOCK">In Stock</SelectItem>
+              <SelectItem value="LOW_STOCK">Low Stock</SelectItem>
+              <SelectItem value="OUT_OF_STOCK">Out of Stock</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Active vs Archived status toggle */}
           <div className="flex items-center p-0.5 rounded-lg bg-[#F6F7F9] border border-border flex-shrink-0">
             <button
               onClick={() => {
-                setSelectedStatus("ACTIVE");
+                setIsArchivedTab(false);
+                setStockFilter("ALL");
                 updateSearchParams({ status: "ACTIVE", page: "1" });
               }}
               className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
-                selectedStatus === "ACTIVE"
+                !isArchivedTab
                   ? "bg-white text-navy font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}
@@ -167,11 +194,12 @@ export function ProductsPageClient({
             </button>
             <button
               onClick={() => {
-                setSelectedStatus("ARCHIVED");
+                setIsArchivedTab(true);
+                setStockFilter("ALL");
                 updateSearchParams({ status: "ARCHIVED", page: "1" });
               }}
               className={`px-3 py-1 text-xs font-medium rounded-md whitespace-nowrap transition-all ${
-                selectedStatus === "ARCHIVED"
+                isArchivedTab
                   ? "bg-white text-amber-700 font-semibold shadow-xs"
                   : "text-muted-foreground hover:text-foreground"
               }`}

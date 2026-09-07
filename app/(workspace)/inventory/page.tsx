@@ -84,6 +84,7 @@ export default function InventoryPage() {
       icon: Boxes,
       color: "text-[#3478B9]",
       bg: "bg-[#EDF5FC]",
+      href: "/products",
     },
     {
       label: "Low Stock",
@@ -91,6 +92,7 @@ export default function InventoryPage() {
       icon: AlertTriangle,
       color: "text-warning",
       bg: "bg-[#FFF7E6]",
+      href: "/products?status=LOW_STOCK",
     },
     {
       label: "In Stock",
@@ -98,6 +100,7 @@ export default function InventoryPage() {
       icon: CheckCircle2,
       color: "text-success",
       bg: "bg-[#EAF7F1]",
+      href: "/products?status=IN_STOCK",
     },
     {
       label: "Out of Stock",
@@ -105,6 +108,7 @@ export default function InventoryPage() {
       icon: XCircle,
       color: "text-destructive",
       bg: "bg-[#FDEEEE]",
+      href: "/products?status=OUT_OF_STOCK",
     },
   ];
 
@@ -128,19 +132,21 @@ export default function InventoryPage() {
         {stockMetrics.map((m) => {
           const Icon = m.icon;
           return (
-            <Card key={m.label} className="p-4 bg-white shadow-card flex items-center gap-3.5">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${m.bg} ${m.color} flex-shrink-0`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground font-medium block">
-                  {m.label}
-                </span>
-                <span className="text-xl font-bold text-foreground">
-                  {loading ? "..." : m.count}
-                </span>
-              </div>
-            </Card>
+            <Link key={m.label} href={m.href} className="group">
+              <Card className="p-4 bg-white shadow-card flex items-center gap-3.5 hover:border-navy/40 transition-all cursor-pointer h-full">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${m.bg} ${m.color} flex-shrink-0 group-hover:scale-105 transition-transform`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-xs text-muted-foreground font-medium block">
+                    {m.label}
+                  </span>
+                  <span className="text-xl font-bold text-foreground">
+                    {loading ? "..." : m.count}
+                  </span>
+                </div>
+              </Card>
+            </Link>
           );
         })}
       </div>

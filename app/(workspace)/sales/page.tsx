@@ -2,13 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Plus, FileText, CheckCircle, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { getSalesOrdersAction, confirmSalesOrderAction, createInvoiceFromSalesOrderAction } from "@/app/actions/sales.actions";
+import { getContactsAction } from "@/app/actions/contact.actions";
 import { SalesOrderForm } from "./sales-order-form";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,7 +19,8 @@ import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
 interface SalesOrderItem {
   id: string;
   soNumber: string;
-  customer?: { name: string } | null;
+  customerId?: string;
+  customer?: { id?: string; name: string } | null;
   orderDate: string | Date;
   status: string;
   total: unknown;
@@ -28,8 +30,16 @@ interface SalesOrderItem {
 
 export default function SalesOrdersPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [salesOrders, setSalesOrders] = React.useState<SalesOrderItem[]>([]);
-  const [search, setSearch] = React.useState("");
+  const [customers, setCustomers] = React.useState<Array<{ id: string; name: string }>>([]);
+  const [search, setSearch] = React.useState(searchParams.get("search") || "");
+  const [customerFilter, setCustomerFilter] = React.useState(searchParams.get("customer") || "ALL");
+  const [statusFilter, setStatusFilter] = React.useState(
+    searchParams.get("status")?.toUpperCase() || "ALL"
+  );
+  const [startDate, setStartDate] = React.useState(searchParams.get("startDate") || "");
+  const [endDate, setEndDate] = React.useState(searchParams.get("endDate") || "");
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [actionLoading, setActionLoading] = React.useState<string | null>(null);
@@ -37,12 +47,21 @@ export default function SalesOrdersPage() {
   const loadSalesOrders = React.useCallback(async () => {
     setLoading(true);
     try {
-      const result = await getSalesOrdersAction({ limit: 50 });
-      if (result.success && result.data) {
-        const orderData = result.data as { data?: SalesOrderItem[] };
+      const [ordersRes, contactsRes] = await Promise.all([
+        getSalesOrdersAction({ limit: 100 }),
+        getContactsAction({ type: "CUSTOMER", limit: 100 }),
+      ]);
+
+      if (ordersRes.success && ordersRes.data) {
+        const orderData = ordersRes.data as { data?: SalesOrderItem[] };
         setSalesOrders(orderData.data || []);
       } else {
-        toast.error(result.error || "Failed to load sales orders");
+        toast.error(ordersRes.error || "Failed to load sales orders");
+      }
+
+      if (contactsRes.success && contactsRes.data) {
+        const cData = contactsRes.data as { contacts?: Array<{ id: string; name: string }> };
+        setCustomers(cData.contacts || []);
       }
     } catch (error) {
       console.error("Error loading sales orders:", error);
@@ -57,14 +76,45 @@ export default function SalesOrdersPage() {
   }, [loadSalesOrders]);
 
   const filteredOrders = React.useMemo(() => {
-    if (!search.trim()) return salesOrders;
-    const q = search.toLowerCase().trim();
-    return salesOrders.filter(
-      (so) =>
+    return salesOrders.filter((so) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
         so.soNumber.toLowerCase().includes(q) ||
-        (so.customer?.name && so.customer.name.toLowerCase().includes(q))
-    );
-  }, [salesOrders, search]);
+        (so.customer?.name && so.customer.name.toLowerCase().includes(q));
+
+      const matchesCustomer =
+        customerFilter === "ALL" ||
+        so.customerId === customerFilter ||
+        so.customer?.id === customerFilter;
+
+      const matchesStatus =
+        statusFilter === "ALL" ||
+        so.status.toUpperCase() === statusFilter.toUpperCase();
+
+      let matchesDate = true;
+      if (startDate) {
+        matchesDate = matchesDate && new Date(so.orderDate) >= new Date(startDate);
+      }
+      if (endDate) {
+        matchesDate = matchesDate && new Date(so.orderDate) <= new Date(endDate);
+      }
+
+      return matchesSearch && matchesCustomer && matchesStatus && matchesDate;
+    });
+  }, [salesOrders, search, customerFilter, statusFilter, startDate, endDate]);
+
+  const hasActiveFilters = Boolean(
+    search || customerFilter !== "ALL" || statusFilter !== "ALL" || startDate || endDate
+  );
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setCustomerFilter("ALL");
+    setStatusFilter("ALL");
+    setStartDate("");
+    setEndDate("");
+  };
 
   const handleConfirmOrder = async (id: string) => {
     setActionLoading(id);
@@ -87,10 +137,9 @@ export default function SalesOrdersPage() {
     setActionLoading(id);
     try {
       const result = await createInvoiceFromSalesOrderAction(id);
-      if (result.success) {
-        toast.success("Invoice created successfully from sales order");
-        await loadSalesOrders();
-        router.push("/invoices");
+      if (result.success && result.data) {
+        toast.success("Invoice created successfully");
+        router.push(`/invoices/${(result.data as { id: string }).id}`);
       } else {
         toast.error(result.error || "Failed to create invoice");
       }
@@ -160,21 +209,82 @@ export default function SalesOrdersPage() {
         />
       ) : (
         <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="max-w-sm w-full">
+          {/* Filter Toolbar */}
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
+            <div className="flex-1 min-w-[220px]">
               <DebouncedSearchInput
                 placeholder="Search sales orders by order # or customer..."
                 value={search}
                 onChange={setSearch}
-                className="py-2"
+                className="h-9"
               />
             </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <select
+                value={customerFilter}
+                onChange={(e) => setCustomerFilter(e.target.value)}
+                className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+              >
+                <option value="ALL">All Customers</option>
+                {customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+              >
+                <option value="ALL">All Status</option>
+                <option value="DRAFT">Draft</option>
+                <option value="CONFIRMED">Confirmed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+
+              <div className="col-span-2 flex items-center gap-1.5">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                  title="Start Date"
+                />
+                <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+                  title="End Date"
+                />
+              </div>
+            </div>
           </div>
+
+          {hasActiveFilters && (
+            <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+              <span>
+                Showing {filteredOrders.length} of {salesOrders.length} sales orders
+              </span>
+              <button
+                onClick={handleResetFilters}
+                className="text-teal hover:underline font-medium cursor-pointer"
+              >
+                Reset all filters
+              </button>
+            </div>
+          )}
 
           <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
             {sortedSalesOrders.length === 0 ? (
               <div className="p-8 text-center text-muted-foreground text-sm">
-                No sales orders found matching &quot;{search}&quot;
+                {hasActiveFilters
+                  ? "No sales orders found matching your filters"
+                  : "No sales orders recorded yet"}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -278,7 +388,7 @@ export default function SalesOrdersPage() {
                             )}
                             {isInvoiced && (
                               <Link
-                                href="/invoices"
+                                href={so.invoices?.[0]?.id ? `/invoices/${so.invoices[0].id}` : `/invoices?search=${encodeURIComponent(so.soNumber)}`}
                                 className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
                               >
                                 <Eye className="h-3.5 w-3.5" />

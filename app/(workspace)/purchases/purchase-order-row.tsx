@@ -53,7 +53,7 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
       const result = await createBillFromPurchaseOrderAction(po.id);
       if (result.success && result.data) {
         toast.success(`Vendor bill #${result.data.billNumber} created from PO`);
-        router.push("/bills");
+        router.push(`/bills/${result.data.id}`);
       } else {
         toast.error(result.error || "Failed to create vendor bill from PO");
       }
@@ -123,7 +123,7 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
 
           {hasBills && (
             <Link
-              href="/bills"
+              href={po.vendorBills?.[0]?.id ? `/bills/${po.vendorBills[0].id}` : `/bills?search=${encodeURIComponent(po.poNumber)}`}
               className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
             >
               <Eye className="h-3.5 w-3.5" />

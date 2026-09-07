@@ -19,6 +19,8 @@ export default function JournalEntriesPage() {
   const [search, setSearch] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<JournalEntryStatus | "">("");
   const [sourceFilter, setSourceFilter] = React.useState<JournalEntrySource | "">("");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
 
   const loadEntries = React.useCallback(async () => {
     setLoading(true);
@@ -45,12 +47,37 @@ export default function JournalEntriesPage() {
 
   const filtered = React.useMemo(() => {
     return entries.filter((entry) => {
-      if (!search) return true;
-      return entry.entryNumber.toLowerCase().includes(search.toLowerCase());
-    });
-  }, [entries, search]);
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        entry.entryNumber.toLowerCase().includes(q) ||
+        entry.journal.code.toLowerCase().includes(q) ||
+        entry.journal.name.toLowerCase().includes(q) ||
+        (entry.createdBy?.name && entry.createdBy.name.toLowerCase().includes(q));
 
-  const hasActiveFilters = Boolean(search || statusFilter || sourceFilter);
+      let matchesDate = true;
+      if (startDate) {
+        matchesDate = matchesDate && new Date(entry.accountingDate) >= new Date(startDate);
+      }
+      if (endDate) {
+        matchesDate = matchesDate && new Date(entry.accountingDate) <= new Date(endDate);
+      }
+
+      return matchesSearch && matchesDate;
+    });
+  }, [entries, search, startDate, endDate]);
+
+  const hasActiveFilters = Boolean(
+    search || statusFilter || sourceFilter || startDate || endDate
+  );
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setStatusFilter("");
+    setSourceFilter("");
+    setStartDate("");
+    setEndDate("");
+  };
 
   return (
     <div className="space-y-5">
@@ -68,40 +95,74 @@ export default function JournalEntriesPage() {
         }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="max-w-xs w-full">
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
+        <div className="flex-1 min-w-[220px]">
           <DebouncedSearchInput
-            placeholder="Search by entry #..."
+            placeholder="Search entry #, journal, or created by..."
             value={search}
             onChange={setSearch}
-            className="py-2"
+            className="h-9"
           />
         </div>
 
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as JournalEntryStatus | "")}
-          className="px-3 py-2 text-xs rounded-lg border border-border bg-white focus:outline-hidden focus:ring-2 focus:ring-teal/30 focus:border-teal cursor-pointer"
-        >
-          <option value="">All Statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="POSTED">Posted</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as JournalEntryStatus | "")}
+            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="">All Statuses</option>
+            <option value="DRAFT">Draft</option>
+            <option value="POSTED">Posted</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
 
-        <select
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value as JournalEntrySource | "")}
-          className="px-3 py-2 text-xs rounded-lg border border-border bg-white focus:outline-hidden focus:ring-2 focus:ring-teal/30 focus:border-teal cursor-pointer"
-        >
-          <option value="">All Sources</option>
-          <option value="MANUAL">Manual</option>
-          <option value="VENDOR_BILL">Vendor Bill</option>
-          <option value="CUSTOMER_INVOICE">Customer Invoice</option>
-          <option value="BILL_PAYMENT">Bill Payment</option>
-          <option value="INVOICE_PAYMENT">Invoice Payment</option>
-        </select>
+          <select
+            value={sourceFilter}
+            onChange={(e) => setSourceFilter(e.target.value as JournalEntrySource | "")}
+            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="">All Sources</option>
+            <option value="MANUAL">Manual</option>
+            <option value="VENDOR_BILL">Vendor Bill</option>
+            <option value="CUSTOMER_INVOICE">Customer Invoice</option>
+            <option value="BILL_PAYMENT">Bill Payment</option>
+            <option value="INVOICE_PAYMENT">Invoice Payment</option>
+          </select>
+
+          <div className="col-span-2 flex items-center gap-1.5">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              title="Start Date"
+            />
+            <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              title="End Date"
+            />
+          </div>
+        </div>
       </div>
+
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>
+            Showing {filtered.length} of {entries.length} entries
+          </span>
+          <button
+            onClick={handleResetFilters}
+            className="text-teal hover:underline font-medium cursor-pointer"
+          >
+            Reset all filters
+          </button>
+        </div>
+      )}
 
       <JournalEntriesTable
         entries={filtered}

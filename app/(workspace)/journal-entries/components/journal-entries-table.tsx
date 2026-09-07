@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import type { JournalEntryItem } from "../journal-entries-types";
+import { JournalEntryDetailDialog } from "./journal-entry-detail-dialog";
 
 interface JournalEntriesTableProps {
   entries: JournalEntryItem[];
@@ -15,6 +16,8 @@ export function JournalEntriesTable({
   loading,
   hasActiveFilters,
 }: JournalEntriesTableProps) {
+  const [selectedEntryId, setSelectedEntryId] = React.useState<string | null>(null);
+
   if (loading) {
     return (
       <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
@@ -53,12 +56,20 @@ export function JournalEntriesTable({
         </thead>
         <tbody className="divide-y divide-border">
           {entries.map((entry) => (
-            <tr key={entry.id} className="hover:bg-[#F8FAFC] transition-colors">
+            <tr
+              key={entry.id}
+              onClick={() => setSelectedEntryId(entry.id)}
+              className="hover:bg-primary-light/30 transition-colors cursor-pointer"
+            >
               <td className="py-3.5 px-4 font-mono font-bold text-navy">
-                {entry.entryNumber}
+                <span className="hover:underline">{entry.entryNumber}</span>
               </td>
               <td className="py-3.5 px-4 text-muted-foreground">
-                {new Date(entry.accountingDate).toLocaleDateString()}
+                {new Date(entry.accountingDate).toLocaleDateString("en-IN", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                })}
               </td>
               <td className="py-3.5 px-4 font-semibold text-foreground">
                 {entry.journal.code}
@@ -69,10 +80,10 @@ export function JournalEntriesTable({
                 </Badge>
               </td>
               <td className="py-3.5 px-4 text-right font-semibold text-foreground">
-                ${Number(entry.totalDebit).toFixed(2)}
+                ₹{Number(entry.totalDebit).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3.5 px-4 text-right font-semibold text-foreground">
-                ${Number(entry.totalCredit).toFixed(2)}
+                ₹{Number(entry.totalCredit).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </td>
               <td className="py-3.5 px-4 text-center">
                 <Badge
@@ -90,6 +101,14 @@ export function JournalEntriesTable({
         </tbody>
       </table>
       </div>
+
+      <JournalEntryDetailDialog
+        entryId={selectedEntryId}
+        open={Boolean(selectedEntryId)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEntryId(null);
+        }}
+      />
     </div>
   );
 }

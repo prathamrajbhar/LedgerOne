@@ -4,12 +4,26 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { FileText, Plus } from "lucide-react";
 import { getPurchaseOrdersAction } from "@/app/actions/purchase.actions";
+import { getContactsAction } from "@/app/actions/contact.actions";
 import { PurchaseOrdersTable } from "./purchase-orders-table";
 
-export default async function PurchasesPage() {
-  const result = await getPurchaseOrdersAction();
+export default async function PurchasesPage({
+  searchParams,
+}: {
+  searchParams?: {
+    vendor?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  };
+}) {
+  const [poResult, vendorsResult] = await Promise.all([
+    getPurchaseOrdersAction(),
+    getContactsAction({ type: "VENDOR", limit: 100 }),
+  ]);
 
-  if (!result.success || !result.data) {
+  if (!poResult.success || !poResult.data) {
     return (
       <div className="space-y-5">
         <PageHeader
@@ -23,7 +37,12 @@ export default async function PurchasesPage() {
     );
   }
 
-  const serializedPOs = result.data.map((po) => ({
+  const vendors =
+    vendorsResult.success && vendorsResult.data
+      ? ((vendorsResult.data as { contacts?: Array<{ id: string; name: string }> }).contacts || [])
+      : [];
+
+  const serializedPOs = poResult.data.map((po) => ({
     ...po,
     total: Number(po.total),
     orderDate: po.orderDate instanceof Date ? po.orderDate.toISOString() : String(po.orderDate),
@@ -59,7 +78,15 @@ export default async function PurchasesPage() {
           </Link>
         </div>
       ) : (
-        <PurchaseOrdersTable purchaseOrders={serializedPOs} />
+        <PurchaseOrdersTable
+          purchaseOrders={serializedPOs}
+          vendors={vendors}
+          initialSearch={searchParams?.search || ""}
+          initialVendor={searchParams?.vendor || "ALL"}
+          initialStatus={searchParams?.status?.toUpperCase() || "ALL"}
+          initialStartDate={searchParams?.startDate || ""}
+          initialEndDate={searchParams?.endDate || ""}
+        />
       )}
     </div>
   );

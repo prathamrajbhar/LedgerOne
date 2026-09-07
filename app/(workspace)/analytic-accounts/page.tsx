@@ -12,6 +12,8 @@ import {
 } from "@/app/actions/analytic-account.actions";
 import { AnalyticAccountType } from "@prisma/client";
 
+import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
+
 interface AnalyticAccount {
   id: string;
   name: string;
@@ -21,6 +23,8 @@ interface AnalyticAccount {
 export default function AnalyticAccountsPage() {
   const [accounts, setAccounts] = React.useState<AnalyticAccount[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [search, setSearch] = React.useState("");
+  const [typeFilter, setTypeFilter] = React.useState<string>("ALL");
 
   const loadAccounts = React.useCallback(async () => {
     setLoading(true);
@@ -41,6 +45,22 @@ export default function AnalyticAccountsPage() {
   React.useEffect(() => {
     loadAccounts();
   }, [loadAccounts]);
+
+  const filtered = React.useMemo(() => {
+    return accounts.filter((acc) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch = !q || acc.name.toLowerCase().includes(q);
+      const matchesType = typeFilter === "ALL" || acc.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [accounts, search, typeFilter]);
+
+  const hasActiveFilters = Boolean(search || typeFilter !== "ALL");
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setTypeFilter("ALL");
+  };
 
   const handleDelete = async (id: string, accountName: string) => {
     if (!confirm(`Are you sure you want to delete "${accountName}"?`)) return;
@@ -84,16 +104,70 @@ export default function AnalyticAccountsPage() {
         }
       />
 
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
+        <div className="w-full sm:w-80">
+          <DebouncedSearchInput
+            placeholder="Search by cost center or project name..."
+            value={search}
+            onChange={setSearch}
+            className="h-9"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="ALL">All Cost Types</option>
+            <option value="INCOME">Income Tracking</option>
+            <option value="EXPENSES">Cost/Expense Tracking</option>
+          </select>
+
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetFilters}
+              className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>
+            Showing {filtered.length} of {accounts.length} cost centers
+          </span>
+          <button
+            onClick={handleResetFilters}
+            className="text-teal hover:underline font-medium cursor-pointer"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
           <p className="text-sm text-muted-foreground">Loading analytic accounts...</p>
         </div>
-      ) : accounts.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">No analytic accounts configured yet.</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Click &quot;New Analytic Account&quot; to add your first cost center or project tracker.
+          <p className="text-sm text-muted-foreground">
+            {hasActiveFilters
+              ? "No analytic accounts found matching your filters."
+              : "No analytic accounts configured yet."}
           </p>
+          {!hasActiveFilters && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Click &quot;New Analytic Account&quot; to add your first cost center or project tracker.
+            </p>
+          )}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
@@ -107,7 +181,7 @@ export default function AnalyticAccountsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {accounts.map((acc) => (
+                {filtered.map((acc) => (
                   <tr key={acc.id} className="hover:bg-primary-light/30 transition-colors">
                     <td className="py-3.5 px-4 font-semibold text-foreground">{acc.name}</td>
                     <td className="py-3.5 px-4 text-muted-foreground text-xs">

@@ -14,13 +14,20 @@ export default async function ProductsPage({
   const page = parseInt(searchParams.page || "1");
   const search = searchParams.search || "";
   const categoryId = searchParams.category || "";
-  const status = searchParams.status || "ACTIVE";
-  const isArchived = status === "ARCHIVED";
+  const statusParam = searchParams.status?.toUpperCase() || "ACTIVE";
+  const isArchived = statusParam === "ARCHIVED";
+
+  // Map statusParam to stockStatus if it's one of the inventory status filters
+  const stockStatus: "ALL" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK" | undefined =
+    statusParam === "OUT_OF_STOCK" || statusParam === "LOW_STOCK" || statusParam === "IN_STOCK"
+      ? statusParam
+      : undefined;
 
   const [productsResult, categoriesResult] = await Promise.all([
     getProductsAction({
       search,
       categoryId: categoryId && categoryId !== "ALL" ? categoryId : undefined,
+      stockStatus,
       page,
       limit: 20,
       includeArchived: isArchived,
@@ -62,6 +69,7 @@ export default async function ProductsPage({
       initialPage={page}
       initialSearch={search}
       initialCategoryId={categoryId}
+      initialStockStatus={stockStatus || "ALL"}
       totalPages={totalPages}
       totalItems={total}
     />

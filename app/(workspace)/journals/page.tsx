@@ -26,6 +26,7 @@ export default function JournalsPage() {
   const [journals, setJournals] = React.useState<JournalItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
+  const [typeFilter, setTypeFilter] = React.useState<string>("ALL");
 
   const loadJournals = React.useCallback(async () => {
     setLoading(true);
@@ -48,12 +49,26 @@ export default function JournalsPage() {
   }, [loadJournals]);
 
   const filtered = React.useMemo(() => {
-    return journals.filter(
-      (j) =>
-        j.name.toLowerCase().includes(search.toLowerCase()) ||
-        j.code.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [journals, search]);
+    return journals.filter((j) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
+        j.name.toLowerCase().includes(q) ||
+        j.code.toLowerCase().includes(q) ||
+        j.defaultAccount.name.toLowerCase().includes(q) ||
+        j.defaultAccount.code.toLowerCase().includes(q);
+
+      const matchesType = typeFilter === "ALL" || j.type === typeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [journals, search, typeFilter]);
+
+  const hasActiveFilters = Boolean(search || typeFilter !== "ALL");
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setTypeFilter("ALL");
+  };
 
   return (
     <div className="space-y-5">
@@ -70,16 +85,55 @@ export default function JournalsPage() {
         }
       />
 
-      <div className="flex items-center gap-3">
-        <div className="max-w-sm w-full">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
+        <div className="w-full sm:w-80">
           <DebouncedSearchInput
-            placeholder="Search journals by name or code..."
+            placeholder="Search by code, name, or default account..."
             value={search}
             onChange={setSearch}
-            className="py-2"
+            className="h-9"
           />
         </div>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="h-9 px-3 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="ALL">All Journal Types</option>
+            <option value="SALES">Sales</option>
+            <option value="PURCHASE">Purchase</option>
+            <option value="BANK">Bank</option>
+            <option value="CASH">Cash</option>
+          </select>
+
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetFilters}
+              className="h-9 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              Reset
+            </Button>
+          )}
+        </div>
       </div>
+
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>
+            Showing {filtered.length} of {journals.length} journals
+          </span>
+          <button
+            onClick={handleResetFilters}
+            className="text-teal hover:underline font-medium cursor-pointer"
+          >
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
@@ -88,8 +142,8 @@ export default function JournalsPage() {
       ) : filtered.length === 0 ? (
         <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
           <p className="text-sm text-muted-foreground">
-            {search
-              ? "No journals found matching your search"
+            {hasActiveFilters
+              ? "No journals found matching your filters"
               : "No journals yet. Create your first journal to get started."}
           </p>
         </div>

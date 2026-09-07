@@ -37,6 +37,7 @@ export interface ListProductsParams {
   search?: string;
   categoryId?: string;
   type?: "GOODS" | "SERVICE" | "COMBO";
+  stockStatus?: "ALL" | "IN_STOCK" | "LOW_STOCK" | "OUT_OF_STOCK";
   includeArchived?: boolean;
   page?: number;
   limit?: number;
@@ -205,7 +206,15 @@ export class ProductService {
   }
 
   async list(params: ListProductsParams) {
-    const { search, categoryId, type, includeArchived = false, page = 1, limit = 20 } = params;
+    const {
+      search,
+      categoryId,
+      type,
+      stockStatus,
+      includeArchived = false,
+      page = 1,
+      limit = 20,
+    } = params;
 
     const where: Prisma.ProductWhereInput = {
       ...(search && {
@@ -214,6 +223,15 @@ export class ProductService {
       ...(categoryId && { categoryId }),
       ...(type && { type }),
       isArchived: includeArchived,
+      ...(stockStatus === "OUT_OF_STOCK" && {
+        stock: 0,
+      }),
+      ...(stockStatus === "LOW_STOCK" && {
+        stock: { gt: 0, lte: prisma.product.fields.reorderPoint },
+      }),
+      ...(stockStatus === "IN_STOCK" && {
+        stock: { gt: prisma.product.fields.reorderPoint },
+      }),
     };
 
     const [products, total] = await Promise.all([

@@ -15,7 +15,6 @@ import {
   PieChart,
   FolderTree,
   FileCheck,
-  Coins,
   Building,
   Database,
   Layers,
@@ -120,12 +119,6 @@ export const navSections: NavSection[] = [
         href: "/invoices",
         icon: FileText,
         description: "Receivables & billing records",
-      },
-      {
-        name: "Invoice Payments",
-        href: "/payments",
-        icon: Coins,
-        description: "Collected customer payments",
       },
       {
         name: "Purchase Orders",

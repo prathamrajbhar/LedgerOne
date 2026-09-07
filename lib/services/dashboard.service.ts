@@ -406,15 +406,30 @@ export class DashboardService {
    * Get inventory stock levels
    */
   async getInventoryStatus(): Promise<InventoryStatus> {
-    const totalProducts = await prisma.product.count({
+    const products = await prisma.product.findMany({
       where: { isArchived: false },
+      select: { stock: true, reorderPoint: true },
     });
 
+    let lowStock = 0;
+    let outOfStock = 0;
+    let inStock = 0;
+
+    for (const product of products) {
+      if (product.stock === 0) {
+        outOfStock++;
+      } else if (product.stock <= product.reorderPoint) {
+        lowStock++;
+      } else {
+        inStock++;
+      }
+    }
+
     return {
-      totalProducts,
-      lowStock: 0,
-      inStock: totalProducts,
-      outOfStock: 0,
+      totalProducts: products.length,
+      lowStock,
+      inStock,
+      outOfStock,
     };
   }
 

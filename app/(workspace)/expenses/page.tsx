@@ -13,11 +13,17 @@ import {
 } from "@/app/actions/expense.actions";
 import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
+import { JournalEntryDetailDialog } from "../journal-entries/components/journal-entry-detail-dialog";
 
 export default function ExpensesPage() {
   const router = useRouter();
+  const [selectedEntryId, setSelectedEntryId] = React.useState<string | null>(null);
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
   const [search, setSearch] = React.useState("");
+  const [accountFilter, setAccountFilter] = React.useState<string>("ALL");
+  const [methodFilter, setMethodFilter] = React.useState<string>("ALL");
+  const [startDate, setStartDate] = React.useState("");
+  const [endDate, setEndDate] = React.useState("");
   const [loading, setLoading] = React.useState(true);
 
   // Fetch expenses on mount
@@ -36,19 +42,63 @@ export default function ExpensesPage() {
     setLoading(false);
   };
 
+  // Extract unique expense accounts for dropdown
+  const uniqueAccounts = React.useMemo(() => {
+    const set = new Set<string>();
+    expenses.forEach((e) => {
+      if (e.expenseAccount && e.expenseAccount !== "N/A") {
+        set.add(e.expenseAccount);
+      }
+    });
+    return Array.from(set).sort();
+  }, [expenses]);
+
   const filteredExpenses = React.useMemo(() => {
-    if (!search.trim()) return expenses;
-    const q = search.toLowerCase().trim();
-    return expenses.filter(
-      (e) =>
+    return expenses.filter((e) => {
+      const q = search.trim().toLowerCase();
+      const matchesSearch =
+        !q ||
         e.code.toLowerCase().includes(q) ||
         e.description.toLowerCase().includes(q) ||
         e.expenseAccount.toLowerCase().includes(q) ||
-        (e.analyticAccount && e.analyticAccount.toLowerCase().includes(q))
-    );
-  }, [expenses, search]);
+        (e.analyticAccount && e.analyticAccount.toLowerCase().includes(q));
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+      const matchesAccount =
+        accountFilter === "ALL" || e.expenseAccount === accountFilter;
+
+      const matchesMethod =
+        methodFilter === "ALL" ||
+        e.paymentMethod.toUpperCase() === methodFilter.toUpperCase();
+
+      let matchesDate = true;
+      if (startDate) {
+        matchesDate = matchesDate && new Date(e.date) >= new Date(startDate);
+      }
+      if (endDate) {
+        matchesDate = matchesDate && new Date(e.date) <= new Date(endDate);
+      }
+
+      return matchesSearch && matchesAccount && matchesMethod && matchesDate;
+    });
+  }, [expenses, search, accountFilter, methodFilter, startDate, endDate]);
+
+  const hasActiveFilters = Boolean(
+    search ||
+      accountFilter !== "ALL" ||
+      methodFilter !== "ALL" ||
+      startDate ||
+      endDate
+  );
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setAccountFilter("ALL");
+    setMethodFilter("ALL");
+    setStartDate("");
+    setEndDate("");
+  };
+
+  const totalExpenses = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   type ExpenseSortColumn = "code" | "description" | "expenseAccount" | "analyticAccount" | "date" | "paymentMethod" | "amount";
   const { sortedItems: sortedExpenses, sortState, handleSort } = useTableSort<ExpenseRecord, ExpenseSortColumn>(
@@ -102,16 +152,74 @@ export default function ExpensesPage() {
         </Card>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="max-w-sm w-full">
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
+        <div className="flex-1 min-w-[220px]">
           <DebouncedSearchInput
             placeholder="Search expenses by entry #, description, or account..."
             value={search}
             onChange={setSearch}
-            className="py-2"
+            className="h-9"
           />
         </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <select
+            value={accountFilter}
+            onChange={(e) => setAccountFilter(e.target.value)}
+            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="ALL">All Expense Accounts</option>
+            {uniqueAccounts.map((acc) => (
+              <option key={acc} value={acc}>
+                {acc}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={methodFilter}
+            onChange={(e) => setMethodFilter(e.target.value)}
+            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+          >
+            <option value="ALL">All Methods</option>
+            <option value="BANK">Bank Transfer</option>
+            <option value="CASH">Cash</option>
+          </select>
+
+          <div className="col-span-2 flex items-center gap-1.5">
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              title="Start Date"
+            />
+            <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              title="End Date"
+            />
+          </div>
+        </div>
       </div>
+
+      {hasActiveFilters && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+          <span>
+            Showing {filteredExpenses.length} of {expenses.length} expenses
+          </span>
+          <button
+            onClick={handleResetFilters}
+            className="text-teal hover:underline font-medium cursor-pointer"
+          >
+            Reset all filters
+          </button>
+        </div>
+      )}
 
       <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
         {loading ? (
@@ -120,7 +228,9 @@ export default function ExpensesPage() {
           </div>
         ) : sortedExpenses.length === 0 ? (
           <div className="p-8 text-center text-muted-foreground text-sm">
-            {search ? "No expenses found matching your search" : "No expenses recorded yet. Click 'Record Expense' to add one."}
+            {hasActiveFilters
+              ? "No expenses found matching your filters"
+              : "No expenses recorded yet. Click 'Record Expense' to add one."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -152,8 +262,14 @@ export default function ExpensesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {sortedExpenses.map((e) => (
-                  <tr key={e.id} className="hover:bg-primary-light/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{e.code}</td>
+                  <tr
+                    key={e.id}
+                    onClick={() => setSelectedEntryId(e.id)}
+                    className="hover:bg-primary-light/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-bold text-navy">
+                      <span className="hover:underline">{e.code}</span>
+                    </td>
                     <td className="py-3.5 px-4 font-semibold text-foreground">{e.description}</td>
                     <td className="py-3.5 px-4 text-muted-foreground">{e.expenseAccount}</td>
                     <td className="py-3.5 px-4 text-muted-foreground">{e.analyticAccount || "-"}</td>
@@ -169,6 +285,14 @@ export default function ExpensesPage() {
           </div>
         )}
       </div>
+
+      <JournalEntryDetailDialog
+        entryId={selectedEntryId}
+        open={Boolean(selectedEntryId)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEntryId(null);
+        }}
+      />
     </div>
   );
 }

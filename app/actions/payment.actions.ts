@@ -22,6 +22,7 @@ export interface PaymentRecord {
   amount: number;
   documentType: "INVOICE" | "BILL";
   documentNumber: string;
+  documentId: string;
 }
 
 export interface UnpaidDocument {

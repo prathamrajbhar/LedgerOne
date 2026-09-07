@@ -32,6 +32,7 @@ export async function getPaymentsAction(): Promise<{ success: boolean; data?: Pa
         amount: p.amount.toNumber(),
         documentType: "INVOICE" as const,
         documentNumber: p.invoice.invoiceNumber,
+        documentId: p.invoice.id,
       })),
       ...billPayments.map((p) => ({
         id: p.id,
@@ -48,6 +49,7 @@ export async function getPaymentsAction(): Promise<{ success: boolean; data?: Pa
         amount: p.amount.toNumber(),
         documentType: "BILL" as const,
         documentNumber: p.vendorBill.billNumber,
+        documentId: p.vendorBill.id,
       })),
     ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
