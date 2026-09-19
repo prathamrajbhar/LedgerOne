@@ -122,17 +122,12 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
           </div>
 
           {/* Header Bar */}
-          <div className="flex items-center justify-between px-3.5 py-3 bg-navy text-white shrink-0 border-b border-white/10 select-none">
+          <div className="flex items-center justify-between px-3.5 py-2.5 bg-slate-900 text-white shrink-0 border-b border-slate-800 select-none">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-md bg-white/10 flex items-center justify-center border border-white/15">
+              <div className="w-6 h-6 rounded-md bg-teal/15 flex items-center justify-center border border-teal/25">
                 <Bot className="h-3.5 w-3.5 text-teal" />
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold text-white tracking-tight">LedgerOne Copilot</span>
-                <span className="inline-flex items-center text-[9px] font-semibold text-emerald-300 bg-emerald-500/20 px-1.5 py-0.2 rounded border border-emerald-500/30">
-                  Agentic
-                </span>
-              </div>
+              <span className="text-xs font-semibold text-white tracking-tight">LedgerOne Copilot</span>
             </div>
 
             <div className="flex items-center gap-1">
