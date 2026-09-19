@@ -13,6 +13,8 @@ import { ActionCard } from "./cards/action-card";
 import { PdfCard, PdfCardData } from "./cards/pdf-card";
 import { AccountBalanceCard, AccountBalanceCardData } from "./cards/account-balance-card";
 
+import { ChatMarkdown } from "./chat-markdown";
+
 interface ChatMessageItemProps {
   message: UIMessage;
   onAddToolResult: (params: { tool: string; toolCallId: string; state: "output-available"; output: Record<string, unknown> }) => void;
@@ -55,11 +57,7 @@ export function ChatMessageItem({ message, onAddToolResult }: ChatMessageItemPro
       >
         {message.parts?.map((part, pIdx) => {
           if (isTextUIPart(part)) {
-            return (
-              <p key={pIdx} className="whitespace-pre-wrap leading-relaxed">
-                {part.text}
-              </p>
-            );
+            return <ChatMarkdown key={pIdx} content={part.text} isUser={isUser} />;
           }
 
           if (isToolUIPart(part)) {
