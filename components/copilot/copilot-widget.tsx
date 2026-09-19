@@ -6,10 +6,15 @@ import { Sparkles, X, Bot, RotateCcw, Maximize2, Minimize2 } from "lucide-react"
 import { CopilotChat } from "./copilot-chat";
 
 export function CopilotWidget() {
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [resetCounter, setResetCounter] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -25,6 +30,10 @@ export function CopilotWidget() {
       document.removeEventListener("mousedown", handleOutsideClick);
     };
   }, [open]);
+
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div ref={containerRef} className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50">

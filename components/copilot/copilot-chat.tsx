@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, isToolUIPart, getToolName, UIMessage } from "ai";
+import { DefaultChatTransport, isToolUIPart, getToolName } from "ai";
 import { useRouter } from "next/navigation";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,17 +20,6 @@ export function CopilotChat({ resetTrigger }: { resetTrigger?: number }) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const handledNavCalls = useRef<Set<string>>(new Set());
 
-  // Restore session history from localStorage
-  const initialMessages = useMemo<UIMessage[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? (JSON.parse(saved) as UIMessage[]) : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
   const transport = useMemo(
     () => new DefaultChatTransport({ api: "/api/copilot/chat" }),
     []
@@ -44,10 +33,25 @@ export function CopilotChat({ resetTrigger }: { resetTrigger?: number }) {
     setMessages,
   } = useChat({
     transport,
-    messages: initialMessages,
+    messages: [],
   });
 
   const isLoading = status === "submitted" || status === "streaming";
+
+  // Restore session history from localStorage after mount to prevent hydration mismatch
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMessages(parsed);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [setMessages]);
 
   // Sync messages to localStorage
   useEffect(() => {
