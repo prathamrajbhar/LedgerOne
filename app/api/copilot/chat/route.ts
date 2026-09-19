@@ -82,8 +82,9 @@ GUIDELINES:
     const modelMessages = await convertToModelMessages(messages);
 
     // 5. Multi-step Agent Reasoning via streamText
+    const modelName = process.env.GEMINI_MODEL || "gemini-3.6-flash";
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: google(modelName),
       system: systemPrompt,
       messages: modelMessages,
       tools,
