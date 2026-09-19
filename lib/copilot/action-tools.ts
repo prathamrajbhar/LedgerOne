@@ -52,18 +52,100 @@ export function createCopilotActionTools() {
     recordExpenseAction: tool({
       description: "Propose recording an operational expense entry. Requires interactive user approval.",
       inputSchema: z.object({
-        description: z.string().describe("Description of the expense (e.g. 'Office Supplies', 'Client Dinner')"),
+        description: z.string().describe("Description of the expense (e.g. 'Office Supplies')"),
         amount: z.number().min(1).describe("Expense amount in INR"),
         category: z.string().default("General Expense"),
       }),
     }),
 
-    // 6. Client Navigation
-    navigateTo: tool({
-      description: "Navigate the user directly to an ERP page, report, invoice, customer, or settings screen. For invoices, use '/invoices/<invoiceNumber>' or '/invoices/<id>'. For bills, use '/bills/<billNumber>' or '/bills/<id>'.",
+    // 6. Record Payment (Inbound or Outbound)
+    recordPaymentAction: tool({
+      description: "Propose recording a payment for an invoice (inbound) or vendor bill (outbound). Updates status and ledger entries. Requires interactive user approval.",
       inputSchema: z.object({
-        path: z.string().describe("The internal route path (e.g., '/invoices', '/invoices/INV-2026-4009', '/bills', '/reports/profit-loss')"),
-        label: z.string().describe("Human readable title of the destination page"),
+        documentNumber: z.string().describe("Invoice Number (e.g. 'INV-2026-4009') or Bill Number (e.g. 'BILL-2026-2001')"),
+        amount: z.number().min(0.01).describe("Payment amount in INR"),
+        paymentMethod: z.enum(["CASH", "BANK_TRANSFER", "CHEQUE", "UPI"]).default("BANK_TRANSFER"),
+        note: z.string().optional().describe("Optional payment reference or note"),
+      }),
+    }),
+
+    // 7. Sales Order Lifecycle
+    createSalesOrderAction: tool({
+      description: "Propose creating a new Quotation / Sales Order. Requires interactive user approval.",
+      inputSchema: z.object({
+        customerName: z.string().describe("Customer name"),
+        productName: z.string().describe("Product name"),
+        quantity: z.number().min(1).default(1),
+        unitPrice: z.number().min(0).describe("Unit price"),
+      }),
+    }),
+
+    confirmSalesOrderAction: tool({
+      description: "Propose confirming a Sales Order from DRAFT to CONFIRMED. Requires interactive user approval.",
+      inputSchema: z.object({
+        orderNumber: z.string().describe("Sales Order number (e.g. 'SO-2026-0001') or ID"),
+      }),
+    }),
+
+    convertSalesOrderToInvoiceAction: tool({
+      description: "Propose converting a confirmed Sales Order into a Customer Invoice. Requires interactive user approval.",
+      inputSchema: z.object({
+        orderNumber: z.string().describe("Sales Order number or ID to convert"),
+      }),
+    }),
+
+    // 8. Purchase Order Lifecycle
+    createPurchaseOrderAction: tool({
+      description: "Propose creating a new Purchase Order / RFQ. Requires interactive user approval.",
+      inputSchema: z.object({
+        vendorName: z.string().describe("Vendor name"),
+        productName: z.string().describe("Product name"),
+        quantity: z.number().min(1).default(1),
+        unitPrice: z.number().min(0).describe("Cost per unit"),
+      }),
+    }),
+
+    confirmPurchaseOrderAction: tool({
+      description: "Propose confirming a Purchase Order from DRAFT to CONFIRMED. Requires interactive user approval.",
+      inputSchema: z.object({
+        orderNumber: z.string().describe("Purchase Order number (e.g. 'PO-2026-0001') or ID"),
+      }),
+    }),
+
+    convertPurchaseOrderToBillAction: tool({
+      description: "Propose converting a confirmed Purchase Order into a Vendor Bill. Requires interactive user approval.",
+      inputSchema: z.object({
+        orderNumber: z.string().describe("Purchase Order number or ID to convert"),
+      }),
+    }),
+
+    // 9. Catalog & Stock Adjustments
+    createProductAction: tool({
+      description: "Propose creating a new Product in the catalog. Requires interactive user approval.",
+      inputSchema: z.object({
+        name: z.string().min(2).describe("Product name"),
+        salesPrice: z.number().min(0).describe("Selling price"),
+        cost: z.number().min(0).describe("Cost price"),
+        initialStock: z.number().min(0).default(0),
+        sku: z.string().optional(),
+      }),
+    }),
+
+    adjustStockAction: tool({
+      description: "Propose adjusting inventory stock for a product. Requires interactive user approval.",
+      inputSchema: z.object({
+        productNameOrSku: z.string().describe("Product name or SKU"),
+        newStockQuantity: z.number().min(0).describe("New physical stock count"),
+        reason: z.string().optional().describe("Reason for adjustment (e.g. 'Physical inventory audit')"),
+      }),
+    }),
+
+    // 10. Client Navigation
+    navigateTo: tool({
+      description: "Navigate the user directly to an ERP page, report, invoice, customer, or settings screen.",
+      inputSchema: z.object({
+        path: z.string().describe("Internal route path (e.g., '/invoices', '/invoices/INV-2026-4009', '/reports/profit-loss')"),
+        label: z.string().describe("Human readable title of destination"),
         description: z.string().optional(),
       }),
     }),

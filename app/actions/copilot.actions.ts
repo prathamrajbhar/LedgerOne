@@ -6,6 +6,16 @@ import { emailService } from "@/lib/email/client";
 import { prisma } from "@/lib/prisma";
 import { ContactType, DocumentStatus, PaymentStatus } from "@prisma/client";
 import { handleCreateInvoiceDraft, handleCreateBillDraft, handleRecordExpense } from "./copilot-drafts";
+import { handleRecordPayment } from "./copilot-payments";
+import {
+  handleCreateSalesOrder,
+  handleConfirmSalesOrder,
+  handleConvertSalesOrderToInvoice,
+  handleCreatePurchaseOrder,
+  handleConfirmPurchaseOrder,
+  handleConvertPurchaseOrderToBill,
+} from "./copilot-orders";
+import { handleCreateProduct, handleAdjustStock } from "./copilot-inventory";
 
 export interface CopilotActionResult {
   success: boolean;
@@ -99,15 +109,24 @@ export async function executeCopilotAction(
   }
 
   // 3. Draft Invoices, Bills, and Expenses
-  if (toolName === "createCustomerInvoiceDraftAction") {
-    return handleCreateInvoiceDraft(input, userId);
-  }
-  if (toolName === "createVendorBillDraftAction") {
-    return handleCreateBillDraft(input, userId);
-  }
-  if (toolName === "recordExpenseAction") {
-    return handleRecordExpense(input, userId);
-  }
+  if (toolName === "createCustomerInvoiceDraftAction") return handleCreateInvoiceDraft(input, userId);
+  if (toolName === "createVendorBillDraftAction") return handleCreateBillDraft(input, userId);
+  if (toolName === "recordExpenseAction") return handleRecordExpense(input, userId);
+
+  // 4. Payments
+  if (toolName === "recordPaymentAction") return handleRecordPayment(input, userId);
+
+  // 5. Sales & Purchase Order Lifecycles
+  if (toolName === "createSalesOrderAction") return handleCreateSalesOrder(input, userId);
+  if (toolName === "confirmSalesOrderAction") return handleConfirmSalesOrder(input);
+  if (toolName === "convertSalesOrderToInvoiceAction") return handleConvertSalesOrderToInvoice(input, userId);
+  if (toolName === "createPurchaseOrderAction") return handleCreatePurchaseOrder(input, userId);
+  if (toolName === "confirmPurchaseOrderAction") return handleConfirmPurchaseOrder(input);
+  if (toolName === "convertPurchaseOrderToBillAction") return handleConvertPurchaseOrderToBill(input, userId);
+
+  // 6. Products & Inventory
+  if (toolName === "createProductAction") return handleCreateProduct(input);
+  if (toolName === "adjustStockAction") return handleAdjustStock(input);
 
   return { success: false, error: `Unknown sensitive action '${toolName}'.` };
 }

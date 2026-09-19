@@ -6,6 +6,7 @@ import { ShieldCheck, Check, X, Loader2, CheckCircle2, XCircle } from "lucide-re
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { executeCopilotAction } from "@/app/actions/copilot.actions";
+import { ActionPreview } from "./action-preview";
 
 interface ActionCardProps {
   toolName: string;
@@ -99,40 +100,7 @@ export function ActionCard({ toolName, toolCallId, input, state, output, onAddTo
       </div>
 
       <div className="text-[11px] text-slate-600 dark:text-slate-300 space-y-1 bg-amber-50/50 dark:bg-amber-950/20 p-2 rounded">
-        {toolName === "createContactAction" && (
-          <>
-            <p><strong>Action:</strong> Create new {String(input.type || "Contact").toLowerCase()}</p>
-            <p><strong>Name:</strong> {String(input.name || "")}</p>
-            <p><strong>Email:</strong> {String(input.email || "")}</p>
-          </>
-        )}
-        {toolName === "sendInvoicePaymentReminder" && (
-          <>
-            <p><strong>Action:</strong> Dispatch email payment reminder with invoice PDF</p>
-            <p><strong>Invoice:</strong> {String(input.invoiceId || "")}</p>
-          </>
-        )}
-        {toolName === "createCustomerInvoiceDraftAction" && (
-          <>
-            <p><strong>Action:</strong> Create draft Customer Invoice</p>
-            <p><strong>Customer:</strong> {String(input.customerName || "")}</p>
-            <p><strong>Item:</strong> {String(input.productName || "")} (Qty: {String(input.quantity || 1)} @ ₹{String(input.unitPrice || 0)})</p>
-          </>
-        )}
-        {toolName === "createVendorBillDraftAction" && (
-          <>
-            <p><strong>Action:</strong> Create draft Vendor Bill</p>
-            <p><strong>Vendor:</strong> {String(input.vendorName || "")}</p>
-            <p><strong>Item:</strong> {String(input.productName || "")} (Qty: {String(input.quantity || 1)} @ ₹{String(input.unitPrice || 0)})</p>
-          </>
-        )}
-        {toolName === "recordExpenseAction" && (
-          <>
-            <p><strong>Action:</strong> Record Operational Expense</p>
-            <p><strong>Description:</strong> {String(input.description || "")}</p>
-            <p><strong>Amount:</strong> ₹{Number(input.amount || 0).toLocaleString("en-IN")}</p>
-          </>
-        )}
+        <ActionPreview toolName={toolName} input={input} />
       </div>
 
       <div className="flex items-center gap-2 pt-1">

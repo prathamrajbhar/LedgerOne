@@ -10,11 +10,30 @@ import { RecordsCard, RecordsCardProps } from "./cards/records-card";
 import { DocumentCard, DocumentDetails } from "./cards/document-card";
 import { BudgetCard, BudgetCardData } from "./cards/budget-card";
 import { ActionCard } from "./cards/action-card";
+import { PdfCard, PdfCardData } from "./cards/pdf-card";
+import { AccountBalanceCard, AccountBalanceCardData } from "./cards/account-balance-card";
 
 interface ChatMessageItemProps {
   message: UIMessage;
   onAddToolResult: (params: { tool: string; toolCallId: string; state: "output-available"; output: Record<string, unknown> }) => void;
 }
+
+const SENSITIVE_ACTION_TOOLS = new Set([
+  "createContactAction",
+  "sendInvoicePaymentReminder",
+  "createCustomerInvoiceDraftAction",
+  "createVendorBillDraftAction",
+  "recordExpenseAction",
+  "recordPaymentAction",
+  "createSalesOrderAction",
+  "confirmSalesOrderAction",
+  "convertSalesOrderToInvoiceAction",
+  "createPurchaseOrderAction",
+  "confirmPurchaseOrderAction",
+  "convertPurchaseOrderToBillAction",
+  "createProductAction",
+  "adjustStockAction",
+]);
 
 export function ChatMessageItem({ message, onAddToolResult }: ChatMessageItemProps) {
   const isUser = message.role === "user";
@@ -61,14 +80,14 @@ export function ChatMessageItem({ message, onAddToolResult }: ChatMessageItemPro
             if (toolName === "getBudgetStatus" && part.state === "output-available") {
               return <BudgetCard key={pIdx} data={part.output as BudgetCardData} />;
             }
+            if (toolName === "getDocumentPdfLink" && part.state === "output-available") {
+              return <PdfCard key={pIdx} data={part.output as PdfCardData} />;
+            }
+            if (toolName === "getAccountBalances" && part.state === "output-available") {
+              return <AccountBalanceCard key={pIdx} data={part.output as AccountBalanceCardData} />;
+            }
 
-            if (
-              toolName === "createContactAction" ||
-              toolName === "sendInvoicePaymentReminder" ||
-              toolName === "createCustomerInvoiceDraftAction" ||
-              toolName === "createVendorBillDraftAction" ||
-              toolName === "recordExpenseAction"
-            ) {
+            if (SENSITIVE_ACTION_TOOLS.has(toolName)) {
               return (
                 <ActionCard
                   key={pIdx}
