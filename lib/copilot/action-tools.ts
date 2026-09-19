@@ -140,11 +140,46 @@ export function createCopilotActionTools() {
       }),
     }),
 
-    // 10. Client Navigation
+    // 10. User & Access Management
+    createStaffUserAction: tool({
+      description: "Propose creating a new internal staff user account (Administrator or Accountant) with login credentials. Requires interactive user approval.",
+      inputSchema: z.object({
+        name: z.string().min(2).describe("Staff member full name"),
+        email: z.string().email().describe("Work email address"),
+        role: z.enum(["ADMINISTRATOR", "ACCOUNTANT"]).default("ACCOUNTANT").describe("Access role: ADMINISTRATOR or ACCOUNTANT"),
+        loginId: z.string().optional().describe("Optional custom login ID (6-12 chars)"),
+        initialPassword: z.string().optional().describe("Optional custom password (min 8 chars, mixed case, special char)"),
+      }),
+    }),
+
+    inviteContactToPortalAction: tool({
+      description: "Propose inviting an existing Customer or Vendor to the Client/Vendor Portal, creating login credentials and dispatching invitation. Requires interactive user approval.",
+      inputSchema: z.object({
+        contactNameOrEmail: z.string().describe("Name, email, or ID of the customer or vendor to invite"),
+      }),
+    }),
+
+    toggleUserStatusAction: tool({
+      description: "Propose activating or deactivating a system user account in LedgerOne. Requires interactive user approval.",
+      inputSchema: z.object({
+        userIdentifier: z.string().describe("User email, Login ID, or User ID"),
+        isActive: z.boolean().describe("true to activate account, false to deactivate"),
+      }),
+    }),
+
+    updateUserRoleAction: tool({
+      description: "Propose changing the system access role of an internal staff member. Requires interactive user approval.",
+      inputSchema: z.object({
+        userIdentifier: z.string().describe("User email, Login ID, or User ID"),
+        newRole: z.enum(["ADMINISTRATOR", "ACCOUNTANT"]).describe("New role to assign"),
+      }),
+    }),
+
+    // 11. Client Navigation
     navigateTo: tool({
       description: "Navigate the user directly to an ERP page, report, invoice, customer, or settings screen.",
       inputSchema: z.object({
-        path: z.string().describe("Internal route path (e.g., '/invoices', '/invoices/INV-2026-4009', '/reports/profit-loss')"),
+        path: z.string().describe("Internal route path (e.g., '/users', '/invoices', '/bills', '/reports/profit-loss')"),
         label: z.string().describe("Human readable title of destination"),
         description: z.string().optional(),
       }),

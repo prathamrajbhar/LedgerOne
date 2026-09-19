@@ -132,5 +132,55 @@ export function createCopilotReadTools(userContext: CopilotUserContext) {
         return getDocumentPdfLinkQuery(documentNumber);
       },
     }),
+
+    // 9. System Users & Access Audit
+    getSystemUsersList: tool({
+      description: "Query and inspect system users, their access roles (Administrator, Accountant, Portal Contact), login IDs, active status, and associated customer/vendor profiles.",
+      inputSchema: z.object({
+        role: z.enum(["ALL", "ADMINISTRATOR", "ACCOUNTANT", "CONTACT"]).default("ALL").describe("Filter by system role"),
+        search: z.string().optional().describe("Search by user name, email, or login ID"),
+        isActive: z.boolean().optional().describe("Filter by active/inactive status"),
+      }),
+      execute: async ({ role, search, isActive }: { role: "ALL" | "ADMINISTRATOR" | "ACCOUNTANT" | "CONTACT"; search?: string; isActive?: boolean }) => {
+        const where: Record<string, unknown> = {};
+        if (role !== "ALL") where.role = role;
+        if (typeof isActive === "boolean") where.isActive = isActive;
+        if (search) {
+          where.OR = [
+            { name: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
+            { loginId: { contains: search, mode: "insensitive" } },
+          ];
+        }
+
+        const users = await prisma.user.findMany({
+          where,
+          take: 15,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            loginId: true,
+            email: true,
+            name: true,
+            role: true,
+            isActive: true,
+            contact: { select: { id: true, name: true, type: true } },
+          },
+        });
+
+        return {
+          totalReturned: users.length,
+          users: users.map((u) => ({
+            id: u.id,
+            loginId: u.loginId,
+            name: u.name || "Unnamed",
+            email: u.email,
+            role: u.role,
+            isActive: u.isActive,
+            associatedEntity: u.contact ? `${u.contact.name} (${u.contact.type})` : "Internal Staff",
+          })),
+        };
+      },
+    }),
   };
 }

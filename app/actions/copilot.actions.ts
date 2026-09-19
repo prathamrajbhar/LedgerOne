@@ -16,6 +16,12 @@ import {
   handleConvertPurchaseOrderToBill,
 } from "./copilot-orders";
 import { handleCreateProduct, handleAdjustStock } from "./copilot-inventory";
+import {
+  handleCreateStaffUser,
+  handleInviteContactToPortal,
+  handleToggleUserStatus,
+  handleUpdateUserRole,
+} from "./copilot-users";
 
 export interface CopilotActionResult {
   success: boolean;
@@ -127,6 +133,12 @@ export async function executeCopilotAction(
   // 6. Products & Inventory
   if (toolName === "createProductAction") return handleCreateProduct(input);
   if (toolName === "adjustStockAction") return handleAdjustStock(input);
+
+  // 7. User & Access Management
+  if (toolName === "createStaffUserAction") return handleCreateStaffUser(input, userId);
+  if (toolName === "inviteContactToPortalAction") return handleInviteContactToPortal(input, userId);
+  if (toolName === "toggleUserStatusAction") return handleToggleUserStatus(input);
+  if (toolName === "updateUserRoleAction") return handleUpdateUserRole(input);
 
   return { success: false, error: `Unknown sensitive action '${toolName}'.` };
 }

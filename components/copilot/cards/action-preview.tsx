@@ -148,5 +148,45 @@ export function ActionPreview({ toolName, input }: ActionPreviewProps) {
     );
   }
 
+  if (toolName === "createStaffUserAction") {
+    return (
+      <>
+        <p><strong>Action:</strong> Create Staff Account</p>
+        <p><strong>Name:</strong> {String(input.name || "")}</p>
+        <p><strong>Email:</strong> {String(input.email || "")}</p>
+        <p><strong>Role:</strong> {String(input.role || "ACCOUNTANT")}</p>
+      </>
+    );
+  }
+
+  if (toolName === "inviteContactToPortalAction") {
+    return (
+      <>
+        <p><strong>Action:</strong> Invite Contact to Portal</p>
+        <p><strong>Contact:</strong> {String(input.contactNameOrEmail || "")}</p>
+        <p><strong>Access:</strong> Client/Vendor Portal Credentials</p>
+      </>
+    );
+  }
+
+  if (toolName === "toggleUserStatusAction") {
+    return (
+      <>
+        <p><strong>Action:</strong> {input.isActive ? "Activate" : "Deactivate"} User Account</p>
+        <p><strong>User:</strong> {String(input.userIdentifier || "")}</p>
+      </>
+    );
+  }
+
+  if (toolName === "updateUserRoleAction") {
+    return (
+      <>
+        <p><strong>Action:</strong> Change User Access Role</p>
+        <p><strong>User:</strong> {String(input.userIdentifier || "")}</p>
+        <p><strong>New Role:</strong> {String(input.newRole || "")}</p>
+      </>
+    );
+  }
+
   return <p><strong>Action:</strong> Execute {toolName}</p>;
 }

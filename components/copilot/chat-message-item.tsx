@@ -35,6 +35,10 @@ const SENSITIVE_ACTION_TOOLS = new Set([
   "convertPurchaseOrderToBillAction",
   "createProductAction",
   "adjustStockAction",
+  "createStaffUserAction",
+  "inviteContactToPortalAction",
+  "toggleUserStatusAction",
+  "updateUserRoleAction",
 ]);
 
 export function ChatMessageItem({ message, onAddToolResult, onSelectPrompt }: ChatMessageItemProps) {
