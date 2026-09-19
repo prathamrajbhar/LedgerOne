@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState } from "react";
 import PortalHeader from "./components/PortalHeader";
 import PortalSidebar from "./components/PortalSidebar";
-import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
 import { ForceChangePasswordModal } from "@/components/auth/force-change-password-modal";
 import { ContactType } from "@prisma/client";
 
@@ -57,9 +56,6 @@ export default function PortalLayoutClient({
           </div>
         </main>
       </div>
-
-      {/* Help Assistant Widget */}
-      {!mustChangePassword && <HelpAssistantWidget />}
 
       {/* Mandatory Change Password Modal */}
       <ForceChangePasswordModal mustChangePassword={mustChangePassword} />

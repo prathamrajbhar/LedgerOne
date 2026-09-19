@@ -4,7 +4,6 @@ import * as React from "react";
 import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/navbar";
-import { HelpAssistantWidget } from "@/components/help-assistant/chat-widget";
 import { ForceChangePasswordModal } from "@/components/auth/force-change-password-modal";
 import { UserRole } from "@prisma/client";
 
@@ -62,9 +61,6 @@ export default function WorkspaceLayoutClient({
           </div>
         </main>
       </div>
-
-      {/* Persistent Help Assistant Chat Widget */}
-      {!mustChangePassword && <HelpAssistantWidget />}
 
       {/* Mandatory Change Password Modal */}
       <ForceChangePasswordModal mustChangePassword={mustChangePassword} />
