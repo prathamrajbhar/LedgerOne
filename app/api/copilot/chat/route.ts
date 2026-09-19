@@ -1,9 +1,13 @@
-import { streamText, isStepCount } from "ai";
-import { google } from "@ai-sdk/google";
+import { streamText, isStepCount, convertToModelMessages } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { auth } from "@/lib/auth/auth.config";
 import { createCopilotTools } from "@/lib/copilot/tools";
 
 export const maxDuration = 45;
+
+const google = createGoogleGenerativeAI({
+  apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+});
 
 export async function POST(req: Request) {
   try {
@@ -69,11 +73,14 @@ COMMUNICATION GUIDELINES:
 - Multi-step reasoning: Chain tools autonomously when answering complex requests.
 - Be concise, direct, professional, and practical. Use Markdown formatting.`;
 
-    // 4. Multi-step Agent Reasoning via streamText
+    // 4. Convert UI messages to model messages (fixes Zod validation error)
+    const modelMessages = await convertToModelMessages(messages);
+
+    // 5. Multi-step Agent Reasoning via streamText
     const result = streamText({
       model: google("gemini-2.5-flash"),
       system: systemPrompt,
-      messages,
+      messages: modelMessages,
       tools,
       stopWhen: isStepCount(5),
     });
