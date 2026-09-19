@@ -4,7 +4,7 @@ import { UnauthorizedError } from "./errors";
 
 /**
  * Authorization helper functions for enforcing role-based access control
- * These are server-side only and should be used in services, API routes, and server actions
+ * Server-side only
  */
 
 /**
@@ -84,8 +84,7 @@ export async function isContact(): Promise<boolean> {
 }
 
 /**
- * Check if current user can perform hard delete operations
- * Only Admin can hard delete
+ * Check if current user can perform hard delete operations (Admin only)
  */
 export async function canHardDelete(): Promise<boolean> {
   return isAdmin();
@@ -93,14 +92,8 @@ export async function canHardDelete(): Promise<boolean> {
 
 /**
  * Get contact ID from session (for portal users)
- * Throws if user is not a contact
  */
 export async function getContactId(): Promise<string> {
   const session = await requireContactAccess();
-
-  if (!session.user.contactId) {
-    throw new UnauthorizedError("Contact ID not found");
-  }
-
-  return session.user.contactId;
+  return session.user.contactId!;
 }

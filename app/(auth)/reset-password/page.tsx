@@ -6,8 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Lock, ArrowLeft, Eye, EyeOff, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Lock, ArrowLeft, Eye, EyeOff, Loader2 } from "lucide-react";
 import { validateResetTokenAction, resetPasswordAction } from "@/app/actions/auth.actions";
+import { TokenErrorCard, ResetSuccessCard } from "./reset-status-card";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -56,15 +57,6 @@ function ResetPasswordForm() {
       return;
     }
 
-    const hasUpper = /[A-Z]/.test(password);
-    const hasLower = /[a-z]/.test(password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (!hasUpper || !hasLower || !hasSpecial) {
-      toast.error("Password must contain uppercase, lowercase, and special character.");
-      return;
-    }
-
     if (password !== confirmPassword) {
       toast.error("Passwords do not match.");
       return;
@@ -72,12 +64,7 @@ function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      const result = await resetPasswordAction({
-        token,
-        password,
-        confirmPassword,
-      });
-
+      const result = await resetPasswordAction({ token, password, confirmPassword });
       if (!result.success) {
         toast.error(result.error || "Failed to update password");
         return;
@@ -85,9 +72,7 @@ function ResetPasswordForm() {
 
       setSuccess(true);
       toast.success("Password updated successfully!");
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
+      setTimeout(() => router.push("/login"), 2000);
     } catch {
       toast.error("An error occurred while resetting password.");
     } finally {
@@ -97,7 +82,6 @@ function ResetPasswordForm() {
 
   return (
     <div className="bg-[#FAFBFE] shadow-[0_20px_50px_rgba(15,35,65,0.08)] border border-white/90 rounded-[24px] p-6 sm:p-7 space-y-4 backdrop-blur-sm">
-      {/* Header with Title and Logo */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h2 className="text-xl sm:text-2xl font-bold text-[#0F2942] tracking-tight">
@@ -111,16 +95,8 @@ function ResetPasswordForm() {
             )}
           </p>
         </div>
-
-        <div className="relative w-14 h-14 flex-shrink-0 rounded-2xl p-1 bg-white border border-border/60 shadow-2xs flex items-center justify-center overflow-hidden">
-          <Image
-            src="/logo.png"
-            alt="LedgerOne Logo"
-            width={56}
-            height={56}
-            className="w-full h-full object-contain"
-            priority
-          />
+        <div className="relative w-12 h-12 flex-shrink-0 rounded-2xl p-1 bg-white border border-border/60 shadow-2xs flex items-center justify-center overflow-hidden">
+          <Image src="/logo.png" alt="LedgerOne Logo" width={48} height={48} className="w-full h-full object-contain" priority />
         </div>
       </div>
 
@@ -130,50 +106,13 @@ function ResetPasswordForm() {
           <p className="text-xs text-muted-foreground">Verifying security token...</p>
         </div>
       ) : !tokenValid ? (
-        <div className="space-y-4 py-2">
-          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-rose-600 flex-shrink-0 mt-0.5" />
-            <div className="space-y-1">
-              <h3 className="text-xs font-bold text-rose-900">
-                Invalid or Expired Link
-              </h3>
-              <p className="text-xs text-rose-800 leading-relaxed">
-                {tokenError}
-              </p>
-            </div>
-          </div>
-
-          <Link
-            href="/forgot-password"
-            className="w-full bg-[#193552] hover:bg-[#12283E] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            Request New Reset Link
-          </Link>
-        </div>
+        <TokenErrorCard error={tokenError} />
       ) : success ? (
-        <div className="space-y-4 py-4 text-center">
-          <div className="mx-auto w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-            <CheckCircle2 className="h-6 w-6" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-bold text-[#0F2942]">Password Changed Successfully</h3>
-            <p className="text-xs text-muted-foreground">
-              Redirecting you to the sign-in page...
-            </p>
-          </div>
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1 text-xs text-[#1F73B7] font-semibold hover:underline"
-          >
-            Go to Sign In Now &rarr;
-          </Link>
-        </div>
+        <ResetSuccessCard />
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground block">
-              New Password
-            </label>
+            <label className="text-xs font-semibold text-foreground block">New Password</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
               <input
@@ -189,20 +128,14 @@ function ResetPasswordForm() {
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground cursor-pointer"
-                aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
-            <p className="text-[10px] text-muted-foreground">
-              Min. 8 characters with uppercase, lowercase, and special symbol.
-            </p>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground block">
-              Confirm New Password
-            </label>
+            <label className="text-xs font-semibold text-foreground block">Confirm New Password</label>
             <div className="relative">
               <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-muted-foreground pointer-events-none" />
               <input
@@ -218,7 +151,6 @@ function ResetPasswordForm() {
                 type="button"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                 className="absolute right-3 top-3.5 text-muted-foreground hover:text-foreground cursor-pointer"
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
               >
                 {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -228,28 +160,16 @@ function ResetPasswordForm() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-[#193552] hover:bg-[#12283E] active:scale-[0.99] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full bg-[#193552] hover:bg-[#12283E] active:scale-[0.99] text-white font-medium h-11 rounded-xl shadow-sm text-xs flex items-center justify-center gap-2 transition-all mt-2 cursor-pointer disabled:opacity-70"
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Updating Password...
-              </>
-            ) : (
-              "Update Password"
-            )}
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Update Password"}
           </button>
         </form>
       )}
 
-      {/* Back to Sign In Link */}
       <div className="text-center text-xs text-muted-foreground pt-1 border-t border-border/70">
-        <Link
-          href="/login"
-          className="font-semibold text-[#1F73B7] hover:underline inline-flex items-center gap-1"
-        >
-          <ArrowLeft className="h-3 w-3 inline" />
-          Back to Sign In
+        <Link href="/login" className="font-semibold text-[#1F73B7] hover:underline inline-flex items-center gap-1">
+          <ArrowLeft className="h-3 w-3 inline" /> Back to Sign In
         </Link>
       </div>
     </div>
@@ -258,13 +178,7 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="bg-[#FAFBFE] rounded-[24px] p-8 flex items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-[#16324F]" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="bg-[#FAFBFE] rounded-[24px] p-8 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-[#16324F]" /></div>}>
       <ResetPasswordForm />
     </Suspense>
   );

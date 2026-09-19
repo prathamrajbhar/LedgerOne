@@ -1,62 +1,33 @@
 import { prisma } from "@/lib/prisma";
-/**
- * Auth Service
- * Handles user authentication, session management, and portal invitations
- */
-
 import { UserRole } from "@prisma/client";
-import { hash, compare } from "bcryptjs";
-import { randomBytes } from "crypto";
-import { ValidationError, UnauthorizedError, ConflictError } from "../utils/errors";
-import { emailService } from "../email/client";
+import { ValidationError, UnauthorizedError, ConflictError } from "@/lib/utils/errors";
+import { passwordService } from "./auth/password.service";
+import { passwordResetService } from "./auth/password-reset.service";
+import { portalAuthService } from "./auth/portal-auth.service";
+import type {
+  SignUpInput,
+  LoginInput,
+  ContactLoginInput,
+  CreateUserInput,
+  InviteContactToPortalInput,
+  PortalInvitationResult,
+  ResetTokenValidationResult,
+  AuthenticatedUser,
+} from "./auth/auth.types";
 
-
-
-export interface SignUpInput {
-  loginId: string;
-  email: string;
-  password: string;
-  name?: string;
-  role?: UserRole;
-}
-
-export interface LoginInput {
-  loginId: string;
-  password: string;
-}
-
-export interface ContactLoginInput {
-  email: string;
-  password: string;
-}
-
-export interface CreateUserInput {
-  loginId: string;
-  email: string;
-  password: string;
-  name: string;
-  role: UserRole;
-}
-
-export interface InviteContactToPortalInput {
-  contactId: string;
-  invitedByUserId: string;
-}
+export * from "./auth/auth.types";
 
 export class AuthService {
   /**
    * Self-service sign up for Accountant role
    */
   async signUp(input: SignUpInput) {
-    // Validate login ID (6-12 characters)
     if (input.loginId.length < 6 || input.loginId.length > 12) {
       throw new ValidationError("Login ID must be 6-12 characters");
     }
 
-    // Validate password complexity
-    this.validatePassword(input.password);
+    passwordService.validate(input.password);
 
-    // Check uniqueness
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [{ loginId: input.loginId }, { email: input.email }],
@@ -70,11 +41,9 @@ export class AuthService {
       throw new ConflictError("Email already exists");
     }
 
-    // Hash password
-    const hashedPassword = await hash(input.password, 12);
+    const hashedPassword = await passwordService.hash(input.password);
 
-    // Create user
-    const user = await prisma.user.create({
+    return prisma.user.create({
       data: {
         loginId: input.loginId,
         email: input.email,
@@ -90,31 +59,20 @@ export class AuthService {
         role: true,
       },
     });
-
-    return user;
   }
 
   /**
-   * Login with credentials (for all users: Admin, Accountant, and Contact Portal users)
-   * Supports authentication by either loginId or email
+   * Unified login for all roles (by loginId or email)
    */
-  async login(input: LoginInput) {
+  async login(input: LoginInput): Promise<AuthenticatedUser> {
     const identifier = input.loginId.trim();
-
     const isEmail = identifier.includes("@");
+
     const user = await prisma.user.findFirst({
       where: isEmail
         ? { email: { equals: identifier, mode: "insensitive" } }
         : { loginId: identifier },
-      select: {
-        id: true,
-        loginId: true,
-        email: true,
-        name: true,
-        role: true,
-        password: true,
-        isActive: true,
-        mustChangePassword: true,
+      include: {
         contact: {
           select: {
             id: true,
@@ -142,89 +100,37 @@ export class AuthService {
       throw new UnauthorizedError("Contact account is archived");
     }
 
-    const isValidPassword = await compare(input.password, user.password);
-
+    const isValidPassword = await passwordService.compare(input.password, user.password);
     if (!isValidPassword) {
       throw new UnauthorizedError("Invalid Login ID or Password");
     }
 
-    // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     return userWithoutPassword;
   }
 
   /**
-   * Contact portal login (email-based authentication)
+   * Contact portal login by email
    */
-  async authenticateContact(input: ContactLoginInput) {
-    // Find user by email with CONTACT role
-    const user = await prisma.user.findFirst({
-      where: {
-        email: input.email,
-        role: UserRole.CONTACT,
-      },
-      select: {
-        id: true,
-        loginId: true,
-        email: true,
-        name: true,
-        role: true,
-        password: true,
-        isActive: true,
-        mustChangePassword: true,
-        contact: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-            email: true,
-            phone: true,
-            address: true,
-            profileImage: true,
-            isArchived: true,
-          },
-        },
-      },
-    });
-
-    if (!user || !user.contact) {
-      throw new UnauthorizedError("Invalid email or password");
-    }
-
-    if (!user.isActive) {
-      throw new UnauthorizedError("Account is deactivated");
-    }
-
-    if (user.contact.isArchived) {
-      throw new UnauthorizedError("Contact account is archived");
-    }
-
-    const isValidPassword = await compare(input.password, user.password);
-
-    if (!isValidPassword) {
-      throw new UnauthorizedError("Invalid email or password");
-    }
-
-    // Return user with contact info, without password
-    const { password: _, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+  async authenticateContact(input: ContactLoginInput): Promise<AuthenticatedUser> {
+    return this.login({ loginId: input.email, password: input.password });
   }
 
   /**
-   * Admin creates internal user (Admin or Accountant)
+   * Admin creates internal user
    */
   async createUser(input: CreateUserInput, createdByUserId: string) {
-    // Only Administrator can create users
-    await this.verifyAdministrator(createdByUserId);
+    const admin = await prisma.user.findUnique({ where: { id: createdByUserId } });
+    if (!admin || admin.role !== UserRole.ADMINISTRATOR) {
+      throw new UnauthorizedError("Only Administrator can perform this action");
+    }
 
-    // Validate
     if (input.loginId.length < 6 || input.loginId.length > 12) {
       throw new ValidationError("Login ID must be 6-12 characters");
     }
 
-    this.validatePassword(input.password);
+    passwordService.validate(input.password);
 
-    // Check uniqueness
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [{ loginId: input.loginId }, { email: input.email }],
@@ -238,11 +144,9 @@ export class AuthService {
       throw new ConflictError("Email already exists");
     }
 
-    // Hash password
-    const hashedPassword = await hash(input.password, 12);
+    const hashedPassword = await passwordService.hash(input.password);
 
-    // Create user
-    const user = await prisma.user.create({
+    return prisma.user.create({
       data: {
         loginId: input.loginId,
         email: input.email,
@@ -259,175 +163,20 @@ export class AuthService {
         isActive: true,
       },
     });
-
-    return user;
   }
 
   /**
-   * Invite contact to portal (creates Contact-role login)
+   * Update temporary password upon first login
    */
-  async inviteContactToPortal(input: InviteContactToPortalInput) {
-    // Verify the inviter has permission (Admin or Accountant)
-    await this.verifyInternalUser(input.invitedByUserId);
+  async updateTemporaryPassword(userId: string, newPassword: string): Promise<{ success: boolean }> {
+    passwordService.validate(newPassword);
 
-    // Get contact
-    const contact = await prisma.contact.findUnique({
-      where: { id: input.contactId },
-      include: { user: true },
-    });
-
-    if (!contact) {
-      throw new ValidationError("Contact not found");
-    }
-
-    if (contact.userId) {
-      throw new ConflictError("Contact already has portal access");
-    }
-
-    // Check if a user with this email already exists
-    const existingUserWithEmail = await prisma.user.findUnique({
-      where: { email: contact.email },
-    });
-    if (existingUserWithEmail) {
-      throw new ConflictError(
-        `A system user with email "${contact.email}" already exists (Login ID: ${existingUserWithEmail.loginId}, Role: ${existingUserWithEmail.role}).`
-      );
-    }
-
-    // Generate temporary password
-    const tempPassword = this.generateTemporaryPassword();
-    const hashedPassword = await hash(tempPassword, 12);
-
-    // Find latest portal user loginId to generate next sequence (e.g. cust003)
-    const latestPortalUser = await prisma.user.findFirst({
-      where: {
-        role: UserRole.CONTACT,
-        loginId: { startsWith: "cust" },
-      },
-      orderBy: { loginId: "desc" },
-      select: { loginId: true },
-    });
-
-    let nextNumber = 1;
-    if (latestPortalUser?.loginId) {
-      const match = latestPortalUser.loginId.match(/^cust(\d+)$/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
-    }
-    const generatedLoginId = `cust${String(nextNumber).padStart(3, "0")}`;
-
-    // Create Contact-role user and link to contact
-    const user = await prisma.user.create({
-      data: {
-        loginId: generatedLoginId,
-        email: contact.email,
-        password: hashedPassword,
-        role: UserRole.CONTACT,
-        mustChangePassword: true,
-        contact: {
-          connect: { id: contact.id },
-        },
-      },
-    });
-
-    // Send portal invitation email with credentials
-    let emailSent = false;
-    let emailError: string | null = null;
-
-    try {
-      await emailService.sendPortalInvitation(
-        contact.email,
-        user.loginId,
-        tempPassword,
-        contact.name
-      );
-      emailSent = true;
-    } catch (error) {
-      // Log email failure but don't fail the entire operation
-      // User is already created, admin can manually share credentials or resend
-      emailError = error instanceof Error ? error.message : "Unknown email error";
-    }
-
-    return {
-      userId: user.id,
-      loginId: user.loginId,
-      temporaryPassword: tempPassword, // Only returned for initial setup/manual sharing
-      emailSent,
-      emailError,
-    };
-  }
-
-  /**
-   * Resend portal invitation with a new temporary password
-   */
-  async resendPortalInvitation(userId: string, requestedByUserId: string) {
-    await this.verifyInternalUser(requestedByUserId);
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { contact: true },
-    });
-
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
       throw new ValidationError("User not found");
     }
 
-    if (user.role !== UserRole.CONTACT || !user.contact) {
-      throw new ValidationError("Only portal contacts can receive invitation emails");
-    }
-
-    const tempPassword = this.generateTemporaryPassword();
-    const hashedPassword = await hash(tempPassword, 12);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        isActive: true,
-        mustChangePassword: true,
-      },
-    });
-
-    let emailSent = false;
-    let emailError: string | null = null;
-
-    try {
-      await emailService.sendPortalInvitation(
-        user.email,
-        user.loginId,
-        tempPassword,
-        user.contact.name
-      );
-      emailSent = true;
-    } catch (error) {
-      emailError = error instanceof Error ? error.message : "Failed to send email";
-    }
-
-    return {
-      userId: user.id,
-      loginId: user.loginId,
-      temporaryPassword: tempPassword,
-      emailSent,
-      emailError,
-    };
-  }
-
-  /**
-   * Update password for user logging in with temporary password
-   */
-  async updateTemporaryPassword(userId: string, newPassword: string) {
-    this.validatePassword(newPassword);
-
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new ValidationError("User not found");
-    }
-
-    const hashedPassword = await hash(newPassword, 12);
+    const hashedPassword = await passwordService.hash(newPassword);
 
     await prisma.user.update({
       where: { id: userId },
@@ -440,191 +189,25 @@ export class AuthService {
     return { success: true };
   }
 
-  // Private helper methods
-
-  private validatePassword(password: string) {
-    if (password.length < 8) {
-      throw new ValidationError("Password must be at least 8 characters");
-    }
-
-    const hasUppercase = /[A-Z]/.test(password);
-    const hasLowercase = /[a-z]/.test(password);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (!hasUppercase || !hasLowercase || !hasSpecial) {
-      throw new ValidationError(
-        "Password must contain uppercase, lowercase, and special character"
-      );
-    }
+  // Delegated methods
+  inviteContactToPortal(input: InviteContactToPortalInput): Promise<PortalInvitationResult> {
+    return portalAuthService.inviteContact(input);
   }
 
-  private async verifyAdministrator(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user || user.role !== UserRole.ADMINISTRATOR) {
-      throw new UnauthorizedError("Only Administrator can perform this action");
-    }
-
-    return user;
+  resendPortalInvitation(userId: string, requestedByUserId: string): Promise<PortalInvitationResult> {
+    return portalAuthService.resendInvitation(userId, requestedByUserId);
   }
 
-  private async verifyInternalUser(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user || user.role === UserRole.CONTACT) {
-      throw new UnauthorizedError("Unauthorized");
-    }
-
-    return user;
+  requestPasswordReset(email: string): Promise<{ success: boolean }> {
+    return passwordResetService.requestReset(email);
   }
 
-  private generateTemporaryPassword(): string {
-    // Generate a random 12-character password with required complexity
-    const length = 12;
-    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    const lowercase = "abcdefghijklmnopqrstuvwxyz";
-    const numbers = "0123456789";
-    const special = "!@#$%^&*";
-
-    let password = "";
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += special[Math.floor(Math.random() * special.length)];
-
-    const all = uppercase + lowercase + numbers + special;
-    for (let i = 3; i < length; i++) {
-      password += all[Math.floor(Math.random() * all.length)];
-    }
-
-    // Shuffle
-    return password
-      .split("")
-      .sort(() => Math.random() - 0.5)
-      .join("");
+  validateResetToken(token: string): Promise<ResetTokenValidationResult> {
+    return passwordResetService.validateToken(token);
   }
 
-  /**
-   * Request password reset: generates a secure token and sends an email
-   */
-  async requestPasswordReset(email: string) {
-    const normalizedEmail = email.trim().toLowerCase();
-
-    const user = await prisma.user.findFirst({
-      where: {
-        email: {
-          equals: normalizedEmail,
-          mode: "insensitive",
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        isActive: true,
-      },
-    });
-
-    // If user does not exist or is inactive, return silently to prevent email enumeration
-    if (!user || !user.isActive) {
-      return { success: true };
-    }
-
-    // Generate cryptographic reset token (32 bytes = 64 hex chars)
-    const token = randomBytes(32).toString("hex");
-    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour validity
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        resetToken: token,
-        resetTokenExpiry: expiry,
-      },
-    });
-
-    // Dispatch password reset email
-    await emailService.sendPasswordResetEmail(user.email, token, user.name);
-
-    return { success: true };
-  }
-
-  /**
-   * Validate password reset token
-   */
-  async validateResetToken(token: string) {
-    if (!token || typeof token !== "string") {
-      return { valid: false, message: "Reset token is missing or invalid." };
-    }
-
-    const user = await prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpiry: {
-          gt: new Date(),
-        },
-      },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-      },
-    });
-
-    if (!user) {
-      return {
-        valid: false,
-        message: "This password reset link is invalid or has expired. Please request a new one.",
-      };
-    }
-
-    return {
-      valid: true,
-      email: user.email,
-      name: user.name,
-    };
-  }
-
-  /**
-   * Reset user password using token
-   */
-  async resetPasswordWithToken(token: string, newPassword: string) {
-    if (!token || typeof token !== "string") {
-      throw new ValidationError("Password reset token is required");
-    }
-
-    this.validatePassword(newPassword);
-
-    const user = await prisma.user.findFirst({
-      where: {
-        resetToken: token,
-        resetTokenExpiry: {
-          gt: new Date(),
-        },
-      },
-    });
-
-    if (!user) {
-      throw new ValidationError(
-        "This password reset link is invalid or has expired. Please request a new link."
-      );
-    }
-
-    const hashedPassword = await hash(newPassword, 12);
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        password: hashedPassword,
-        resetToken: null,
-        resetTokenExpiry: null,
-        mustChangePassword: false,
-      },
-    });
-
-    return { success: true };
+  resetPasswordWithToken(token: string, newPassword: string): Promise<{ success: boolean }> {
+    return passwordResetService.resetWithToken(token, newPassword);
   }
 }
 

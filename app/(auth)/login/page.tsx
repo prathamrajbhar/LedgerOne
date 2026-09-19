@@ -5,7 +5,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Lock, User, Eye, EyeOff, ArrowRight } from "lucide-react";
+import { Lock, User, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 function LoginForm() {
@@ -19,10 +19,7 @@ function LoginForm() {
   useEffect(() => {
     const error = searchParams.get("error");
     if (error === "SessionExpired") {
-      toast.error("Your session has expired. Please log in again.", {
-        duration: 5000,
-      });
-
+      toast.error("Your session has expired. Please log in again.");
       if (typeof window !== "undefined") {
         const url = new URL(window.location.href);
         url.searchParams.delete("error");
@@ -39,7 +36,6 @@ function LoginForm() {
     }
 
     setLoading(true);
-
     try {
       const result = await signIn("credentials", {
         loginId: loginId.trim(),
@@ -56,7 +52,6 @@ function LoginForm() {
         toast.success("Welcome back!");
         const callbackUrl = searchParams.get("callbackUrl");
         window.location.href = callbackUrl || "/";
-        return;
       }
     } catch {
       toast.error("An error occurred during login. Please try again.");
@@ -66,17 +61,17 @@ function LoginForm() {
   };
 
   return (
-    <div className="w-full max-w-[575px] max-h-[calc(100dvh-70px)] max-h-[calc(100svh-70px)] my-4 sm:my-6 lg:my-0 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-5 sm:p-8 lg:p-[48px] flex flex-col justify-between overflow-y-auto lg:overflow-hidden">
-      <div className="flex-shrink-0">
+    <div className="w-full max-w-[575px] my-4 sm:my-6 lg:my-0 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-5 sm:p-8 lg:p-[48px] flex flex-col justify-between">
+      <div>
         <h2 className="text-2xl sm:text-[28px] font-bold text-[#0F2942] tracking-tight leading-tight">
           Welcome Back
         </h2>
         <p className="text-xs sm:text-sm text-[#526477] leading-relaxed mt-1.5">
-          Sign in to your LedgerOne workspace and continue<br className="hidden sm:inline" /> managing your business with ease.
+          Sign in to your LedgerOne workspace and continue managing your business with ease.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-[clamp(10px,1.6vh,16px)] pt-2 flex-1 flex flex-col justify-center min-h-0">
+      <form onSubmit={handleSubmit} className="space-y-4 pt-4 flex-1 flex flex-col justify-center">
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-[#0F2942] block">
             Login ID or Email
@@ -90,7 +85,7 @@ function LoginForm() {
               placeholder="e.g. admin001, cust006, or email"
               value={loginId}
               onChange={(e) => setLoginId(e.target.value)}
-              className="w-full h-[clamp(42px,5vh,50px)] pl-11 pr-4 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none"
+              className="w-full h-12 pl-11 pr-4 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none"
               required
             />
           </div>
@@ -98,13 +93,8 @@ function LoginForm() {
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label className="text-xs font-semibold text-[#0F2942] block">
-              Password
-            </label>
-            <Link
-              href="/forgot-password"
-              className="text-xs text-[#1F73B7] hover:underline font-medium py-0.5"
-            >
+            <label className="text-xs font-semibold text-[#0F2942] block">Password</label>
+            <Link href="/forgot-password" className="text-xs text-[#1F73B7] hover:underline font-medium">
               Forgot password?
             </Link>
           </div>
@@ -117,7 +107,7 @@ function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-[clamp(42px,5vh,50px)] pl-11 pr-11 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none font-mono"
+              className="w-full h-12 pl-11 pr-11 rounded-xl bg-[#EEF4FC] hover:bg-[#E8F0FA] focus:bg-white border-0 ring-1 ring-black/5 focus:ring-2 focus:ring-[#167C80]/30 text-xs sm:text-sm text-[#0F2942] placeholder:text-[#8C9BAE] transition-all outline-none font-mono"
               required
             />
             <button
@@ -140,10 +130,7 @@ function LoginForm() {
             onChange={(e) => setRememberMe(e.target.checked)}
             className="h-4 w-4 rounded border-gray-300 text-[#0F2942] accent-[#0F2942] cursor-pointer"
           />
-          <label
-            htmlFor="remember"
-            className="text-xs text-[#526477] cursor-pointer select-none"
-          >
+          <label htmlFor="remember" className="text-xs text-[#526477] cursor-pointer select-none">
             Remember my workspace login
           </label>
         </div>
@@ -151,30 +138,34 @@ function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-[clamp(44px,5.4vh,54px)] bg-[#0F2942] hover:bg-[#163859] text-white font-bold rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99] flex-shrink-0"
+          className="w-full h-12 bg-[#0F2942] hover:bg-[#163859] text-white font-bold rounded-xl shadow-md text-xs sm:text-sm flex items-center justify-center gap-2 transition-all mt-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer active:scale-[0.99]"
         >
-          <span>{loading ? "Signing in..." : "Sign In"}</span>
-          {!loading && <ArrowRight className="h-4 w-4" />}
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            <>
+              Sign In
+              <ArrowRight className="h-4 w-4" />
+            </>
+          )}
         </button>
       </form>
 
-      <div className="relative my-2 sm:my-2.5 flex-shrink-0">
+      <div className="relative my-4">
         <div className="absolute inset-0 flex items-center">
           <span className="w-full border-t border-[#E2E8F0]" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white/95 px-3 text-[#8C9BAE] font-semibold tracking-wider">
-            OR
-          </span>
+          <span className="bg-white/95 px-3 text-[#8C9BAE] font-semibold tracking-wider">OR</span>
         </div>
       </div>
 
-      <div className="text-center text-xs text-[#526477] pt-0.5 flex-shrink-0">
+      <div className="text-center text-xs text-[#526477]">
         Don&apos;t have an accountant account?{" "}
-        <Link
-          href="/sign-up"
-          className="font-semibold text-[#1F73B7] hover:underline ml-1"
-        >
+        <Link href="/sign-up" className="font-semibold text-[#1F73B7] hover:underline ml-1">
           Register Company
         </Link>
       </div>
@@ -186,7 +177,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="w-full max-w-[575px] h-[520px] mb-6 sm:mb-8 lg:mb-12 bg-white/95 backdrop-blur-md shadow-[0_20px_60px_rgba(15,35,65,0.08)] border border-white/80 rounded-[28px] p-6 sm:p-8 flex items-center justify-center">
+        <div className="w-full max-w-[575px] h-[480px] bg-white/95 rounded-[28px] p-8 flex items-center justify-center">
           <div className="w-8 h-8 border-2 border-[#0F2942] border-t-transparent rounded-full animate-spin" />
         </div>
       }

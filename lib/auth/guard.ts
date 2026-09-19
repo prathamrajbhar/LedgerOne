@@ -3,11 +3,13 @@ import { Permission, hasPermission } from "./permissions";
 import { UnauthorizedError } from "../utils/errors";
 import { prisma } from "@/lib/prisma";
 
+/**
+ * Enforce required permission at data layer and verify real-time user active status in database
+ */
 export async function requirePermission(permission: Permission | Permission[]) {
   const session = await requireAuth();
   const permissions = Array.isArray(permission) ? permission : [permission];
 
-  // Active status verification against DB
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, isActive: true, role: true },
