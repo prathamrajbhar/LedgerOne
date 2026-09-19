@@ -27,7 +27,6 @@ export default function WorkspaceLayoutClient({
 }: WorkspaceLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copilotOpen, setCopilotOpen] = useState(false);
-  const [copilotExpanded, setCopilotExpanded] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -40,8 +39,8 @@ export default function WorkspaceLayoutClient({
         />
       </React.Suspense>
 
-      {/* Main Workspace Area (Dynamically adjusts width when Copilot is open) */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
+      {/* Main Workspace Area (Fluidly adapts to Copilot width) */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Static / Sticky Top Navbar */}
         <Navbar
           onMenuClick={() => setSidebarOpen(true)}
@@ -53,7 +52,7 @@ export default function WorkspaceLayoutClient({
 
         {/* Scrollable Page Content */}
         <main className="flex-1 overflow-y-auto bg-background p-4 sm:p-6 lg:p-7">
-          <div className="max-w-[1600px] mx-auto w-full">
+          <div className="max-w-[1600px] mx-auto w-full min-w-0">
             {mustChangePassword ? (
               <div className="h-[60vh] flex items-center justify-center text-muted-foreground text-sm font-medium">
                 Action Required: Please set your permanent password to access your workspace.
@@ -65,14 +64,12 @@ export default function WorkspaceLayoutClient({
         </main>
       </div>
 
-      {/* Autonomous ERP Copilot Panel (Docked side-by-side with zero overlap) */}
+      {/* Autonomous ERP Copilot Panel (Resizable, docked side-by-side) */}
       {!mustChangePassword && (
         <CopilotWidget
           isOpen={copilotOpen}
           onOpen={() => setCopilotOpen(true)}
           onClose={() => setCopilotOpen(false)}
-          isExpanded={copilotExpanded}
-          onToggleExpand={() => setCopilotExpanded(!copilotExpanded)}
         />
       )}
 
