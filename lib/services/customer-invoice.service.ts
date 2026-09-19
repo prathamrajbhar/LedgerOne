@@ -727,8 +727,13 @@ export class CustomerInvoiceService {
    * Find invoice by ID
    */
   async findById(id: string) {
-    const invoice = await prisma.customerInvoice.findUnique({
-      where: { id },
+    const invoice = await prisma.customerInvoice.findFirst({
+      where: {
+        OR: [
+          { id },
+          { invoiceNumber: id },
+        ],
+      },
       include: {
         customer: true,
         createdBy: true,

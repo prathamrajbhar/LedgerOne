@@ -428,8 +428,13 @@ export class SalesOrderService {
    * Find sales order by ID
    */
   async findById(id: string) {
-    const salesOrder = await prisma.salesOrder.findUnique({
-      where: { id },
+    const salesOrder = await prisma.salesOrder.findFirst({
+      where: {
+        OR: [
+          { id },
+          { soNumber: id },
+        ],
+      },
       include: {
         customer: true,
         createdBy: true,

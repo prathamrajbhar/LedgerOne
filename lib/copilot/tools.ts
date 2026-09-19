@@ -2,9 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { dashboardService } from "@/lib/services/dashboard.service";
-import { contactService } from "@/lib/services/contact.service";
-import { emailService } from "@/lib/email/client";
-import { ContactType, DocumentStatus, PaymentStatus } from "@prisma/client";
+import { DocumentStatus, PaymentStatus } from "@prisma/client";
 
 export interface CopilotUserContext {
   userId: string;
@@ -213,9 +211,9 @@ export function createCopilotTools(userContext: CopilotUserContext) {
       },
     }),
 
-    // 4. WRITE ACTION TOOL: Create new Contact
+    // 4. WRITE ACTION TOOL: Create new Contact (Sensitive - requires user approval)
     createContactAction: tool({
-      description: "Create a new Customer or Vendor contact in the LedgerOne database.",
+      description: "Propose creating a new Customer or Vendor contact in the LedgerOne database. Requires interactive user approval before database write.",
       inputSchema: z.object({
         name: z.string().min(2).describe("Full name or company name of the contact"),
         email: z.string().email().describe("Email address for invoices and communications"),
@@ -223,135 +221,23 @@ export function createCopilotTools(userContext: CopilotUserContext) {
         phone: z.string().optional().describe("Contact phone number"),
         city: z.string().optional().describe("City location"),
       }),
-      execute: async ({
-        name,
-        email,
-        type,
-        phone,
-        city,
-      }: {
-        name: string;
-        email: string;
-        type: "CUSTOMER" | "VENDOR" | "BOTH";
-        phone?: string;
-        city?: string;
-      }) => {
-        try {
-          const contact = await contactService.create({
-            name,
-            email,
-            type: type as ContactType,
-            phone: phone || undefined,
-            city: city || undefined,
-          });
-
-          return {
-            success: true,
-            action: "createContact",
-            message: `Successfully created ${type.toLowerCase()} '${contact.name}' (${contact.email}).`,
-            contact: {
-              id: contact.id,
-              name: contact.name,
-              email: contact.email,
-              type: contact.type,
-            },
-          };
-        } catch (error) {
-          const err = error as Error;
-          return {
-            success: false,
-            action: "createContact",
-            error: err.message || "Failed to create contact.",
-          };
-        }
-      },
     }),
 
-    // 5. WRITE ACTION TOOL: Send Overdue Invoice Payment Reminder
+    // 5. WRITE ACTION TOOL: Send Overdue Invoice Payment Reminder (Sensitive - requires user approval)
     sendInvoicePaymentReminder: tool({
-      description: "Send an official payment reminder email with PDF details to the customer of an invoice.",
+      description: "Propose sending an official payment reminder email with PDF details to the customer of an invoice. Requires interactive user approval before dispatch.",
       inputSchema: z.object({
-        invoiceId: z.string().describe("The ID of the Customer Invoice"),
+        invoiceId: z.string().describe("The ID or Invoice Number of the Customer Invoice (e.g. 'INV-2026-4009')"),
         customNote: z.string().optional().describe("Optional friendly reminder message to append"),
       }),
-      execute: async ({ invoiceId }: { invoiceId: string; customNote?: string }) => {
-        try {
-          const invoice = await prisma.customerInvoice.findUnique({
-            where: { id: invoiceId },
-            include: { customer: true },
-          });
-
-          if (!invoice) {
-            return { success: false, error: "Invoice not found." };
-          }
-          if (!invoice.customer?.email) {
-            return { success: false, error: "Customer does not have a registered email address." };
-          }
-          if (invoice.status !== DocumentStatus.CONFIRMED) {
-            return { success: false, error: "Reminders can only be sent for Confirmed invoices." };
-          }
-          if (invoice.paymentStatus === PaymentStatus.PAID || Number(invoice.amountDue) <= 0) {
-            return { success: false, error: "Invoice is already fully paid." };
-          }
-
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const due = new Date(invoice.dueDate);
-          due.setHours(0, 0, 0, 0);
-          const diffDays = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-          const isOverdue = diffDays < 0;
-          const absDays = Math.abs(diffDays);
-
-          const formattedDue = new Date(invoice.dueDate).toLocaleDateString("en-IN", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          });
-
-          await emailService.sendInvoicePaymentReminder({
-            customerName: invoice.customer.name,
-            customerEmail: invoice.customer.email,
-            invoiceNumber: invoice.invoiceNumber,
-            totalAmount: Number(invoice.total).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
-            amountDue: Number(invoice.amountDue).toLocaleString("en-IN", { minimumFractionDigits: 2 }),
-            dueDate: formattedDue,
-            isOverdue,
-            daysDiff: absDays,
-            invoiceId: invoice.id,
-          });
-
-          await prisma.customerInvoice.update({
-            where: { id: invoiceId },
-            data: {
-              reminderCount: { increment: 1 },
-              lastReminderSentAt: new Date(),
-            },
-          });
-
-          return {
-            success: true,
-            action: "sendInvoicePaymentReminder",
-            message: `Reminder email successfully dispatched to ${invoice.customer.email} for invoice ${invoice.invoiceNumber}.`,
-            invoiceNumber: invoice.invoiceNumber,
-            recipient: invoice.customer.email,
-          };
-        } catch (error) {
-          const err = error as Error;
-          return {
-            success: false,
-            action: "sendInvoicePaymentReminder",
-            error: err.message || "Failed to send payment reminder.",
-          };
-        }
-      },
     }),
 
     // 6. CLIENT-SIDE NAVIGATION TOOL (Omits execute so client intercepts it)
     navigateTo: tool({
-      description: "Navigate the user directly to an ERP page, report, invoice, customer, or settings screen.",
+      description: "Navigate the user directly to an ERP page, report, invoice, customer, or settings screen. For invoices, use '/invoices/<invoiceNumber>' or '/invoices/<id>' (e.g. '/invoices/INV-2026-4009'). For bills, use '/bills/<billNumber>' or '/bills/<id>'.",
       inputSchema: z.object({
-        path: z.string().describe("The internal route path (e.g., '/invoices', '/dashboard', '/products/new', '/reports/profit-loss', '/settings/users')"),
-        label: z.string().describe("Human readable title of the page being navigated to (e.g. 'Customer Invoices', 'Profit & Loss Statement')"),
+        path: z.string().describe("The internal route path (e.g., '/invoices', '/invoices/INV-2026-4009', '/dashboard', '/products/new', '/reports/profit-loss', '/settings/users-management')"),
+        label: z.string().describe("Human readable title of the page being navigated to (e.g. 'Customer Invoices', 'Invoice INV-2026-4009', 'Profit & Loss Statement')"),
         description: z.string().optional().describe("Brief explanation of why the user is being navigated there"),
       }),
     }),

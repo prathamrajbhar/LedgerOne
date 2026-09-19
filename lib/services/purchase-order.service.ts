@@ -273,8 +273,13 @@ export class PurchaseOrderService {
   }
 
   async findById(id: string) {
-    const po = await prisma.purchaseOrder.findUnique({
-      where: { id },
+    const po = await prisma.purchaseOrder.findFirst({
+      where: {
+        OR: [
+          { id },
+          { poNumber: id },
+        ],
+      },
       include: {
         vendor: true,
         lines: {

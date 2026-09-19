@@ -27,10 +27,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { executeCopilotAction } from "@/app/actions/copilot.actions";
 
 export function CopilotChat() {
   const router = useRouter();
   const [inputVal, setInputVal] = useState("");
+  const [executingCallIds, setExecutingCallIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const handledNavCalls = useRef<Set<string>>(new Set());
 
@@ -63,7 +65,7 @@ export function CopilotChat() {
       msg.parts.forEach((part) => {
         if (isToolUIPart(part)) {
           const toolName = getToolName(part);
-          if (toolName === "navigateTo") {
+          if (toolName === "navigateTo" && part.state === "input-available") {
             const toolCallId = part.toolCallId;
             if (!handledNavCalls.current.has(toolCallId)) {
               handledNavCalls.current.add(toolCallId);
@@ -430,8 +432,31 @@ export function CopilotChat() {
                       const isContactAction = toolName === "createContactAction";
                       const isReminderAction = toolName === "sendInvoicePaymentReminder";
 
+                      const isExecuting = executingCallIds.has(part.toolCallId);
+
                       if (part.state === "output-available") {
-                        const result = part.output as { success?: boolean; message?: string; error?: string };
+                        const result = part.output as {
+                          success?: boolean;
+                          cancelled?: boolean;
+                          message?: string;
+                          error?: string;
+                        };
+
+                        if (result?.cancelled) {
+                          return (
+                            <div
+                              key={pIdx}
+                              className="p-2.5 rounded-lg border text-[11px] flex items-start gap-2 bg-slate-100 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                            >
+                              <XCircle className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="font-semibold block">Action Cancelled</span>
+                                <span>{result.message || "Operation was cancelled by user."}</span>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div
                             key={pIdx}
@@ -480,6 +505,8 @@ export function CopilotChat() {
                                   <p><strong>Action:</strong> Create new {String(contactInput.type || "Contact").toLowerCase()}</p>
                                   <p><strong>Name:</strong> {String(contactInput.name || "")}</p>
                                   <p><strong>Email:</strong> {String(contactInput.email || "")}</p>
+                                  {Boolean(contactInput.phone) && <p><strong>Phone:</strong> {String(contactInput.phone)}</p>}
+                                  {Boolean(contactInput.city) && <p><strong>City:</strong> {String(contactInput.city)}</p>}
                                 </>
                               );
                             })()}
@@ -488,7 +515,8 @@ export function CopilotChat() {
                               return (
                                 <>
                                   <p><strong>Action:</strong> Dispatch email payment reminder with invoice PDF</p>
-                                  <p><strong>Invoice ID:</strong> {String(reminderInput.invoiceId || "")}</p>
+                                  <p><strong>Invoice:</strong> {String(reminderInput.invoiceId || "")}</p>
+                                  {Boolean(reminderInput.customNote) && <p><strong>Note:</strong> {String(reminderInput.customNote)}</p>}
                                 </>
                               );
                             })()}
@@ -498,38 +526,75 @@ export function CopilotChat() {
                             <Button
                               type="button"
                               size="sm"
+                              disabled={isExecuting}
                               onClick={async () => {
-                                void addToolResult({
-                                  tool: toolName,
-                                  toolCallId: part.toolCallId,
-                                  state: "output-available",
-                                  output: {
-                                    success: true,
-                                    message: "Approved and executed by user.",
-                                  },
-                                });
+                                if (isExecuting) return;
+                                setExecutingCallIds((prev) => new Set(prev).add(part.toolCallId));
+                                try {
+                                  const execution = await executeCopilotAction(
+                                    toolName,
+                                    (part.input || {}) as Record<string, unknown>
+                                  );
+                                  void addToolResult({
+                                    tool: toolName,
+                                    toolCallId: part.toolCallId,
+                                    state: "output-available",
+                                    output: execution,
+                                  });
+                                } catch (err) {
+                                  const error = err as Error;
+                                  void addToolResult({
+                                    tool: toolName,
+                                    toolCallId: part.toolCallId,
+                                    state: "output-available",
+                                    output: {
+                                      success: false,
+                                      error: error.message || "Failed to execute action.",
+                                    },
+                                  });
+                                } finally {
+                                  setExecutingCallIds((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(part.toolCallId);
+                                    return next;
+                                  });
+                                }
                               }}
                               className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 gap-1 font-medium cursor-pointer"
                             >
-                              <Check className="w-3.5 h-3.5" />
-                              Approve
+                              {isExecuting ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Executing...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Approve</span>
+                                </>
+                              )}
                             </Button>
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
-                              onClick={async () => {
+                              disabled={isExecuting}
+                              onClick={() => {
                                 void addToolResult({
                                   tool: toolName,
                                   toolCallId: part.toolCallId,
-                                  state: "output-error",
-                                  errorText: "User cancelled the operation.",
+                                  state: "output-available",
+                                  output: {
+                                    success: false,
+                                    cancelled: true,
+                                    message: "Action was cancelled by user.",
+                                  },
                                 });
                               }}
-                              className="flex-1 text-slate-600 hover:bg-slate-100 text-xs h-7 gap-1 cursor-pointer"
+                              className="flex-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs h-7 gap-1 cursor-pointer"
                             >
                               <X className="w-3.5 h-3.5" />
-                              Cancel
+                              <span>Cancel</span>
                             </Button>
                           </div>
                         </div>

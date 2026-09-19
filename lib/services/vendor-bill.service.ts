@@ -564,8 +564,13 @@ export class VendorBillService {
   }
 
   async findById(id: string) {
-    const bill = await prisma.vendorBill.findUnique({
-      where: { id },
+    const bill = await prisma.vendorBill.findFirst({
+      where: {
+        OR: [
+          { id },
+          { billNumber: id },
+        ],
+      },
       include: {
         vendor: true,
         purchaseOrder: true,
