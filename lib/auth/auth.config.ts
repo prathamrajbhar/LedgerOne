@@ -1,9 +1,7 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { UserRole } from "@prisma/client";
 import { authService } from "@/lib/services/auth.service";
-import { prisma } from "@/lib/prisma";
 import { checkUserStatus } from "./user-status";
 import { refreshTokenService } from "@/lib/services/refresh-token.service";
 
@@ -13,7 +11,6 @@ const STATUS_CHECK_INTERVAL_MS = 60 * 1000;
 export const { handlers, signIn, signOut, auth } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
-  adapter: PrismaAdapter(prisma),
   providers: [
     // Unified login (Admin, Accountant, and Contact Portal users) - uses loginId or email
     CredentialsProvider({
@@ -133,7 +130,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      // If token is null (user was logged out), return null session
       if (!token) {
         return null as unknown as typeof session;
       }
@@ -142,7 +138,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
         session.user.mustChangePassword = token.mustChangePassword as boolean | undefined;
-        // Add contact info for portal users
         if (token.contactId) {
           session.user.contactId = token.contactId as string;
           session.user.contactType = token.contactType as import("@prisma/client").ContactType;
