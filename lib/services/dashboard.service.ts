@@ -75,45 +75,69 @@ export class DashboardService {
     const prevEndDate = new Date(startDate);
     prevEndDate.setDate(prevEndDate.getDate() - 1);
 
-    const [currentRevenueAgg, previousRevenueAgg, currentExpensesAgg, previousExpensesAgg] =
+    const [currentIncomeLines, prevIncomeLines, currentExpenseLines, prevExpenseLines] =
       await Promise.all([
-        prisma.customerInvoice.aggregate({
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            invoiceDate: { gte: startDate, lte: endDate },
+            account: { type: AccountType.INCOME },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: startDate, lte: endDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { credit: true, debit: true },
         }),
-        prisma.customerInvoice.aggregate({
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            invoiceDate: { gte: prevStartDate, lte: prevEndDate },
+            account: { type: AccountType.INCOME },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: prevStartDate, lte: prevEndDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { credit: true, debit: true },
         }),
-        prisma.vendorBill.aggregate({
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            billDate: { gte: startDate, lte: endDate },
+            account: { type: { in: [AccountType.EXPENSES, AccountType.OTHER_EXPENSES] } },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: startDate, lte: endDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { debit: true, credit: true },
         }),
-        prisma.vendorBill.aggregate({
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            billDate: { gte: prevStartDate, lte: prevEndDate },
+            account: { type: { in: [AccountType.EXPENSES, AccountType.OTHER_EXPENSES] } },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: prevStartDate, lte: prevEndDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { debit: true, credit: true },
         }),
       ]);
 
-    const totalRevenue = Number(currentRevenueAgg._sum.total || 0);
-    const prevRevenue = Number(previousRevenueAgg._sum.total || 0);
+    const totalRevenue = Math.max(
+      0,
+      Number(currentIncomeLines._sum.credit || 0) - Number(currentIncomeLines._sum.debit || 0)
+    );
+    const prevRevenue = Math.max(
+      0,
+      Number(prevIncomeLines._sum.credit || 0) - Number(prevIncomeLines._sum.debit || 0)
+    );
     const revenueChange =
       prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
-    const totalExpenses = Number(currentExpensesAgg._sum.total || 0);
-    const prevExpenses = Number(previousExpensesAgg._sum.total || 0);
+    const totalExpenses = Math.max(
+      0,
+      Number(currentExpenseLines._sum.debit || 0) - Number(currentExpenseLines._sum.credit || 0)
+    );
+    const prevExpenses = Math.max(
+      0,
+      Number(prevExpenseLines._sum.debit || 0) - Number(prevExpenseLines._sum.credit || 0)
+    );
     const expensesChange =
       prevExpenses > 0 ? ((totalExpenses - prevExpenses) / prevExpenses) * 100 : 0;
 
@@ -208,25 +232,37 @@ export class DashboardService {
 
       const monthName = monthDate.toLocaleDateString("en-US", { month: "short" });
 
-      const [revenueAgg, expensesAgg] = await Promise.all([
-        prisma.customerInvoice.aggregate({
+      const [incomeLines, expenseLines] = await Promise.all([
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            invoiceDate: { gte: startDate, lte: endDate },
+            account: { type: AccountType.INCOME },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: startDate, lte: endDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { credit: true, debit: true },
         }),
-        prisma.vendorBill.aggregate({
+        prisma.journalEntryLine.aggregate({
           where: {
-            status: DocumentStatus.CONFIRMED,
-            billDate: { gte: startDate, lte: endDate },
+            account: { type: { in: [AccountType.EXPENSES, AccountType.OTHER_EXPENSES] } },
+            journalEntry: {
+              status: JournalEntryStatus.POSTED,
+              accountingDate: { gte: startDate, lte: endDate },
+            },
           },
-          _sum: { total: true },
+          _sum: { debit: true, credit: true },
         }),
       ]);
 
-      const revenue = Number(revenueAgg._sum.total || 0);
-      const expenses = Number(expensesAgg._sum.total || 0);
+      const revenue = Math.max(
+        0,
+        Number(incomeLines._sum.credit || 0) - Number(incomeLines._sum.debit || 0)
+      );
+      const expenses = Math.max(
+        0,
+        Number(expenseLines._sum.debit || 0) - Number(expenseLines._sum.credit || 0)
+      );
       const profit = revenue - expenses;
 
       overviewList.push({

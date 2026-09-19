@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { PaymentStatus, DocumentStatus } from "@prisma/client";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
@@ -135,7 +136,9 @@ export function PortalBillsClient({ bills }: PortalBillsClientProps) {
                   return (
                     <tr key={bill.id} className="hover:bg-primary-light/30 transition-colors">
                       <td className="py-3.5 px-4 font-mono font-bold text-navy">
-                        {bill.billNumber}
+                        <Link href={`/portal/bills/${bill.id}`} className="hover:underline text-primary">
+                          {bill.billNumber}
+                        </Link>
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-foreground">
                         {bill.purchaseOrder?.poNumber || "—"}

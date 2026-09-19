@@ -223,16 +223,49 @@ export class ProductService {
       ...(categoryId && { categoryId }),
       ...(type && { type }),
       isArchived: includeArchived,
-      ...(stockStatus === "OUT_OF_STOCK" && {
-        stock: 0,
-      }),
-      ...(stockStatus === "LOW_STOCK" && {
-        stock: { gt: 0, lte: prisma.product.fields.reorderPoint },
-      }),
-      ...(stockStatus === "IN_STOCK" && {
-        stock: { gt: prisma.product.fields.reorderPoint },
-      }),
     };
+
+    if (stockStatus === "OUT_OF_STOCK") {
+      where.stock = 0;
+    }
+
+    if (stockStatus === "LOW_STOCK" || stockStatus === "IN_STOCK") {
+      const allMatching = await prisma.product.findMany({
+        where: {
+          ...(search && {
+            name: { contains: search, mode: "insensitive" },
+          }),
+          ...(categoryId && { categoryId }),
+          ...(type && { type }),
+          isArchived: includeArchived,
+        },
+        include: {
+          category: true,
+        },
+        orderBy: { name: "asc" },
+      });
+
+      const filtered = allMatching.filter((p) => {
+        if (stockStatus === "LOW_STOCK") {
+          return p.stock > 0 && p.stock <= p.reorderPoint;
+        }
+        if (stockStatus === "IN_STOCK") {
+          return p.stock > p.reorderPoint;
+        }
+        return true;
+      });
+
+      const total = filtered.length;
+      const paginated = filtered.slice((page - 1) * limit, page * limit);
+
+      return {
+        data: paginated,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
+    }
 
     const [products, total] = await Promise.all([
       prisma.product.findMany({

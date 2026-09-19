@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,8 @@ import {
   Filter,
   X,
   AlertTriangle,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 import {
@@ -35,6 +38,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface SystemUser {
   id: string;
@@ -212,19 +222,19 @@ export function UsersTable({
     switch (role) {
       case "ADMINISTRATOR":
         return (
-          <Badge variant="default" className="bg-navy text-white text-[10px] gap-1">
+          <Badge variant="default" className="bg-navy text-white text-[10px] gap-1 font-sans">
             <ShieldCheck className="h-3 w-3" /> Admin
           </Badge>
         );
       case "ACCOUNTANT":
         return (
-          <Badge variant="secondary" className="bg-teal text-white text-[10px] gap-1">
+          <Badge variant="secondary" className="bg-teal text-white text-[10px] gap-1 font-sans">
             <UserCheck className="h-3 w-3" /> Accountant
           </Badge>
         );
       case "CONTACT":
         return (
-          <Badge variant="outline" className="border-border text-muted-foreground text-[10px] gap-1">
+          <Badge variant="outline" className="border-border text-muted-foreground text-[10px] gap-1 font-sans">
             <ExternalLink className="h-3 w-3" /> Portal User
           </Badge>
         );
@@ -235,7 +245,7 @@ export function UsersTable({
     <div className="space-y-4">
       {/* Search & Filter Toolbar */}
       <div className="bg-white p-3.5 rounded-xl border border-border shadow-xs flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-        {/* Search Input with Debouncing indicator */}
+        {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           {loading ? (
             <Loader2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-navy animate-spin" />
@@ -380,57 +390,68 @@ export function UsersTable({
                         </span>
                       </td>
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {user.role === UserRole.CONTACT && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={isResending}
-                              onClick={() => handleResendEmail(user.id, user.email)}
-                              className="h-8 px-2 text-xs text-navy hover:text-navy-dark hover:bg-slate-100 gap-1"
-                              title="Resend invitation email with new temporary password"
-                            >
-                              {isResending ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <Mail className="h-3.5 w-3.5" />
+                        <div className="flex items-center justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-muted-foreground hover:text-navy hover:bg-slate-100 rounded-lg cursor-pointer"
+                                title="More actions"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Open menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-48 bg-white border border-border shadow-dropdown rounded-xl p-1 text-xs">
+                              <DropdownMenuItem
+                                onClick={() => router.push(`/users/${user.id}/edit`)}
+                                className="gap-2 cursor-pointer text-foreground hover:text-navy hover:bg-slate-50"
+                              >
+                                <Pencil className="h-3.5 w-3.5 text-navy" />
+                                <span>Edit User Profile</span>
+                              </DropdownMenuItem>
+
+                              {user.role === UserRole.CONTACT && (
+                                <DropdownMenuItem
+                                  disabled={isResending}
+                                  onClick={() => handleResendEmail(user.id, user.email)}
+                                  className="gap-2 cursor-pointer text-foreground hover:text-navy hover:bg-slate-50"
+                                >
+                                  {isResending ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Mail className="h-3.5 w-3.5 text-teal" />
+                                  )}
+                                  <span>Resend Portal Email</span>
+                                </DropdownMenuItem>
                               )}
-                              <span className="hidden sm:inline">Resend Email</span>
-                            </Button>
-                          )}
 
-                          {!isSelf && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={isToggling}
-                              onClick={() => handleToggle(user.id, user.isActive)}
-                              className={`h-8 px-2.5 text-xs ${
-                                user.isActive
-                                  ? "text-muted-foreground hover:text-amber-700 hover:bg-amber-50"
-                                  : "text-green-700 hover:text-green-800 hover:bg-green-50"
-                              }`}
-                              title={user.isActive ? "Deactivate user access" : "Re-activate user"}
-                            >
-                              <Power className="h-3.5 w-3.5 sm:mr-1" />
-                              <span className="hidden sm:inline">
-                                {user.isActive ? "Deactivate" : "Activate"}
-                              </span>
-                            </Button>
-                          )}
+                              {!isSelf && (
+                                <DropdownMenuItem
+                                  disabled={isToggling}
+                                  onClick={() => handleToggle(user.id, user.isActive)}
+                                  className="gap-2 cursor-pointer text-foreground hover:bg-slate-50"
+                                >
+                                  <Power className="h-3.5 w-3.5 text-amber-600" />
+                                  <span>{user.isActive ? "Deactivate Access" : "Re-activate Access"}</span>
+                                </DropdownMenuItem>
+                              )}
 
-                          {!isSelf && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setUserToDelete(user)}
-                              className="h-8 px-2 text-xs text-muted-foreground hover:text-rose-600 hover:bg-rose-50"
-                              title="Permanently delete user from database"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              <span className="sr-only">Delete</span>
-                            </Button>
-                          )}
+                              {!isSelf && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => setUserToDelete(user)}
+                                    className="gap-2 cursor-pointer text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                                    <span>Delete Account</span>
+                                  </DropdownMenuItem>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>

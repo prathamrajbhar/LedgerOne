@@ -223,7 +223,7 @@ export default function GeneralLedgerPage() {
                   <tr
                     key={line.id}
                     className="hover:bg-primary-light/30 transition-colors cursor-pointer"
-                    onClick={() => router.push(`/journal-entries?entry=${line.entryId}`)}
+                    onClick={() => router.push(`/journal-entries/${line.entryId}`)}
                   >
                     <td className="py-3.5 px-4 text-foreground font-medium">
                       <div className="flex items-center gap-2">

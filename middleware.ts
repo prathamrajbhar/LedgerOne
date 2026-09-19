@@ -5,12 +5,30 @@ import type { NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
   const isSecure = request.nextUrl.protocol === "https:";
-  const token = await getToken({
+
+  // Check Auth.js v5 cookie first, then fallback to next-auth cookie
+  const mainCookie = isSecure ? "__Secure-authjs.session-token" : "authjs.session-token";
+  const legacyCookie = isSecure ? "__Secure-next-auth.session-token" : "next-auth.session-token";
+
+  let token = await getToken({
     req: request,
-    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+    secret,
     secureCookie: isSecure,
+    cookieName: mainCookie,
+    salt: mainCookie,
   });
+
+  if (!token) {
+    token = await getToken({
+      req: request,
+      secret,
+      secureCookie: isSecure,
+      cookieName: legacyCookie,
+      salt: legacyCookie,
+    });
+  }
 
   // Handle root route cleanly without false session expired errors
   if (pathname === "/") {
@@ -39,18 +57,23 @@ export async function middleware(request: NextRequest) {
     const loginUrl = isPortalRoute ? "/portal/login" : "/login";
     const url = new URL(loginUrl, request.url);
 
-    // Only flag SessionExpired if the client actually had a session cookie that expired or was revoked
     const hasSessionCookie =
-      request.cookies.has("next-auth.session-token") ||
-      request.cookies.has("__Secure-next-auth.session-token") ||
       request.cookies.has("authjs.session-token") ||
-      request.cookies.has("__Secure-authjs.session-token");
+      request.cookies.has("__Secure-authjs.session-token") ||
+      request.cookies.has("next-auth.session-token") ||
+      request.cookies.has("__Secure-next-auth.session-token");
+
+    const response = NextResponse.redirect(url);
 
     if (hasSessionCookie) {
       url.searchParams.set("error", "SessionExpired");
+      response.cookies.delete("authjs.session-token");
+      response.cookies.delete("__Secure-authjs.session-token");
+      response.cookies.delete("next-auth.session-token");
+      response.cookies.delete("__Secure-next-auth.session-token");
     }
 
-    return NextResponse.redirect(url);
+    return response;
   }
 
   const userRole = token.role as string | undefined;

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ interface AnalyticAccount {
 }
 
 export default function AnalyticAccountsPage() {
+  const router = useRouter();
   const [accounts, setAccounts] = React.useState<AnalyticAccount[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -47,47 +49,26 @@ export default function AnalyticAccountsPage() {
   }, [loadAccounts]);
 
   const filtered = React.useMemo(() => {
-    return accounts.filter((acc) => {
-      const q = search.trim().toLowerCase();
-      const matchesSearch = !q || acc.name.toLowerCase().includes(q);
-      const matchesType = typeFilter === "ALL" || acc.type === typeFilter;
-      return matchesSearch && matchesType;
-    });
+    const q = search.trim().toLowerCase();
+    return accounts.filter((acc) => (!q || acc.name.toLowerCase().includes(q)) && (typeFilter === "ALL" || acc.type === typeFilter));
   }, [accounts, search, typeFilter]);
 
   const hasActiveFilters = Boolean(search || typeFilter !== "ALL");
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setTypeFilter("ALL");
-  };
+  const handleResetFilters = () => { setSearch(""); setTypeFilter("ALL"); };
 
   const handleDelete = async (id: string, accountName: string) => {
     if (!confirm(`Are you sure you want to delete "${accountName}"?`)) return;
-
     try {
       const result = await deleteAnalyticAccountAction(id);
       if (result.success) {
         toast.success("Analytic account deleted successfully");
         await loadAccounts();
-      } else {
-        toast.error(result.error || "Failed to delete analytic account");
-      }
-    } catch {
-      toast.error("Failed to delete analytic account");
-    }
+      } else { toast.error(result.error || "Failed to delete analytic account"); }
+    } catch { toast.error("Failed to delete analytic account"); }
   };
 
-  const typeLabel = (accountType: AnalyticAccountType) => {
-    switch (accountType) {
-      case "INCOME":
-        return "Income Tracking";
-      case "EXPENSES":
-        return "Cost/Expense Tracking";
-      default:
-        return accountType;
-    }
-  };
+  const typeLabel = (t: AnalyticAccountType) =>
+    t === "INCOME" ? "Income Tracking" : "Cost/Expense Tracking";
 
   return (
     <div className="space-y-5">
@@ -153,21 +134,12 @@ export default function AnalyticAccountsPage() {
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">Loading analytic accounts...</p>
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card text-sm text-muted-foreground">
+          Loading analytic accounts...
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">
-            {hasActiveFilters
-              ? "No analytic accounts found matching your filters."
-              : "No analytic accounts configured yet."}
-          </p>
-          {!hasActiveFilters && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Click &quot;New Analytic Account&quot; to add your first cost center or project tracker.
-            </p>
-          )}
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card text-sm text-muted-foreground">
+          {hasActiveFilters ? "No analytic accounts found matching your filters." : "No analytic accounts configured yet."}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
@@ -182,12 +154,20 @@ export default function AnalyticAccountsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((acc) => (
-                  <tr key={acc.id} className="hover:bg-primary-light/30 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-foreground">{acc.name}</td>
+                  <tr
+                    key={acc.id}
+                    onClick={() => router.push(`/analytic-accounts/${acc.id}`)}
+                    className="hover:bg-primary-light/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3.5 px-4 font-semibold text-foreground">
+                      <Link href={`/analytic-accounts/${acc.id}`} className="hover:text-navy hover:underline">
+                        {acc.name}
+                      </Link>
+                    </td>
                     <td className="py-3.5 px-4 text-muted-foreground text-xs">
                       {typeLabel(acc.type)}
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"

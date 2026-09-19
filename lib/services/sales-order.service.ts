@@ -51,6 +51,35 @@ export interface ListSalesOrdersParams {
 }
 
 export class SalesOrderService {
+  private async generateSoNumber(): Promise<string> {
+    const settings = await prisma.companySettings.findFirst();
+    const prefix = settings?.soNumberPrefix || "SO";
+
+    const salesOrders = await prisma.salesOrder.findMany({
+      where: { soNumber: { startsWith: prefix } },
+      select: { soNumber: true },
+    });
+
+    let maxNumber = 0;
+    for (const so of salesOrders) {
+      const suffix = so.soNumber.slice(prefix.length);
+      const parsed = parseInt(suffix, 10);
+      if (!isNaN(parsed) && parsed > maxNumber) {
+        maxNumber = parsed;
+      }
+    }
+
+    let nextNumber = maxNumber + 1;
+    let soNumber = `${prefix}${String(nextNumber).padStart(5, "0")}`;
+
+    while (await prisma.salesOrder.findUnique({ where: { soNumber } })) {
+      nextNumber += 1;
+      soNumber = `${prefix}${String(nextNumber).padStart(5, "0")}`;
+    }
+
+    return soNumber;
+  }
+
   /**
    * Create a new sales order in DRAFT status
    */
@@ -150,10 +179,7 @@ export class SalesOrderService {
     const total = subtotal.add(totalTax);
 
     // Generate SO number
-    const settings = await prisma.companySettings.findFirst();
-    const prefix = settings?.soNumberPrefix || "SO";
-    const count = await prisma.salesOrder.count();
-    const soNumber = `${prefix}${String(count + 1).padStart(5, "0")}`;
+    const soNumber = await this.generateSoNumber();
 
     // Create sales order
     const salesOrder = await prisma.salesOrder.create({
@@ -419,6 +445,10 @@ export class SalesOrderService {
             id: true,
             invoiceNumber: true,
             status: true,
+            total: true,
+            amountPaid: true,
+            amountDue: true,
+            invoiceDate: true,
           },
         },
       },

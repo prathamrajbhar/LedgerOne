@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -14,13 +14,23 @@ import { JournalEntriesTable } from "./components/journal-entries-table";
 
 export default function JournalEntriesPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const entryQueryParam = searchParams.get("entry");
+
   const [entries, setEntries] = React.useState<JournalEntryItem[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [search, setSearch] = React.useState("");
+  const [search, setSearch] = React.useState(entryQueryParam || "");
   const [statusFilter, setStatusFilter] = React.useState<JournalEntryStatus | "">("");
   const [sourceFilter, setSourceFilter] = React.useState<JournalEntrySource | "">("");
   const [startDate, setStartDate] = React.useState("");
   const [endDate, setEndDate] = React.useState("");
+
+  // Sync query param to search state if present
+  React.useEffect(() => {
+    if (entryQueryParam) {
+      setSearch(entryQueryParam);
+    }
+  }, [entryQueryParam]);
 
   const loadEntries = React.useCallback(async () => {
     setLoading(true);
@@ -30,7 +40,16 @@ export default function JournalEntriesPage() {
         source: sourceFilter || undefined,
       });
       if (result.success && result.data) {
-        setEntries(result.data.entries as unknown as JournalEntryItem[]);
+        const fetchedEntries = result.data.entries as unknown as JournalEntryItem[];
+        setEntries(fetchedEntries);
+
+        // If URL had a specific entry ID that wasn't found by entry number search, redirect directly to that entry detail
+        if (entryQueryParam) {
+          const directMatch = fetchedEntries.find((e) => e.id === entryQueryParam);
+          if (directMatch) {
+            router.push(`/journal-entries/${directMatch.id}`);
+          }
+        }
       } else {
         toast.error(result.error || "Failed to load journal entries");
       }
@@ -39,7 +58,7 @@ export default function JournalEntriesPage() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, sourceFilter]);
+  }, [statusFilter, sourceFilter, entryQueryParam, router]);
 
   React.useEffect(() => {
     loadEntries();
@@ -51,6 +70,7 @@ export default function JournalEntriesPage() {
       const matchesSearch =
         !q ||
         entry.entryNumber.toLowerCase().includes(q) ||
+        entry.id.toLowerCase().includes(q) ||
         entry.journal.code.toLowerCase().includes(q) ||
         entry.journal.name.toLowerCase().includes(q) ||
         (entry.createdBy?.name && entry.createdBy.name.toLowerCase().includes(q));

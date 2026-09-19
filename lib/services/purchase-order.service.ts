@@ -284,6 +284,17 @@ export class PurchaseOrderService {
           },
         },
         createdBy: true,
+        vendorBills: {
+          select: {
+            id: true,
+            billNumber: true,
+            status: true,
+            total: true,
+            amountPaid: true,
+            amountDue: true,
+            billDate: true,
+          },
+        },
       },
     });
 

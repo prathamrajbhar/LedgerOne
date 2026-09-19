@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import type { JournalEntryItem } from "../journal-entries-types";
-import { JournalEntryDetailDialog } from "./journal-entry-detail-dialog";
 
 interface JournalEntriesTableProps {
   entries: JournalEntryItem[];
@@ -16,7 +17,7 @@ export function JournalEntriesTable({
   loading,
   hasActiveFilters,
 }: JournalEntriesTableProps) {
-  const [selectedEntryId, setSelectedEntryId] = React.useState<string | null>(null);
+  const router = useRouter();
 
   if (loading) {
     return (
@@ -58,11 +59,13 @@ export function JournalEntriesTable({
           {entries.map((entry) => (
             <tr
               key={entry.id}
-              onClick={() => setSelectedEntryId(entry.id)}
+              onClick={() => router.push(`/journal-entries/${entry.id}`)}
               className="hover:bg-primary-light/30 transition-colors cursor-pointer"
             >
               <td className="py-3.5 px-4 font-mono font-bold text-navy">
-                <span className="hover:underline">{entry.entryNumber}</span>
+                <Link href={`/journal-entries/${entry.id}`} className="hover:underline">
+                  {entry.entryNumber}
+                </Link>
               </td>
               <td className="py-3.5 px-4 text-muted-foreground">
                 {new Date(entry.accountingDate).toLocaleDateString("en-IN", {
@@ -101,14 +104,6 @@ export function JournalEntriesTable({
         </tbody>
       </table>
       </div>
-
-      <JournalEntryDetailDialog
-        entryId={selectedEntryId}
-        open={Boolean(selectedEntryId)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedEntryId(null);
-        }}
-      />
     </div>
   );
 }

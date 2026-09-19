@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface JournalItem {
 }
 
 export default function JournalsPage() {
+  const router = useRouter();
   const [journals, setJournals] = React.useState<JournalItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -64,11 +66,7 @@ export default function JournalsPage() {
   }, [journals, search, typeFilter]);
 
   const hasActiveFilters = Boolean(search || typeFilter !== "ALL");
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setTypeFilter("ALL");
-  };
+  const handleResetFilters = () => { setSearch(""); setTypeFilter("ALL"); };
 
   return (
     <div className="space-y-5">
@@ -162,8 +160,16 @@ export default function JournalsPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((j) => (
-                  <tr key={j.id} className="hover:bg-primary-light/30 transition-colors">
-                    <td className="py-3.5 px-4 font-mono font-bold text-navy">{j.code}</td>
+                  <tr
+                    key={j.id}
+                    onClick={() => router.push(`/journals/${j.id}`)}
+                    className="hover:bg-primary-light/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3.5 px-4 font-mono font-bold text-navy">
+                      <Link href={`/journals/${j.id}`} className="hover:underline">
+                        {j.code}
+                      </Link>
+                    </td>
                     <td className="py-3.5 px-4 font-semibold text-foreground">{j.name}</td>
                     <td className="py-3.5 px-4">
                       <Badge variant="outline" className="text-[10px] bg-[#F6F7F9]">

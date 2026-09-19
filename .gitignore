@@ -85,44 +85,9 @@ Desktop.ini
 .temp/
 scratch/
 
-# Python & Test Artifacts
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Python Virtual Environments
-.venv/
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-scripts/.venv/
-
-# Pytest & Test Reports
-.pytest_cache/
-.coverage
-htmlcov/
-*.html
-!docs/**/*.html
-scripts/latest_report.html
+# Images & Screenshots
 *.png
 !public/*.png
 !app/*.png
-
 !docs/screenshots/*.png
+

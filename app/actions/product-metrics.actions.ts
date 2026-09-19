@@ -58,13 +58,14 @@ export async function getRestockAlertsAction(): Promise<ProductActionResult> {
     const products = await prisma.product.findMany({
       where: {
         isArchived: false,
-        stock: { lte: prisma.product.fields.reorderPoint },
       },
       include: { category: true },
       orderBy: [{ stock: "asc" }, { name: "asc" }],
     });
 
-    const transformedData = products.map((product) => ({
+    const alertedProducts = products.filter((p) => p.stock <= p.reorderPoint);
+
+    const transformedData = alertedProducts.map((product) => ({
       id: product.id,
       name: product.name,
       sku: product.sku || "",

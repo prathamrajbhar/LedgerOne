@@ -84,46 +84,56 @@ export function JournalEntryDetailDialog({
       .then((res) => {
         if (!isMounted) return;
         if (res.success && res.data) {
-          const raw = res.data as any;
+          const raw = res.data as Record<string, unknown>;
+          const rawJournal = raw.journal as Record<string, unknown> | null;
+          const rawCreatedBy = raw.createdBy as Record<string, unknown> | null;
+          const rawBill = raw.vendorBill as Record<string, unknown> | null;
+          const rawInvoice = raw.invoice as Record<string, unknown> | null;
+          const rawLines = (raw.lines || []) as Array<Record<string, unknown>>;
+
           setEntry({
-            id: raw.id,
-            entryNumber: raw.entryNumber,
-            accountingDate: new Date(raw.accountingDate).toLocaleDateString("en-IN", {
+            id: String(raw.id),
+            entryNumber: String(raw.entryNumber),
+            accountingDate: new Date(String(raw.accountingDate)).toLocaleDateString("en-IN", {
               day: "2-digit",
               month: "short",
               year: "numeric",
             }),
-            status: raw.status,
-            source: raw.source,
-            reference: raw.reference || null,
+            status: String(raw.status),
+            source: String(raw.source),
+            reference: raw.reference ? String(raw.reference) : null,
             totalDebit: Number(raw.totalDebit),
             totalCredit: Number(raw.totalCredit),
             journal: {
-              code: raw.journal?.code || "",
-              name: raw.journal?.name || "",
-              type: raw.journal?.type || "",
+              code: String(rawJournal?.code || ""),
+              name: String(rawJournal?.name || ""),
+              type: String(rawJournal?.type || ""),
             },
             createdBy: {
-              name: raw.createdBy?.name || "System",
-              email: raw.createdBy?.email || "",
+              name: String(rawCreatedBy?.name || "System"),
+              email: String(rawCreatedBy?.email || ""),
             },
-            vendorBill: raw.vendorBill
-              ? { id: raw.vendorBill.id, billNumber: raw.vendorBill.billNumber }
+            vendorBill: rawBill
+              ? { id: String(rawBill.id), billNumber: String(rawBill.billNumber) }
               : null,
-            invoice: raw.invoice
-              ? { id: raw.invoice.id, invoiceNumber: raw.invoice.invoiceNumber }
+            invoice: rawInvoice
+              ? { id: String(rawInvoice.id), invoiceNumber: String(rawInvoice.invoiceNumber) }
               : null,
-            lines: (raw.lines || []).map((line: any) => ({
-              id: line.id,
-              account: {
-                code: line.account?.code || "",
-                name: line.account?.name || "",
-                type: line.account?.type || "",
-              },
-              partner: line.partner ? { name: line.partner.name } : null,
-              debit: Number(line.debit),
-              credit: Number(line.credit),
-            })),
+            lines: rawLines.map((line) => {
+              const lineAcc = line.account as Record<string, unknown> | null;
+              const linePartner = line.partner as Record<string, unknown> | null;
+              return {
+                id: String(line.id),
+                account: {
+                  code: String(lineAcc?.code || ""),
+                  name: String(lineAcc?.name || ""),
+                  type: String(lineAcc?.type || ""),
+                },
+                partner: linePartner ? { name: String(linePartner.name) } : null,
+                debit: Number(line.debit),
+                credit: Number(line.credit),
+              };
+            }),
           });
         } else {
           setError(res.error || "Failed to load journal entry details");

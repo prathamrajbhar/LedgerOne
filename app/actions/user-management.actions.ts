@@ -118,6 +118,61 @@ export async function getUsersAction(
   }
 }
 
+export async function getUserByIdAction(userId: string): Promise<UserManagementResult<{
+  id: string;
+  loginId: string;
+  email: string;
+  name: string | null;
+  role: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  mustChangePassword: boolean;
+  contact?: { id: string; name: string; type: string; email: string; phone?: string | null } | null;
+}>> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        loginId: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        mustChangePassword: true,
+        contact: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return { success: false, error: "User account not found." };
+    }
+
+    return {
+      success: true,
+      data: {
+        ...user,
+        createdAt: user.createdAt.toISOString(),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to fetch user profile";
+    return { success: false, error: message };
+  }
+}
+
+
 export async function createInternalUserAction(input: {
   loginId: string;
   email: string;
@@ -147,6 +202,92 @@ export async function createInternalUserAction(input: {
     return { success: false, error: message };
   }
 }
+
+export async function updateUserAction(input: {
+  userId: string;
+  name?: string;
+  email?: string;
+  role?: UserRole;
+  isActive?: boolean;
+  password?: string;
+}): Promise<UserManagementResult> {
+  try {
+    await requireRole(["ADMINISTRATOR"]);
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: input.userId },
+    });
+
+    if (!existingUser) {
+      return { success: false, error: "User not found" };
+    }
+
+    const dataToUpdate: Prisma.UserUpdateInput = {};
+
+    if (typeof input.name === "string") {
+      dataToUpdate.name = input.name.trim();
+    }
+
+    if (input.email && input.email.trim() !== existingUser.email) {
+      const emailClean = input.email.trim().toLowerCase();
+      const emailConflict = await prisma.user.findFirst({
+        where: { email: emailClean, NOT: { id: input.userId } },
+      });
+      if (emailConflict) {
+        return { success: false, error: "Email address is already in use by another account" };
+      }
+      dataToUpdate.email = emailClean;
+    }
+
+    if (input.role) {
+      dataToUpdate.role = input.role;
+    }
+
+    if (typeof input.isActive === "boolean") {
+      dataToUpdate.isActive = input.isActive;
+    }
+
+    if (input.password && input.password.trim().length > 0) {
+      const pwd = input.password.trim();
+      if (pwd.length < 8) {
+        return { success: false, error: "Password must be at least 8 characters long" };
+      }
+      const hasUpper = /[A-Z]/.test(pwd);
+      const hasLower = /[a-z]/.test(pwd);
+      const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pwd);
+      if (!hasUpper || !hasLower || !hasSpecial) {
+        return {
+          success: false,
+          error: "Password must contain uppercase, lowercase, and special characters",
+        };
+      }
+      const bcrypt = await import("bcryptjs");
+      dataToUpdate.password = await bcrypt.hash(pwd, 12);
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: input.userId },
+      data: dataToUpdate,
+      select: {
+        id: true,
+        loginId: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+      },
+    });
+
+    revalidatePath("/users");
+    revalidatePath("/settings/users");
+    revalidatePath("/settings/users-management");
+    return { success: true, data: updatedUser };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Failed to update user information";
+    return { success: false, error: message };
+  }
+}
+
 
 export async function inviteContactToPortalAction(contactId: string): Promise<UserManagementResult> {
   try {

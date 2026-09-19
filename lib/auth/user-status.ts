@@ -81,11 +81,11 @@ export async function checkUserStatus(
       shouldLogout: false,
     };
   } catch {
-    // On error, log out for safety
+    // On transient DB error, do not force logout to avoid destroying active sessions
     return {
-      exists: false,
-      isActive: false,
-      shouldLogout: true,
+      exists: true,
+      isActive: true,
+      shouldLogout: false,
     };
   }
 }

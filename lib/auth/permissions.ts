@@ -8,6 +8,7 @@ export type Permission =
   // Master Data (Contacts, Products, Analytic Accounts)
   | "masters:read"
   | "masters:write"
+  | "masters:archive"
   // Sales Flow (Orders, Invoices)
   | "sales:read"
   | "sales:write"
@@ -40,6 +41,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     "users:invite",
     "masters:read",
     "masters:write",
+    "masters:archive",
     "sales:read",
     "sales:write",
     "sales:confirm",

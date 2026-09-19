@@ -6,18 +6,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
-import { Card } from "@/components/ui/card";
 import {
   getExpensesAction,
   ExpenseRecord,
 } from "@/app/actions/expense.actions";
-import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
-import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
-import { JournalEntryDetailDialog } from "../journal-entries/components/journal-entry-detail-dialog";
+import { useTableSort } from "@/components/ui/sortable-table-head";
+import { ExpensesTable } from "./components/expenses-table";
+import { ExpensesKpiStrip } from "./components/expenses-kpi-strip";
+import { ExpensesFilterBar } from "./components/expenses-filter-bar";
 
 export default function ExpensesPage() {
   const router = useRouter();
-  const [selectedEntryId, setSelectedEntryId] = React.useState<string | null>(null);
   const [expenses, setExpenses] = React.useState<ExpenseRecord[]>([]);
   const [search, setSearch] = React.useState("");
   const [accountFilter, setAccountFilter] = React.useState<string>("ALL");
@@ -132,166 +131,32 @@ export default function ExpensesPage() {
         }
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">Total Recorded Expenses</span>
-          <p className="text-xl font-bold text-navy mt-1">₹{totalExpenses.toLocaleString("en-IN")}</p>
-          <span className="text-[11px] text-muted-foreground block mt-0.5">Across {expenses.length} transactions</span>
-        </Card>
-        <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">This Month</span>
-          <p className="text-xl font-bold text-navy mt-1">₹{totalExpenses.toLocaleString("en-IN")}</p>
-          <span className="text-[11px] text-muted-foreground block mt-0.5">Operating overheads</span>
-        </Card>
-        <Card className="p-4 bg-white shadow-card">
-          <span className="text-xs text-muted-foreground font-medium">Average Expense</span>
-          <p className="text-xl font-bold text-teal mt-1">
-            ₹{expenses.length > 0 ? Math.round(totalExpenses / expenses.length).toLocaleString("en-IN") : "0"}
-          </p>
-          <span className="text-[11px] text-teal block mt-0.5">Per transaction</span>
-        </Card>
-      </div>
+      <ExpensesKpiStrip totalExpenses={totalExpenses} count={expenses.length} />
 
-      {/* Filter and Search Bar */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white p-3 rounded-xl border border-border shadow-card">
-        <div className="flex-1 min-w-[220px]">
-          <DebouncedSearchInput
-            placeholder="Search expenses by entry #, description, or account..."
-            value={search}
-            onChange={setSearch}
-            className="h-9"
-          />
-        </div>
+      <ExpensesFilterBar
+        search={search}
+        onSearchChange={setSearch}
+        accountFilter={accountFilter}
+        onAccountChange={setAccountFilter}
+        methodFilter={methodFilter}
+        onMethodChange={setMethodFilter}
+        startDate={startDate}
+        onStartDateChange={setStartDate}
+        endDate={endDate}
+        onEndDateChange={setEndDate}
+        uniqueAccounts={uniqueAccounts}
+        hasActiveFilters={hasActiveFilters}
+        filteredCount={filteredExpenses.length}
+        totalCount={expenses.length}
+        onResetFilters={handleResetFilters}
+      />
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <select
-            value={accountFilter}
-            onChange={(e) => setAccountFilter(e.target.value)}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
-          >
-            <option value="ALL">All Expense Accounts</option>
-            {uniqueAccounts.map((acc) => (
-              <option key={acc} value={acc}>
-                {acc}
-              </option>
-            ))}
-          </select>
-
-          <select
-            value={methodFilter}
-            onChange={(e) => setMethodFilter(e.target.value)}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
-          >
-            <option value="ALL">All Methods</option>
-            <option value="BANK">Bank Transfer</option>
-            <option value="CASH">Cash</option>
-          </select>
-
-          <div className="col-span-2 flex items-center gap-1.5">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-              title="Start Date"
-            />
-            <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
-              title="End Date"
-            />
-          </div>
-        </div>
-      </div>
-
-      {hasActiveFilters && (
-        <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-          <span>
-            Showing {filteredExpenses.length} of {expenses.length} expenses
-          </span>
-          <button
-            onClick={handleResetFilters}
-            className="text-teal hover:underline font-medium cursor-pointer"
-          >
-            Reset all filters
-          </button>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        {loading ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            Loading expenses...
-          </div>
-        ) : sortedExpenses.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {hasActiveFilters
-              ? "No expenses found matching your filters"
-              : "No expenses recorded yet. Click 'Record Expense' to add one."}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  <SortableTableHead columnKey="code" currentSort={sortState} onSort={handleSort}>
-                    Entry #
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="description" currentSort={sortState} onSort={handleSort}>
-                    Description
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="expenseAccount" currentSort={sortState} onSort={handleSort}>
-                    Expense Account
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="analyticAccount" currentSort={sortState} onSort={handleSort}>
-                    Analytic
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="date" currentSort={sortState} onSort={handleSort}>
-                    Date
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="paymentMethod" currentSort={sortState} onSort={handleSort}>
-                    Method
-                  </SortableTableHead>
-                  <SortableTableHead columnKey="amount" currentSort={sortState} onSort={handleSort} align="right">
-                    Amount (₹)
-                  </SortableTableHead>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {sortedExpenses.map((e) => (
-                  <tr
-                    key={e.id}
-                    onClick={() => setSelectedEntryId(e.id)}
-                    className="hover:bg-primary-light/30 transition-colors cursor-pointer"
-                  >
-                    <td className="py-3.5 px-4 font-mono font-bold text-navy">
-                      <span className="hover:underline">{e.code}</span>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-foreground">{e.description}</td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{e.expenseAccount}</td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{e.analyticAccount || "-"}</td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{e.date}</td>
-                    <td className="py-3.5 px-4 text-muted-foreground">{e.paymentMethod}</td>
-                    <td className="py-3.5 px-4 text-right font-bold text-foreground">
-                      ₹{e.amount.toLocaleString("en-IN")}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <JournalEntryDetailDialog
-        entryId={selectedEntryId}
-        open={Boolean(selectedEntryId)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedEntryId(null);
-        }}
+      <ExpensesTable
+        loading={loading}
+        expenses={sortedExpenses}
+        hasActiveFilters={hasActiveFilters}
+        sortState={sortState}
+        onSort={handleSort}
       />
     </div>
   );

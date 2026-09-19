@@ -9,30 +9,7 @@ import { PurchaseNewMeta } from "./components/purchase-new-meta";
 import { PurchaseNewLines, PurchaseLineItem } from "./components/purchase-new-lines";
 import { PurchaseNewSummary } from "./components/purchase-new-summary";
 
-interface ContactItem {
-  id: string;
-  name: string;
-  email?: string | null;
-  phone?: string | null;
-}
-
-interface ProductItem {
-  id: string;
-  name: string;
-  sku?: string | null;
-  cost: unknown;
-}
-
-interface AnalyticAccountItem {
-  id: string;
-  name: string;
-}
-
-interface PurchaseCreateClientProps {
-  vendors: ContactItem[];
-  products: ProductItem[];
-  analyticAccounts: AnalyticAccountItem[];
-}
+import { PurchaseCreateClientProps } from "./purchase-create-types";
 
 export function PurchaseCreateClient({
   vendors,

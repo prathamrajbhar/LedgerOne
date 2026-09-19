@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ interface TaxRateItem {
 }
 
 export default function TaxRatesPage() {
+  const router = useRouter();
   const [rates, setRates] = React.useState<TaxRateItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -32,16 +34,9 @@ export default function TaxRatesPage() {
     setLoading(true);
     try {
       const result = await getTaxRatesAction();
-      if (result.success && result.data) {
-        setRates(result.data as TaxRateItem[]);
-      } else {
-        toast.error(result.error || "Failed to load tax rates");
-      }
-    } catch {
-      toast.error("Failed to load tax rates");
-    } finally {
-      setLoading(false);
-    }
+      if (result.success && result.data) setRates(result.data as TaxRateItem[]);
+      else toast.error(result.error || "Failed to load tax rates");
+    } catch { toast.error("Failed to load tax rates"); } finally { setLoading(false); }
   }, []);
 
   React.useEffect(() => {
@@ -49,55 +44,30 @@ export default function TaxRatesPage() {
   }, [loadTaxRates]);
 
   const filtered = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
     return rates.filter((rate) => {
-      const q = search.trim().toLowerCase();
-      const matchesSearch =
-        !q ||
-        rate.name.toLowerCase().includes(q) ||
-        rate.percentage.toString().includes(q);
-
-      const matchesApplicability =
-        applicabilityFilter === "ALL" || rate.applicability === applicabilityFilter;
-
-      return matchesSearch && matchesApplicability;
+      const matchSearch = !q || rate.name.toLowerCase().includes(q) || rate.percentage.toString().includes(q);
+      const matchApp = applicabilityFilter === "ALL" || rate.applicability === applicabilityFilter;
+      return matchSearch && matchApp;
     });
   }, [rates, search, applicabilityFilter]);
 
   const hasActiveFilters = Boolean(search || applicabilityFilter !== "ALL");
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setApplicabilityFilter("ALL");
-  };
+  const handleResetFilters = () => { setSearch(""); setApplicabilityFilter("ALL"); };
 
   const handleDelete = async (id: string, taxName: string) => {
     if (!confirm(`Are you sure you want to delete "${taxName}"?`)) return;
-
     try {
       const result = await deleteTaxRateAction(id);
       if (result.success) {
         toast.success("Tax rate deleted successfully");
         await loadTaxRates();
-      } else {
-        toast.error(result.error || "Failed to delete tax rate");
-      }
-    } catch {
-      toast.error("Failed to delete tax rate");
-    }
+      } else { toast.error(result.error || "Failed to delete tax rate"); }
+    } catch { toast.error("Failed to delete tax rate"); }
   };
 
-  const applicabilityLabel = (app: TaxApplicability) => {
-    switch (app) {
-      case "SALES":
-        return "Sales Only";
-      case "PURCHASE":
-        return "Purchase Only";
-      case "BOTH":
-        return "Both";
-      default:
-        return app;
-    }
-  };
+  const applicabilityLabel = (app: TaxApplicability) =>
+    app === "SALES" ? "Sales Only" : app === "PURCHASE" ? "Purchase Only" : "Both";
 
   return (
     <div className="space-y-5">
@@ -164,21 +134,12 @@ export default function TaxRatesPage() {
       )}
 
       {loading ? (
-        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">Loading tax rates...</p>
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card text-sm text-muted-foreground">
+          Loading tax rates...
         </div>
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card">
-          <p className="text-sm text-muted-foreground">
-            {hasActiveFilters
-              ? "No tax rates found matching your filters."
-              : "No tax rates configured yet."}
-          </p>
-          {!hasActiveFilters && (
-            <p className="text-xs text-muted-foreground mt-1">
-              Click &quot;New Tax Rate&quot; to define GST slabs (e.g. GST 5%, GST 18%, Exempt).
-            </p>
-          )}
+        <div className="rounded-xl border border-border bg-white p-8 text-center shadow-card text-sm text-muted-foreground">
+          {hasActiveFilters ? "No tax rates found matching your filters." : "No tax rates configured yet."}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
@@ -194,8 +155,16 @@ export default function TaxRatesPage() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((rate) => (
-                  <tr key={rate.id} className="hover:bg-primary-light/30 transition-colors">
-                    <td className="py-3.5 px-4 font-semibold text-foreground">{rate.name}</td>
+                  <tr
+                    key={rate.id}
+                    onClick={() => router.push(`/tax-rates/${rate.id}`)}
+                    className="hover:bg-primary-light/30 transition-colors cursor-pointer"
+                  >
+                    <td className="py-3.5 px-4 font-semibold text-foreground">
+                      <Link href={`/tax-rates/${rate.id}`} className="hover:text-navy hover:underline">
+                        {rate.name}
+                      </Link>
+                    </td>
                     <td className="py-3.5 px-4 font-mono font-bold text-navy">
                       {rate.percentage}%
                     </td>
@@ -204,7 +173,7 @@ export default function TaxRatesPage() {
                         {applicabilityLabel(rate.applicability)}
                       </Badge>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                       <Button
                         variant="ghost"
                         size="sm"

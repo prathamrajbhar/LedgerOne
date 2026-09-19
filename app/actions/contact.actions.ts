@@ -161,6 +161,7 @@ export async function updateContactAction(input: UpdateContactInput): Promise<Co
     if (error instanceof ValidationError) {
       return { success: false, error: error.message };
     }
-    return { success: false, error: "Failed to update contact. Please try again." };
+    const message = error instanceof Error ? error.message : "Failed to update contact";
+    return { success: false, error: message };
   }
 }

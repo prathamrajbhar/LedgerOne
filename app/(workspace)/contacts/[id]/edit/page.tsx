@@ -3,8 +3,15 @@ import { getContactByIdAction } from "@/app/actions/contact.actions";
 import { notFound } from "next/navigation";
 import { Contact } from "@prisma/client";
 
-export default async function EditContactPage({ params }: { params: { id: string } }) {
-  const result = await getContactByIdAction(params.id);
+interface EditContactPageProps {
+  params: Promise<{
+    id: string;
+  }>;
+}
+
+export default async function EditContactPage({ params }: EditContactPageProps) {
+  const { id } = await params;
+  const result = await getContactByIdAction(id);
 
   if (!result.success || !result.data) {
     notFound();
@@ -19,6 +26,10 @@ export default async function EditContactPage({ params }: { params: { id: string
     email: contactData.email,
     phone: contactData.phone || "",
     address: contactData.address || "",
+    city: contactData.city || "",
+    state: contactData.state || "",
+    pincode: contactData.pincode || "",
+    profileImage: contactData.profileImage || "",
   };
 
   return <ContactForm initialData={contact} isEdit />;

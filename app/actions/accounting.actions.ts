@@ -64,6 +64,16 @@ export async function resetJournalEntryToDraftAction(id: string) {
   }
 }
 
+export async function deleteJournalEntryAction(id: string) {
+  try {
+    const entry = await journalEntryService.delete(id);
+    return { success: true, data: entry };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to delete draft journal entry" };
+  }
+}
+
 export async function generateProfitLossReportAction(params: GenerateProfitLossParams) {
   try {
     const report = await profitLossReportService.generateReport(params);
@@ -81,6 +91,28 @@ export async function generateBalanceSheetAction(params: BalanceSheetParams) {
   } catch (error: unknown) {
     const err = error as Error;
     return { success: false, error: err.message || "Failed to generate Balance Sheet report" };
+  }
+}
+
+export async function generateStockReportAction() {
+  try {
+    const { stockReportService } = await import("@/lib/services/reports/stock-report.service");
+    const report = await stockReportService.generate();
+    return { success: true, data: report };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to generate Stock Valuation report" };
+  }
+}
+
+export async function generateBudgetReportAction() {
+  try {
+    const { budgetService } = await import("@/lib/services/budget.service");
+    const budgets = await budgetService.list({});
+    return { success: true, data: budgets };
+  } catch (error: unknown) {
+    const err = error as Error;
+    return { success: false, error: err.message || "Failed to generate Budget report" };
   }
 }
 

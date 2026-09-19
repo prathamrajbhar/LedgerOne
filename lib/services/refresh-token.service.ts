@@ -55,10 +55,34 @@ export class RefreshTokenService {
       throw new UnauthorizedError("Invalid refresh token");
     }
 
-    // Reuse detection: If token was already revoked or replaced, breach detected!
-    if (existingToken.isRevoked || existingToken.replacedByHash) {
+    // Reuse detection: If token was already revoked or replaced
+    if (existingToken.replacedByHash) {
+      const REUSE_GRACE_PERIOD_MS = 60 * 1000; // 60 seconds grace period for concurrent requests
+      const ageMs = Date.now() - new Date(existingToken.updatedAt).getTime();
+
+      if (ageMs <= REUSE_GRACE_PERIOD_MS) {
+        // Within grace period: fetch the already-generated replacement token
+        const replacementToken = await prisma.refreshToken.findUnique({
+          where: { tokenHash: existingToken.replacedByHash },
+        });
+
+        if (replacementToken && !replacementToken.isRevoked && replacementToken.expiresAt > new Date()) {
+          return {
+            rawToken: rawToken,
+            expiresAt: replacementToken.expiresAt,
+            familyId: replacementToken.familyId,
+            userId: replacementToken.userId,
+          };
+        }
+      }
+
+      // Beyond grace period: true breach detected! Revoke the entire family
       await this.revokeFamily(existingToken.familyId);
       throw new UnauthorizedError("Refresh token reuse detected. All sessions have been revoked.");
+    }
+
+    if (existingToken.isRevoked) {
+      throw new UnauthorizedError("Refresh token has been revoked.");
     }
 
     // Check expiration

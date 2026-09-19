@@ -27,6 +27,7 @@ interface PurchaseOrderRowProps {
 
 export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
   const router = useRouter();
+  const [status, setStatus] = React.useState(po.status);
   const [isConfirming, setIsConfirming] = React.useState(false);
   const [isCreatingBill, setIsCreatingBill] = React.useState(false);
 
@@ -36,7 +37,8 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
       const result = await confirmPurchaseOrderAction(po.id);
       if (result.success) {
         toast.success("Purchase order confirmed successfully");
-        window.location.reload();
+        setStatus("CONFIRMED");
+        router.refresh();
       } else {
         toast.error(result.error || "Failed to confirm purchase order");
       }
@@ -68,8 +70,15 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
   const hasBills = po.vendorBills && po.vendorBills.length > 0;
 
   return (
-    <tr className="hover:bg-primary-light/30">
-      <td className="py-3.5 px-4 font-mono font-bold text-navy">{po.poNumber}</td>
+    <tr
+      onClick={() => router.push(`/purchases/${po.id}`)}
+      className="hover:bg-primary-light/30 cursor-pointer transition-colors"
+    >
+      <td className="py-3.5 px-4 font-mono font-bold text-navy">
+        <Link href={`/purchases/${po.id}`} className="hover:underline">
+          {po.poNumber}
+        </Link>
+      </td>
       <td className="py-3.5 px-4 font-semibold text-foreground">{po.vendor?.name || "N/A"}</td>
       <td className="py-3.5 px-4 text-muted-foreground">
         {new Date(po.orderDate).toLocaleDateString("en-IN", {
@@ -83,11 +92,18 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
         ₹{Number(po.total).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
       </td>
       <td className="py-3.5 px-4 text-center">
-        <StatusBadge status={hasBills ? "BILLED" : po.status} />
+        <StatusBadge status={hasBills ? "BILLED" : status} />
       </td>
-      <td className="py-3.5 px-4 text-center">
+      <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-center gap-2">
-          {po.status === "DRAFT" && (
+          <Link
+            href={`/purchases/${po.id}`}
+            className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline px-2 py-1 rounded-md hover:bg-navy/5"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            View
+          </Link>
+          {status === "DRAFT" && (
             <Button
               size="sm"
               variant="outline"
@@ -104,7 +120,7 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
             </Button>
           )}
 
-          {po.status === "CONFIRMED" && !hasBills && (
+          {status === "CONFIRMED" && !hasBills && (
             <Button
               size="sm"
               variant="outline"
@@ -117,18 +133,8 @@ export function PurchaseOrderRow({ po }: PurchaseOrderRowProps) {
               ) : (
                 <FileText className="h-3.5 w-3.5 mr-1" />
               )}
-              {isCreatingBill ? "Creating..." : "Create Vendor Bill"}
+              {isCreatingBill ? "Creating..." : "Create Bill"}
             </Button>
-          )}
-
-          {hasBills && (
-            <Link
-              href={po.vendorBills?.[0]?.id ? `/bills/${po.vendorBills[0].id}` : `/bills?search=${encodeURIComponent(po.poNumber)}`}
-              className="inline-flex items-center gap-1 text-xs text-navy font-medium hover:underline"
-            >
-              <Eye className="h-3.5 w-3.5" />
-              View Bill
-            </Link>
           )}
         </div>
       </td>

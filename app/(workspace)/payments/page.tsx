@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -10,12 +10,11 @@ import {
   getPaymentsAction,
   PaymentRecord,
 } from "@/app/actions/payment.actions";
-
-import { SortableTableHead, useTableSort } from "@/components/ui/sortable-table-head";
+import { useTableSort } from "@/components/ui/sortable-table-head";
 import { DebouncedSearchInput } from "@/components/ui/debounced-search-input";
+import { PaymentsTable, type PaymentSortColumn } from "./components/payments-table";
 
 export default function PaymentsPage() {
-  const router = useRouter();
   const [payments, setPayments] = React.useState<PaymentRecord[]>([]);
   const [search, setSearch] = React.useState("");
   const [directionFilter, setDirectionFilter] = React.useState<string>("ALL");
@@ -88,7 +87,7 @@ export default function PaymentsPage() {
 
   const { sortedItems: sortedPayments, sortState, handleSort } = useTableSort<
     PaymentRecord,
-    "ref" | "party" | "documentNumber" | "method" | "date" | "account" | "amount"
+    PaymentSortColumn
   >(
     filtered,
     "date",
@@ -105,13 +104,14 @@ export default function PaymentsPage() {
         title="Payments & Banking"
         description="Record customer receipts, vendor disbursements, and view bank account clearing vouchers."
         actions={
-          <Button
-            onClick={() => router.push("/payments/new")}
-            className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer"
-          >
-            <Plus className="h-4 w-4" />
-            Record Payment
-          </Button>
+          <Link href="/payments/new">
+            <Button
+              className="bg-navy hover:bg-navy-hover text-white text-xs gap-1.5 shadow-sm cursor-pointer"
+            >
+              <Plus className="h-4 w-4" />
+              Record Payment
+            </Button>
+          </Link>
         }
       />
 
@@ -180,117 +180,13 @@ export default function PaymentsPage() {
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-white overflow-hidden shadow-card">
-        {loading ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            Loading payments...
-          </div>
-        ) : sortedPayments.length === 0 ? (
-          <div className="p-8 text-center text-muted-foreground text-sm">
-            {hasActiveFilters
-              ? "No payments found matching your filters"
-              : "No payments recorded yet"}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border bg-[#F9FAFB] text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                  <SortableTableHead
-                    columnKey="ref"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Payment #
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="party"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Party / Counterparty
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="documentNumber"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Document
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="method"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Mode
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="date"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Date
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="account"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    className="py-3.5 px-4"
-                  >
-                    Account
-                  </SortableTableHead>
-                  <SortableTableHead
-                    columnKey="amount"
-                    currentSort={sortState}
-                    onSort={handleSort}
-                    align="right"
-                    className="py-3.5 px-4"
-                  >
-                    Amount (₹)
-                  </SortableTableHead>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {sortedPayments.map((row) => {
-                  const targetUrl =
-                    row.documentType === "INVOICE"
-                      ? `/invoices/${row.documentId}`
-                      : `/bills/${row.documentId}`;
-
-                  return (
-                    <tr
-                      key={row.id}
-                      onClick={() => router.push(targetUrl)}
-                      className="hover:bg-primary-light/30 transition-colors cursor-pointer"
-                    >
-                      <td className="py-3.5 px-4 font-mono font-bold text-navy">
-                        <span className="hover:underline">{row.ref}</span>
-                      </td>
-                      <td className="py-3.5 px-4 font-semibold text-foreground">{row.party}</td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-navy font-medium hover:underline">
-                          {row.documentNumber}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-muted-foreground">{row.method}</td>
-                      <td className="py-3.5 px-4 text-muted-foreground">{row.date}</td>
-                      <td className="py-3.5 px-4 text-muted-foreground">{row.account}</td>
-                      <td className={`py-3.5 px-4 text-right font-bold ${row.direction === "INBOUND" ? "text-success" : "text-destructive"}`}>
-                        {row.direction === "INBOUND" ? "+" : "-"}₹{row.amount.toLocaleString("en-IN")}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <PaymentsTable
+        loading={loading}
+        payments={sortedPayments}
+        hasActiveFilters={hasActiveFilters}
+        sortState={sortState}
+        onSort={handleSort}
+      />
     </div>
   );
 }

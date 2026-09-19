@@ -64,9 +64,24 @@ export class PaymentService {
         throw new ValidationError("Payment amount exceeds amount due");
       }
 
-      // Get company settings for account mappings
+      // Get company settings for account mappings with smart fallback
       const settings = await tx.companySettings.findFirst();
-      if (!settings?.creditorsAccountId) {
+      let creditorsAccountId = settings?.creditorsAccountId;
+      if (!creditorsAccountId) {
+        const defaultCreditors = await tx.chartOfAccount.findFirst({
+          where: {
+            type: "LIABILITY",
+            OR: [
+              { name: { contains: "Creditor", mode: "insensitive" } },
+              { name: { contains: "Payable", mode: "insensitive" } },
+              { code: "2000" },
+            ],
+          },
+        }) || await tx.chartOfAccount.findFirst({ where: { type: "LIABILITY" } });
+        creditorsAccountId = defaultCreditors?.id;
+      }
+
+      if (!creditorsAccountId) {
         throw new ValidationError("Creditors account not configured in company settings");
       }
 
@@ -120,7 +135,7 @@ export class PaymentService {
         tx,
         lines: [
           {
-            accountId: settings.creditorsAccountId,
+            accountId: creditorsAccountId,
             partnerId: bill.vendorId,
             debit: input.amount,
             credit: new Decimal(0),
@@ -153,9 +168,24 @@ export class PaymentService {
         throw new ValidationError("Payment amount exceeds amount due");
       }
 
-      // Get company settings for account mappings
+      // Get company settings for account mappings with smart fallback
       const settings = await tx.companySettings.findFirst();
-      if (!settings?.debtorsAccountId) {
+      let debtorsAccountId = settings?.debtorsAccountId;
+      if (!debtorsAccountId) {
+        const defaultDebtors = await tx.chartOfAccount.findFirst({
+          where: {
+            type: "ASSET",
+            OR: [
+              { name: { contains: "Debtor", mode: "insensitive" } },
+              { name: { contains: "Receivable", mode: "insensitive" } },
+              { code: "1100" },
+            ],
+          },
+        }) || await tx.chartOfAccount.findFirst({ where: { type: "ASSET" } });
+        debtorsAccountId = defaultDebtors?.id;
+      }
+
+      if (!debtorsAccountId) {
         throw new ValidationError("Debtors account not configured in company settings");
       }
 
@@ -216,7 +246,7 @@ export class PaymentService {
             credit: new Decimal(0),
           },
           {
-            accountId: settings.debtorsAccountId,
+            accountId: debtorsAccountId,
             partnerId: invoice.customerId,
             debit: new Decimal(0),
             credit: input.amount,
@@ -364,9 +394,24 @@ export class PaymentService {
         return transaction;
       }
 
-      // Get company settings for account mappings
+      // Get company settings for account mappings with smart fallback
       const settings = await tx.companySettings.findFirst();
-      if (!settings?.debtorsAccountId) {
+      let debtorsAccountId = settings?.debtorsAccountId;
+      if (!debtorsAccountId) {
+        const defaultDebtors = await tx.chartOfAccount.findFirst({
+          where: {
+            type: "ASSET",
+            OR: [
+              { name: { contains: "Debtor", mode: "insensitive" } },
+              { name: { contains: "Receivable", mode: "insensitive" } },
+              { code: "1100" },
+            ],
+          },
+        }) || await tx.chartOfAccount.findFirst({ where: { type: "ASSET" } });
+        debtorsAccountId = defaultDebtors?.id;
+      }
+
+      if (!debtorsAccountId) {
         throw new ValidationError("Debtors account not configured in company settings");
       }
 
@@ -437,7 +482,7 @@ export class PaymentService {
             credit: new Decimal(0),
           },
           {
-            accountId: settings.debtorsAccountId,
+            accountId: debtorsAccountId,
             partnerId: invoice.customerId,
             debit: new Decimal(0),
             credit: transaction.amount,

@@ -61,7 +61,7 @@ export function InventoryStatusCard({ inventoryStatus }: InventoryStatusCardProp
         </Link>
 
         <Link
-          href="/products?status=ACTIVE"
+          href="/products?status=IN_STOCK"
           className="flex items-center gap-3 p-3 rounded-xl bg-surface-subtle border border-border hover:bg-[#F7FCFA] hover:border-success/40 transition-all group"
         >
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#EAF7F1] text-success group-hover:scale-105 transition-transform">

@@ -47,7 +47,7 @@ export function SortableTableHead<T extends string = string>({
       <div
         className={cn(
           "inline-flex items-center gap-1.5 group",
-          align === "right" && "justify-end flex-row-reverse",
+          align === "right" && "justify-end",
           align === "center" && "justify-center"
         )}
       >

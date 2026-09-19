@@ -81,18 +81,15 @@ async function InvoicesPageContent({ searchParams }: PageProps) {
     }
 
     // Status filter
-    if (searchParams.status && searchParams.status !== "ALL") {
-      const status = searchParams.status;
+    const statusParam = (searchParams.status || "").toUpperCase();
+    const paymentStatusParam = (searchParams.paymentStatus || "").toUpperCase();
 
-      if (status === "DRAFT" && inv.status !== DocumentStatus.DRAFT)
-        return false;
-      if (status === "CONFIRMED" && inv.status !== DocumentStatus.CONFIRMED)
-        return false;
-      if (status === "CANCELLED" && inv.status !== DocumentStatus.CANCELLED)
-        return false;
+    if (statusParam && statusParam !== "ALL") {
+      if (statusParam === "DRAFT" && inv.status !== DocumentStatus.DRAFT) return false;
+      if (statusParam === "CONFIRMED" && inv.status !== DocumentStatus.CONFIRMED) return false;
+      if (statusParam === "CANCELLED" && inv.status !== DocumentStatus.CANCELLED) return false;
 
-      // Handle computed statuses (OVERDUE, PAID, PARTIAL)
-      if (status === "OVERDUE") {
+      if (statusParam === "OVERDUE") {
         const today = new Date();
         const dueDate = new Date(inv.dueDate);
         const isOverdue =
@@ -102,18 +99,29 @@ async function InvoicesPageContent({ searchParams }: PageProps) {
         if (!isOverdue) return false;
       }
 
-      if (status === "PAID" && inv.paymentStatus !== PaymentStatus.PAID)
-        return false;
-      if (status === "PARTIAL" && inv.paymentStatus !== PaymentStatus.PARTIAL)
-        return false;
+      if (statusParam === "PAID" && inv.paymentStatus !== PaymentStatus.PAID) return false;
+      if (statusParam === "PARTIAL" && inv.paymentStatus !== PaymentStatus.PARTIAL) return false;
+      if (statusParam === "NOT_PAID" && inv.paymentStatus !== PaymentStatus.NOT_PAID) return false;
     }
 
-    // Payment status filter
-    if (
-      searchParams.paymentStatus &&
-      searchParams.paymentStatus !== "ALL"
-    ) {
-      if (inv.paymentStatus !== searchParams.paymentStatus) return false;
+    // Payment status filter (supports OVERDUE, PENDING, NOT_PAID, PARTIAL, PAID)
+    if (paymentStatusParam && paymentStatusParam !== "ALL") {
+      if (paymentStatusParam === "OVERDUE") {
+        const today = new Date();
+        const dueDate = new Date(inv.dueDate);
+        const isOverdue =
+          Number(inv.amountDue) > 0 &&
+          dueDate < today &&
+          inv.paymentStatus !== PaymentStatus.PAID;
+        if (!isOverdue) return false;
+      } else if (paymentStatusParam === "PENDING") {
+        const isPending =
+          Number(inv.amountDue) > 0 &&
+          inv.paymentStatus !== PaymentStatus.PAID;
+        if (!isPending) return false;
+      } else if (inv.paymentStatus !== paymentStatusParam) {
+        return false;
+      }
     }
 
     // Date range filter

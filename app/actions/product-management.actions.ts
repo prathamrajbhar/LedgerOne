@@ -9,7 +9,7 @@ import { ProductActionResult } from "./product.actions";
 
 export async function archiveProductAction(id: string): Promise<ProductActionResult> {
   try {
-    await requirePermission("masters:write");
+    await requirePermission("masters:archive");
     await productService.archive(id);
     revalidatePath("/products");
     return {
@@ -29,7 +29,7 @@ export async function archiveProductAction(id: string): Promise<ProductActionRes
 
 export async function restoreProductAction(id: string): Promise<ProductActionResult> {
   try {
-    await requirePermission("masters:write");
+    await requirePermission("masters:archive");
     await productService.restore(id);
     revalidatePath("/products");
     return {

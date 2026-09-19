@@ -268,6 +268,19 @@ export class VendorBillService {
       throw new ValidationError("Can only create a vendor bill from a confirmed purchase order");
     }
 
+    const existingBill = await prisma.vendorBill.findFirst({
+      where: {
+        purchaseOrderId: po.id,
+        status: { not: DocumentStatus.CANCELLED },
+      },
+    });
+
+    if (existingBill) {
+      throw new ConflictError(
+        `A vendor bill (${existingBill.billNumber}) has already been generated for this Purchase Order.`
+      );
+    }
+
     let creatorId = userId || po.createdById;
     if (!creatorId) {
       const defaultUser = await prisma.user.findFirst();
@@ -350,22 +363,33 @@ export class VendorBillService {
       throw new ValidationError("Purchase journal not found. Please configure journals first.");
     }
 
-    // Fetch company settings for Accounts Payable (Creditors) account
+    // Fetch company settings for Accounts Payable (Creditors) account with smart fallback
     const companySettings = await prisma.companySettings.findFirst();
+    let creditorsAccount: { id: string } | null = null;
 
-    if (!companySettings?.creditorsAccountId) {
-      throw new ValidationError(
-        "Accounts Payable (Creditors) account not configured in Company Settings. Please configure it before confirming vendor bills."
-      );
+    if (companySettings?.creditorsAccountId) {
+      creditorsAccount = await prisma.chartOfAccount.findUnique({
+        where: { id: companySettings.creditorsAccountId },
+      });
     }
 
-    // Fetch the creditors account (Accounts Payable - credit side)
-    const creditorsAccount = await prisma.chartOfAccount.findUnique({
-      where: { id: companySettings.creditorsAccountId },
-    });
+    if (!creditorsAccount) {
+      creditorsAccount = await prisma.chartOfAccount.findFirst({
+        where: {
+          type: "LIABILITY",
+          OR: [
+            { name: { contains: "Creditor", mode: "insensitive" } },
+            { name: { contains: "Payable", mode: "insensitive" } },
+            { code: "2000" },
+          ],
+        },
+      }) || await prisma.chartOfAccount.findFirst({
+        where: { type: "LIABILITY" },
+      });
+    }
 
     if (!creditorsAccount) {
-      throw new ValidationError("Configured Accounts Payable account not found in Chart of Accounts");
+      throw new ValidationError("Accounts Payable account not configured or found in Chart of Accounts");
     }
 
     // Fetch expense account (debit side)

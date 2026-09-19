@@ -457,7 +457,7 @@ export class JournalEntryService {
           },
         },
         orderBy: {
-          accountingDate: "desc",
+          createdAt: "desc",
         },
         skip,
         take: pageSize,

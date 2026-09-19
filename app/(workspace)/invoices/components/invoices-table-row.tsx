@@ -1,10 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { Download, Loader2, DollarSign, Eye, Check } from "lucide-react";
+import { Download, Loader2, DollarSign, Eye, Check, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { DocumentStatus } from "@prisma/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { InvoiceWithRelations } from "../invoices-types";
 
 interface InvoicesTableRowProps {
@@ -96,64 +103,70 @@ export function InvoicesTableRow({
       </td>
 
       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onViewInvoice(invoice)}
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-navy hover:bg-navy/5 cursor-pointer"
-            title="View Invoice Details"
-          >
-            <Eye className="w-3.5 h-3.5" />
-          </Button>
+        <div className="flex items-center justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-navy hover:bg-slate-100 rounded-lg cursor-pointer"
+                title="Invoice Options"
+              >
+                <MoreVertical className="h-4 w-4" />
+                <span className="sr-only">Actions</span>
+              </Button>
+            </DropdownMenuTrigger>
 
-          {isDraft && (
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={confirmingInvoiceId === invoice.id}
-              onClick={() => onConfirmInvoice(invoice.id)}
-              className="h-7 px-2 text-[11px] font-medium text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 gap-1 cursor-pointer"
-              title="Confirm Invoice"
-            >
-              {confirmingInvoiceId === invoice.id ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <>
-                  <Check className="w-3 h-3" />
-                  Confirm
-                </>
+            <DropdownMenuContent align="end" className="w-48 bg-white border border-border shadow-dropdown rounded-xl p-1 text-xs">
+              <DropdownMenuItem
+                onClick={() => onViewInvoice(invoice)}
+                className="gap-2 cursor-pointer text-foreground hover:text-navy hover:bg-slate-50"
+              >
+                <Eye className="w-3.5 h-3.5 text-navy" />
+                <span>View Invoice Details</span>
+              </DropdownMenuItem>
+
+              {isDraft && (
+                <DropdownMenuItem
+                  disabled={confirmingInvoiceId === invoice.id}
+                  onClick={() => onConfirmInvoice(invoice.id)}
+                  className="gap-2 cursor-pointer text-emerald-600 hover:bg-emerald-50"
+                >
+                  {confirmingInvoiceId === invoice.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  )}
+                  <span>Confirm & Post Journal</span>
+                </DropdownMenuItem>
               )}
-            </Button>
-          )}
 
-          {isConfirmed && hasDue && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onOpenPayment(invoice)}
-              className="h-7 px-2 text-[11px] font-medium text-teal hover:text-teal/90 hover:bg-teal/10 gap-1 cursor-pointer"
-              title="Record Payment"
-            >
-              <DollarSign className="w-3 h-3" />
-              Pay
-            </Button>
-          )}
+              {isConfirmed && hasDue && (
+                <DropdownMenuItem
+                  onClick={() => onOpenPayment(invoice)}
+                  className="gap-2 cursor-pointer text-teal hover:bg-teal/5 font-medium"
+                >
+                  <DollarSign className="w-3.5 h-3.5 text-teal" />
+                  <span>Record Customer Payment</span>
+                </DropdownMenuItem>
+              )}
 
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={downloadingId === invoice.id}
-            onClick={() => onDownloadPDF(invoice)}
-            className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground cursor-pointer"
-            title="Download PDF"
-          >
-            {downloadingId === invoice.id ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5" />
-            )}
-          </Button>
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                disabled={downloadingId === invoice.id}
+                onClick={() => onDownloadPDF(invoice)}
+                className="gap-2 cursor-pointer text-foreground hover:bg-slate-50"
+              >
+                {downloadingId === invoice.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Download className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+                <span>Download PDF Invoice</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </td>
     </tr>

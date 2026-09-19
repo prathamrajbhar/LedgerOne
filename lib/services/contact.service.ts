@@ -104,7 +104,7 @@ export class ContactService {
   }
 
   async update(input: UpdateContactInput) {
-    const { id, ...data } = input;
+    const { id, createPortalUser: _c, portalPassword: _p, ...data } = input;
 
     // Check if contact exists
     const existing = await prisma.contact.findUnique({

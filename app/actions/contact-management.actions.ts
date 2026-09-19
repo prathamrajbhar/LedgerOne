@@ -8,7 +8,7 @@ import { ContactActionResult } from "./contact.actions";
 
 export async function archiveContactAction(id: string): Promise<ContactActionResult> {
   try {
-    await requirePermission("masters:write");
+    await requirePermission("masters:archive");
     await contactService.archive(id);
     return {
       success: true,
@@ -24,7 +24,7 @@ export async function archiveContactAction(id: string): Promise<ContactActionRes
 
 export async function restoreContactAction(id: string): Promise<ContactActionResult> {
   try {
-    await requirePermission("masters:write");
+    await requirePermission("masters:archive");
     await contactService.restore(id);
     revalidatePath("/contacts");
     return {

@@ -19,6 +19,7 @@ import {
   Database,
   Layers,
   FileBarChart,
+  Percent,
 } from "lucide-react";
 import { UserRole } from "@prisma/client";
 
@@ -98,6 +99,12 @@ export const navSections: NavSection[] = [
         href: "/accounts",
         icon: BookOpen,
         description: "GL accounts structure",
+      },
+      {
+        name: "Tax Rates",
+        href: "/tax-rates",
+        icon: Percent,
+        description: "Standard GST slabs & tax rules",
       },
     ],
   },

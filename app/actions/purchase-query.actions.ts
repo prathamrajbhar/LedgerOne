@@ -23,7 +23,7 @@ export async function getPurchaseOrdersAction() {
           },
         },
       },
-      orderBy: { orderDate: "desc" },
+      orderBy: [{ orderDate: "desc" }, { createdAt: "desc" }],
     });
     return { success: true, data: pos };
   } catch (error: unknown) {
@@ -51,7 +51,7 @@ export async function getVendorBillsAction() {
           },
         },
       },
-      orderBy: { billDate: "desc" },
+      orderBy: [{ billDate: "desc" }, { createdAt: "desc" }],
     });
     return { success: true, data: bills };
   } catch (error: unknown) {

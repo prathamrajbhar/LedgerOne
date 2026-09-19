@@ -58,9 +58,11 @@ export class GeneralLedgerService {
       throw new Error("Account not found");
     }
 
-    // Normal debit balance types (Assets, Expenses, Other Expenses)
+    // Normal debit balance types (Assets, Bank, Cash, Expenses, Other Expenses)
     const isDebitNormal =
       account.type === AccountType.ASSET ||
+      account.type === AccountType.BANK ||
+      account.type === AccountType.CASH ||
       account.type === AccountType.EXPENSES ||
       account.type === AccountType.OTHER_EXPENSES;
 
@@ -196,6 +198,8 @@ export class GeneralLedgerService {
 
     const isDebitNormal =
       account.type === AccountType.ASSET ||
+      account.type === AccountType.BANK ||
+      account.type === AccountType.CASH ||
       account.type === AccountType.EXPENSES ||
       account.type === AccountType.OTHER_EXPENSES;
 
