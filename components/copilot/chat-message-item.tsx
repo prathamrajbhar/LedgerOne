@@ -12,12 +12,12 @@ import { BudgetCard, BudgetCardData } from "./cards/budget-card";
 import { ActionCard } from "./cards/action-card";
 import { PdfCard, PdfCardData } from "./cards/pdf-card";
 import { AccountBalanceCard, AccountBalanceCardData } from "./cards/account-balance-card";
-
 import { ChatMarkdown } from "./chat-markdown";
 
 interface ChatMessageItemProps {
   message: UIMessage;
   onAddToolResult: (params: { tool: string; toolCallId: string; state: "output-available"; output: Record<string, unknown> }) => void;
+  onSelectPrompt?: (prompt: string) => void;
 }
 
 const SENSITIVE_ACTION_TOOLS = new Set([
@@ -37,7 +37,7 @@ const SENSITIVE_ACTION_TOOLS = new Set([
   "adjustStockAction",
 ]);
 
-export function ChatMessageItem({ message, onAddToolResult }: ChatMessageItemProps) {
+export function ChatMessageItem({ message, onAddToolResult, onSelectPrompt }: ChatMessageItemProps) {
   const isUser = message.role === "user";
 
   return (
@@ -95,6 +95,7 @@ export function ChatMessageItem({ message, onAddToolResult }: ChatMessageItemPro
                   state={part.state}
                   output={part.output as Record<string, unknown> | undefined}
                   onAddToolResult={onAddToolResult}
+                  onSelectPrompt={onSelectPrompt}
                 />
               );
             }

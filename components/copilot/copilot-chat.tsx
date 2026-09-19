@@ -130,7 +130,12 @@ export function CopilotChat({ resetTrigger }: { resetTrigger?: number }) {
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3">
         {messages.length === 0 && <ChatWelcome onSelectPrompt={handleQuickPrompt} />}
         {messages.map((m) => (
-          <ChatMessageItem key={m.id} message={m} onAddToolResult={addToolResult} />
+          <ChatMessageItem
+            key={m.id}
+            message={m}
+            onAddToolResult={addToolResult}
+            onSelectPrompt={handleQuickPrompt}
+          />
         ))}
         {isLoading && status === "submitted" && (
           <div className="flex items-center gap-2 text-slate-400 text-xs pl-2">

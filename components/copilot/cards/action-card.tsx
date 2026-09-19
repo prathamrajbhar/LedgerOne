@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import { useState } from "react";
-import { ShieldCheck, Check, X, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { ShieldCheck, Check, X, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { executeCopilotAction } from "@/app/actions/copilot.actions";
 import { ActionPreview } from "./action-preview";
+import { ActionCompletedView } from "./action-completed";
 
 interface ActionCardProps {
   toolName: string;
@@ -15,9 +16,10 @@ interface ActionCardProps {
   state: string;
   output?: Record<string, unknown>;
   onAddToolResult: (params: { tool: string; toolCallId: string; state: "output-available"; output: Record<string, unknown> }) => void;
+  onSelectPrompt?: (prompt: string) => void;
 }
 
-export function ActionCard({ toolName, toolCallId, input, state, output, onAddToolResult }: ActionCardProps) {
+export function ActionCard({ toolName, toolCallId, input, state, output, onAddToolResult, onSelectPrompt }: ActionCardProps) {
   const [isExecuting, setIsExecuting] = useState(false);
 
   if (state === "output-available" && output) {
@@ -33,22 +35,23 @@ export function ActionCard({ toolName, toolCallId, input, state, output, onAddTo
       );
     }
 
+    if (output.success) {
+      return (
+        <ActionCompletedView
+          toolName={toolName}
+          input={input}
+          output={output}
+          onSelectPrompt={onSelectPrompt}
+        />
+      );
+    }
+
     return (
-      <div
-        className={`p-2.5 rounded-lg border text-[11px] flex items-start gap-2 ${
-          output.success
-            ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300"
-            : "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300"
-        }`}
-      >
-        {output.success ? (
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-        ) : (
-          <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-        )}
+      <div className="p-2.5 rounded-lg border text-[11px] flex items-start gap-2 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800 text-rose-800 dark:text-rose-300">
+        <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
         <div>
-          <span className="font-semibold block">{output.success ? "Action Completed" : "Action Failed"}</span>
-          <span>{String(output.message || output.error || "")}</span>
+          <span className="font-semibold block">Action Failed</span>
+          <span>{String(output.error || output.message || "Unknown error occurred.")}</span>
         </div>
       </div>
     );

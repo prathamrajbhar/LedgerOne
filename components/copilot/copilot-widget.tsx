@@ -108,17 +108,17 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
 
       {isOpen && (
         <aside
-          style={{ width: `${width}px` }}
-          className={`h-screen flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shrink-0 fixed sm:relative top-0 right-0 z-50 sm:z-20 max-w-[90vw] ${
+          style={{ width: typeof window !== "undefined" && window.innerWidth < 640 ? "100vw" : `${width}px` }}
+          className={`h-screen flex flex-col bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 shrink-0 fixed sm:relative top-0 right-0 z-50 sm:z-20 w-full sm:w-auto max-w-full sm:max-w-[90vw] ${
             !isDragging ? "transition-[width] duration-200 ease-out" : ""
           }`}
         >
-          {/* Draggable Left Resize Handle */}
+          {/* Draggable Left Resize Handle (Desktop only) */}
           <div
             onMouseDown={handleMouseDown}
             onDoubleClick={() => setWidth(DEFAULT_WIDTH)}
             title="Drag to resize width (Double-click to reset)"
-            className="absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-30 group flex items-center justify-center hover:bg-teal/20 transition-colors"
+            className="hidden sm:flex absolute -left-1.5 top-0 bottom-0 w-3 cursor-col-resize z-30 group items-center justify-center hover:bg-teal/20 transition-colors"
           >
             <div className="w-1 h-8 rounded-full bg-slate-300 dark:bg-slate-700 group-hover:bg-teal transition-colors flex items-center justify-center">
               <GripVertical className="w-2.5 h-2.5 text-slate-500 opacity-0 group-hover:opacity-100" />
