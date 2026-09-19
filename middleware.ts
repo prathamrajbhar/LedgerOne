@@ -40,11 +40,21 @@ const WORKSPACE_ROUTES = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+  const isSecure = request.nextUrl.protocol === "https:" || request.headers.get("x-forwarded-proto") === "https";
 
-  const token = await getToken({
+  let token = await getToken({
     req: request,
     secret,
+    secureCookie: isSecure,
   });
+
+  if (!token && isSecure) {
+    token = await getToken({
+      req: request,
+      secret,
+      secureCookie: false,
+    });
+  }
 
   // Handle Root URL
   if (pathname === "/") {
