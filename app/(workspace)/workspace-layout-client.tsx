@@ -26,6 +26,8 @@ export default function WorkspaceLayoutClient({
   mustChangePassword,
 }: WorkspaceLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotExpanded, setCopilotExpanded] = useState(false);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -38,8 +40,8 @@ export default function WorkspaceLayoutClient({
         />
       </React.Suspense>
 
-      {/* Main Workspace Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main Workspace Area (Dynamically adjusts width when Copilot is open) */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300">
         {/* Static / Sticky Top Navbar */}
         <Navbar
           onMenuClick={() => setSidebarOpen(true)}
@@ -63,8 +65,16 @@ export default function WorkspaceLayoutClient({
         </main>
       </div>
 
-      {/* Autonomous ERP Copilot Widget */}
-      {!mustChangePassword && <CopilotWidget />}
+      {/* Autonomous ERP Copilot Panel (Docked side-by-side with zero overlap) */}
+      {!mustChangePassword && (
+        <CopilotWidget
+          isOpen={copilotOpen}
+          onOpen={() => setCopilotOpen(true)}
+          onClose={() => setCopilotOpen(false)}
+          isExpanded={copilotExpanded}
+          onToggleExpand={() => setCopilotExpanded(!copilotExpanded)}
+        />
+      )}
 
       {/* Mandatory Change Password Modal */}
       <ForceChangePasswordModal mustChangePassword={mustChangePassword} />
