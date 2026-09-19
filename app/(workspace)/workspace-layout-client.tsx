@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Navbar } from "@/components/layout/navbar";
 import { ForceChangePasswordModal } from "@/components/auth/force-change-password-modal";
+import { CopilotWidget } from "@/components/copilot/copilot-widget";
 import { UserRole } from "@prisma/client";
 
 interface WorkspaceLayoutClientProps {
@@ -61,6 +62,9 @@ export default function WorkspaceLayoutClient({
           </div>
         </main>
       </div>
+
+      {/* Autonomous ERP Copilot Widget */}
+      {!mustChangePassword && <CopilotWidget />}
 
       {/* Mandatory Change Password Modal */}
       <ForceChangePasswordModal mustChangePassword={mustChangePassword} />
