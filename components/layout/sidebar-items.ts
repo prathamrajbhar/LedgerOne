@@ -28,7 +28,7 @@ export interface NavItem {
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string | number;
-  allowedRoles?: UserRole[]; // If undefined, visible to all workspace users (ADMINISTRATOR and ACCOUNTANT)
+  allowedRoles?: UserRole[];
   description?: string;
 }
 
@@ -39,14 +39,6 @@ export interface NavSection {
   items: NavItem[];
 }
 
-/**
- * Navigation structure grouped into 5 main Admin sections:
- * 1. Overview
- * 2. Master Data
- * 3. Transactions
- * 4. Accounting
- * 5. Reports
- */
 export const navSections: NavSection[] = [
   // 1. Overview
   {
@@ -54,12 +46,7 @@ export const navSections: NavSection[] = [
     icon: LayoutDashboard,
     description: "System metrics & quick insights",
     items: [
-      {
-        name: "Dashboard",
-        href: "/dashboard",
-        icon: LayoutDashboard,
-        description: "Real-time key performance metrics",
-      },
+      { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, description: "Real-time key performance metrics" },
     ],
   },
 
@@ -69,43 +56,12 @@ export const navSections: NavSection[] = [
     icon: Database,
     description: "Core entities, contacts & accounts",
     items: [
-      {
-        name: "Users",
-        href: "/users",
-        icon: Users,
-        allowedRoles: [UserRole.ADMINISTRATOR],
-        description: "Manage system access & roles",
-      },
-      {
-        name: "Customers",
-        href: "/contacts?type=CUSTOMER",
-        icon: Users,
-        description: "Customer database & portals",
-      },
-      {
-        name: "Vendors",
-        href: "/contacts?type=VENDOR",
-        icon: Building,
-        description: "Supplier contacts & details",
-      },
-      {
-        name: "Products",
-        href: "/products",
-        icon: Package,
-        description: "Goods, services & inventory items",
-      },
-      {
-        name: "Chart of Accounts",
-        href: "/accounts",
-        icon: BookOpen,
-        description: "GL accounts structure",
-      },
-      {
-        name: "Tax Rates",
-        href: "/tax-rates",
-        icon: Percent,
-        description: "Standard GST slabs & tax rules",
-      },
+      { name: "Users", href: "/users", icon: Users, allowedRoles: [UserRole.ADMINISTRATOR], description: "Manage system access & roles" },
+      { name: "Customers", href: "/contacts?type=CUSTOMER", icon: Users, description: "Customer database & portals" },
+      { name: "Vendors", href: "/contacts?type=VENDOR", icon: Building, description: "Supplier contacts & details" },
+      { name: "Products", href: "/products", icon: Package, description: "Goods, services & inventory items" },
+      { name: "Chart of Accounts", href: "/accounts", icon: BookOpen, description: "GL accounts structure" },
+      { name: "Tax Rates", href: "/tax-rates", icon: Percent, description: "Standard GST slabs & tax rules" },
     ],
   },
 
@@ -115,42 +71,11 @@ export const navSections: NavSection[] = [
     icon: Layers,
     description: "Sales, purchases & invoicing flows",
     items: [
-      {
-        name: "Sales Orders",
-        href: "/sales",
-        icon: ShoppingBag,
-        description: "Customer quotes & confirmed orders",
-      },
-      {
-        name: "Customer Invoices",
-        href: "/invoices",
-        icon: FileText,
-        description: "Receivables & billing records",
-      },
-      {
-        name: "Purchase Orders",
-        href: "/purchases",
-        icon: ShoppingCart,
-        description: "Vendor procurement orders",
-      },
-      {
-        name: "Vendor Bills",
-        href: "/bills",
-        icon: Receipt,
-        description: "Payables & incoming supplier bills",
-      },
-      {
-        name: "Expenses",
-        href: "/expenses",
-        icon: Receipt,
-        description: "Operational costs & AI receipt scanner",
-      },
-      {
-        name: "Bill Payments",
-        href: "/payments",
-        icon: CreditCard,
-        description: "Disbursed vendor payments",
-      },
+      { name: "Sales Orders", href: "/sales", icon: ShoppingBag, description: "Customer quotes & confirmed orders" },
+      { name: "Customer Invoices", href: "/invoices", icon: FileText, description: "Receivables & billing records" },
+      { name: "Purchase Orders", href: "/purchases", icon: ShoppingCart, description: "Vendor procurement orders" },
+      { name: "Vendor Bills", href: "/bills", icon: Receipt, description: "Payables & incoming supplier bills" },
+      { name: "Expenses", href: "/expenses", icon: Receipt, description: "Operational costs & AI receipt scanner" },
     ],
   },
 
@@ -160,36 +85,11 @@ export const navSections: NavSection[] = [
     icon: BookText,
     description: "General ledger, entries & budgets",
     items: [
-      {
-        name: "Journals",
-        href: "/journals",
-        icon: FileCheck,
-        description: "Sales, purchase & bank journals",
-      },
-      {
-        name: "Journal Entries",
-        href: "/journal-entries",
-        icon: BookText,
-        description: "Double-entry accounting records",
-      },
-      {
-        name: "Payments",
-        href: "/payments",
-        icon: CreditCard,
-        description: "All financial transactions",
-      },
-      {
-        name: "Analytic Accounts",
-        href: "/analytic-accounts",
-        icon: FolderTree,
-        description: "Cost centers & project tracking",
-      },
-      {
-        name: "Budgets",
-        href: "/budgets",
-        icon: PieChart,
-        description: "Financial targets & allocations",
-      },
+      { name: "Journals", href: "/journals", icon: FileCheck, description: "Sales, purchase & bank journals" },
+      { name: "Journal Entries", href: "/journal-entries", icon: BookText, description: "Double-entry accounting records" },
+      { name: "Payments", href: "/payments", icon: CreditCard, description: "All financial transactions & banking vouchers" },
+      { name: "Analytic Accounts", href: "/analytic-accounts", icon: FolderTree, description: "Cost centers & project tracking" },
+      { name: "Budgets", href: "/budgets", icon: PieChart, description: "Financial targets & allocations" },
     ],
   },
 
@@ -199,36 +99,13 @@ export const navSections: NavSection[] = [
     icon: FileBarChart,
     description: "Financial statements & analytics",
     items: [
-      {
-        name: "Profit & Loss",
-        href: "/reports/profit-loss",
-        icon: TrendingUp,
-        description: "Income & expense summary statement",
-      },
-      {
-        name: "Balance Sheet",
-        href: "/reports/balance-sheet",
-        icon: BarChart3,
-        description: "Assets, liabilities & equity overview",
-      },
-      {
-        name: "Budget Reports",
-        href: "/reports/budget-report",
-        icon: PieChart,
-        description: "Variance analysis vs budget targets",
-      },
+      { name: "Profit & Loss", href: "/reports/profit-loss", icon: TrendingUp, description: "Income & expense summary statement" },
+      { name: "Balance Sheet", href: "/reports/balance-sheet", icon: BarChart3, description: "Assets, liabilities & equity overview" },
+      { name: "Budget Reports", href: "/reports/budget-report", icon: PieChart, description: "Variance analysis vs budget targets" },
     ],
   },
 ];
 
-/**
- * Filter navigation items based on user role
- *
- * Rules from docs/rbac.md:
- * - ADMINISTRATOR: See everything across Overview, Master Data, Transactions, Accounting, Reports
- * - ACCOUNTANT: See all except User Management and Settings
- * - CONTACT: Portal only (handled in PortalSidebar.tsx)
- */
 export function getFilteredNavSections(userRole: UserRole): NavSection[] {
   return navSections
     .map((section) => ({
