@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, Bot, RotateCcw, Maximize2, Minimize2, GripVertical } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { X, Bot, RotateCcw, Maximize2, Minimize2, GripVertical } from "lucide-react";
+import { CopilotLauncher } from "./copilot-launcher";
 import { CopilotChat } from "./copilot-chat";
 
 export interface CopilotWidgetProps {
@@ -83,25 +84,28 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
     }
   };
 
+  // Global hotkey to toggle Copilot (Cmd+J / Ctrl+J)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        if (isOpen) {
+          onClose();
+        } else {
+          onOpen();
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onOpen, onClose]);
+
   if (!mounted) return null;
 
   return (
     <>
-      {/* Right Edge Half-Hidden Floating Launcher Tab when Closed */}
-      {!isOpen && (
-        <button
-          onClick={onOpen}
-          className="fixed top-1/2 -translate-y-1/2 right-0 z-40 flex items-center justify-start pl-2 w-11 h-13 rounded-l-2xl bg-white dark:bg-slate-800 text-slate-800 dark:text-white border-2 border-r-0 border-teal/40 dark:border-teal/50 shadow-xl hover:shadow-2xl translate-x-5 hover:translate-x-0 transition-all duration-300 ease-out group cursor-pointer"
-          title="Open LedgerOne Copilot"
-          aria-label="Open LedgerOne Copilot"
-        >
-          <div className="relative flex items-center justify-center w-7 h-7 rounded-lg bg-teal/10 group-hover:bg-teal/20 text-teal transition-colors">
-            <Sparkles className="w-4 h-4 text-teal animate-pulse group-hover:scale-110 transition-transform duration-200" />
-          </div>
-        </button>
-      )}
+      {!isOpen && <CopilotLauncher onOpen={onOpen} />}
 
-      {/* Docked Side-by-Side Right Sidebar with Draggable Resize Handle */}
       {isOpen && (
         <aside
           style={{ width: `${width}px` }}
@@ -131,7 +135,6 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
             </div>
 
             <div className="flex items-center gap-1">
-              {/* Reset Thread */}
               <button
                 onClick={() => setResetCounter((c) => c + 1)}
                 title="Start New Chat"
@@ -141,7 +144,6 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>
 
-              {/* Toggle Width */}
               <button
                 onClick={handleToggleExpand}
                 title={isExpanded ? "Collapse View (410px)" : "Expand View (600px)"}
@@ -151,10 +153,9 @@ export function CopilotWidget({ isOpen, onOpen, onClose }: CopilotWidgetProps) {
                 {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
               </button>
 
-              {/* Close / Undock */}
               <button
                 onClick={onClose}
-                title="Close Copilot"
+                title="Close Copilot (⌘J)"
                 className="p-1 rounded text-slate-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                 aria-label="Close Copilot"
               >
