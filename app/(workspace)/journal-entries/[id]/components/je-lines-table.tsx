@@ -26,13 +26,13 @@ export function JeLinesTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+        <table className="w-full text-left text-xs min-w-[500px]">
           <thead>
             <tr className="text-muted-foreground uppercase text-[10px] font-semibold border-b border-border bg-[#F9FAFB]">
-              <th className="py-2.5 px-3">Account</th>
-              <th className="py-2.5 px-3">Partner</th>
-              <th className="py-2.5 px-3 text-right">Debit Amount (₹)</th>
-              <th className="py-2.5 px-3 text-right">Credit Amount (₹)</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Account</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Partner</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Debit Amount (₹)</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Credit Amount (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

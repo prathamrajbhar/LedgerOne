@@ -22,14 +22,14 @@ export function BillLineItemsTable({ lines }: BillLineItemsTableProps) {
         </div>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-xs text-left border-collapse">
+        <table className="w-full text-xs text-left border-collapse min-w-[550px]">
           <thead>
             <tr className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px]">
-              <th className="py-3 px-4">Item / Description</th>
-              <th className="py-3 px-4">Cost Center / Analytic</th>
-              <th className="py-3 px-4 text-right">Quantity</th>
-              <th className="py-3 px-4 text-right">Unit Cost</th>
-              <th className="py-3 px-4 text-right">Line Total</th>
+              <th className="py-3 px-4 whitespace-nowrap">Item / Description</th>
+              <th className="py-3 px-4 whitespace-nowrap">Cost Center / Analytic</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Quantity</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Unit Cost</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Line Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">

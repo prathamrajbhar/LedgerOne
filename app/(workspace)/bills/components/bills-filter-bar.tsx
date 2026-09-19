@@ -61,12 +61,12 @@ export function BillsFilterBar({
         </div>
 
         {/* Filters cluster */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
           {/* Vendor Filter */}
           <select
             value={vendorFilter}
             onChange={(e) => onVendorFilterChange(e.target.value)}
-            className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+            className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">All Vendors</option>
             {vendors.map((v) => (
@@ -80,7 +80,7 @@ export function BillsFilterBar({
           <select
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value)}
-            className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+            className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">Document Status</option>
             <option value="DRAFT">Draft</option>
@@ -93,7 +93,7 @@ export function BillsFilterBar({
           <select
             value={paymentStatusFilter}
             onChange={(e) => onPaymentStatusFilterChange(e.target.value)}
-            className="h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+            className="w-full h-8.5 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">Payment Status</option>
             <option value="NOT_PAID">Not Paid</option>
@@ -102,24 +102,24 @@ export function BillsFilterBar({
           </select>
 
           {/* Date Range Selector */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 w-full">
             <input
               type="date"
               value={dateRangeFilter.start}
               onChange={(e) =>
                 onDateRangeFilterChange((prev) => ({ ...prev, start: e.target.value }))
               }
-              className="w-full h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="Start Date"
             />
-            <span className="text-muted-foreground text-xs">-</span>
+            <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
             <input
               type="date"
               value={dateRangeFilter.end}
               onChange={(e) =>
                 onDateRangeFilterChange((prev) => ({ ...prev, end: e.target.value }))
               }
-              className="w-full h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-8.5 px-1.5 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="End Date"
             />
           </div>

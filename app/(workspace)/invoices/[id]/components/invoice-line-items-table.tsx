@@ -20,16 +20,16 @@ export function InvoiceLineItemsTable({ lines }: InvoiceLineItemsTableProps) {
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-xs text-left">
+        <table className="w-full text-xs text-left min-w-[600px]">
           <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold">
             <tr>
-              <th className="py-2.5 px-3">#</th>
-              <th className="py-2.5 px-3">Item / Product</th>
-              <th className="py-2.5 px-3">SKU</th>
-              <th className="py-2.5 px-3 text-right">Quantity</th>
-              <th className="py-2.5 px-3 text-right">Unit Price</th>
-              <th className="py-2.5 px-3 text-right">Tax Rate</th>
-              <th className="py-2.5 px-3 text-right">Line Total</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">#</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Item / Product</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">SKU</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Quantity</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Unit Price</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Tax Rate</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Line Total</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">

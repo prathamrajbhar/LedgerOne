@@ -84,7 +84,7 @@ export function BillsTable({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs text-left border-collapse">
+          <table className="w-full text-xs text-left border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold text-[11px] uppercase tracking-wider">
                 <SortableTableHead columnKey="billNumber" currentSort={sortState} onSort={handleSort}>
@@ -111,7 +111,7 @@ export function BillsTable({
                 <SortableTableHead columnKey="status" currentSort={sortState} onSort={handleSort} align="center">
                   Status
                 </SortableTableHead>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">

@@ -28,15 +28,15 @@ export function SoLinesTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+        <table className="w-full text-left text-xs min-w-[600px]">
           <thead>
             <tr className="text-muted-foreground uppercase text-[10px] font-semibold border-b border-border bg-[#F9FAFB]">
-              <th className="py-2.5 px-3">Item / SKU</th>
-              <th className="py-2.5 px-3">Description</th>
-              <th className="py-2.5 px-3 text-center">Qty</th>
-              <th className="py-2.5 px-3 text-right">Unit Price (₹)</th>
-              <th className="py-2.5 px-3 text-right">Tax (₹)</th>
-              <th className="py-2.5 px-3 text-right">Subtotal (₹)</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Item / SKU</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Description</th>
+              <th className="py-2.5 px-3 text-center whitespace-nowrap">Qty</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Unit Price (₹)</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Tax (₹)</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Subtotal (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

@@ -185,14 +185,14 @@ export default function ContactsPage() {
         </div>
 
         {/* Type Filter Buttons + List/Kanban Toggle */}
-        <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
           {/* Type Filter Dropdown */}
           <Select
             value={typeFilter}
             onValueChange={handleTypeChange}
             disabled={loading}
           >
-            <SelectTrigger className="h-9 w-[140px] text-xs bg-white border-border text-foreground font-medium">
+            <SelectTrigger className="h-9 w-full sm:w-[140px] text-xs bg-white border-border text-foreground font-medium">
               <SelectValue placeholder="All Contacts" />
             </SelectTrigger>
             <SelectContent>

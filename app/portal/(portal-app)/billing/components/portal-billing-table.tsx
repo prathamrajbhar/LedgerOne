@@ -36,17 +36,17 @@ export function PortalBillingTable({
   return (
     <Card className="border-border shadow-2xs overflow-hidden bg-white">
       <div className="overflow-x-auto">
-        <table className="w-full text-xs">
+        <table className="w-full text-xs min-w-[650px]">
           <thead className="bg-[#F8FAFC] border-b border-border text-muted-foreground font-semibold">
             <tr>
-              <th className="py-3 px-4 text-left">Invoice No</th>
-              <th className="py-3 px-4 text-left">Invoice Date</th>
-              <th className="py-3 px-4 text-left">Due Date</th>
-              <th className="py-3 px-4 text-left">Status</th>
-              <th className="py-3 px-4 text-right">Total</th>
-              <th className="py-3 px-4 text-right">Amount Paid</th>
-              <th className="py-3 px-4 text-right">Balance Due</th>
-              <th className="py-3 px-4 text-right">Action</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Invoice No</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Invoice Date</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Due Date</th>
+              <th className="py-3 px-4 text-left whitespace-nowrap">Status</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Total</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Amount Paid</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Balance Due</th>
+              <th className="py-3 px-4 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/60">

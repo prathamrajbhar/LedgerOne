@@ -51,11 +51,11 @@ export function InvoicesFilterBar({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
           <select
             value={customerFilter}
             onChange={(e) => onUpdateFilters({ customer: e.target.value })}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+            className="w-full h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">All Customers</option>
             {customers.map((c) => (
@@ -68,7 +68,7 @@ export function InvoicesFilterBar({
           <select
             value={statusFilter}
             onChange={(e) => onUpdateFilters({ status: e.target.value })}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+            className="w-full h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">Document Status</option>
             <option value="DRAFT">Draft</option>
@@ -80,7 +80,7 @@ export function InvoicesFilterBar({
           <select
             value={paymentStatusFilter}
             onChange={(e) => onUpdateFilters({ paymentStatus: e.target.value })}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+            className="w-full h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">Payment Status</option>
             <option value="NOT_PAID">Not Paid</option>
@@ -88,12 +88,12 @@ export function InvoicesFilterBar({
             <option value="PAID">Paid in Full</option>
           </select>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 w-full">
             <input
               type="date"
               value={startDate}
               onChange={(e) => onUpdateFilters({ startDate: e.target.value })}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="Start Date"
             />
             <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
@@ -101,7 +101,7 @@ export function InvoicesFilterBar({
               type="date"
               value={endDate}
               onChange={(e) => onUpdateFilters({ endDate: e.target.value })}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="End Date"
             />
           </div>

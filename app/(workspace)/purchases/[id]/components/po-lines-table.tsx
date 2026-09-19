@@ -25,14 +25,14 @@ export function PoLinesTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
+        <table className="w-full text-left text-xs min-w-[550px]">
           <thead>
             <tr className="text-muted-foreground uppercase text-[10px] font-semibold border-b border-border bg-[#F9FAFB]">
-              <th className="py-2.5 px-3">Raw Material / SKU</th>
-              <th className="py-2.5 px-3">Cost Center (Analytic)</th>
-              <th className="py-2.5 px-3 text-center">Quantity</th>
-              <th className="py-2.5 px-3 text-right">Unit Cost (₹)</th>
-              <th className="py-2.5 px-3 text-right">Line Total (₹)</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Raw Material / SKU</th>
+              <th className="py-2.5 px-3 whitespace-nowrap">Cost Center (Analytic)</th>
+              <th className="py-2.5 px-3 text-center whitespace-nowrap">Quantity</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Unit Cost (₹)</th>
+              <th className="py-2.5 px-3 text-right whitespace-nowrap">Line Total (₹)</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">

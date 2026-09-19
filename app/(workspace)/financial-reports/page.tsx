@@ -147,11 +147,11 @@ export default function FinancialReportsPage() {
 
       {!loading && !error && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="bg-[#F6F7F9] border border-border p-1">
-            <TabsTrigger value="pl" className="text-xs">Profit & Loss</TabsTrigger>
-            <TabsTrigger value="bs" className="text-xs">Balance Sheet</TabsTrigger>
-            <TabsTrigger value="stock" className="text-xs">Stock Valuation</TabsTrigger>
-            <TabsTrigger value="budget" className="text-xs">Budget Performance</TabsTrigger>
+          <TabsList className="bg-[#F6F7F9] border border-border p-1 w-full justify-start overflow-x-auto no-scrollbar">
+            <TabsTrigger value="pl" className="text-xs whitespace-nowrap">Profit & Loss</TabsTrigger>
+            <TabsTrigger value="bs" className="text-xs whitespace-nowrap">Balance Sheet</TabsTrigger>
+            <TabsTrigger value="stock" className="text-xs whitespace-nowrap">Stock Valuation</TabsTrigger>
+            <TabsTrigger value="budget" className="text-xs whitespace-nowrap">Budget Performance</TabsTrigger>
           </TabsList>
 
           <TabsContent value="pl">

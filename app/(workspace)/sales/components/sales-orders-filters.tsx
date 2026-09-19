@@ -50,11 +50,11 @@ export function SalesOrdersFilters({
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 w-full lg:w-auto">
           <select
             value={customerFilter}
             onChange={(e) => onCustomerChange(e.target.value)}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+            className="w-full h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">All Customers</option>
             {customers.map((c) => (
@@ -67,7 +67,7 @@ export function SalesOrdersFilters({
           <select
             value={statusFilter}
             onChange={(e) => onStatusChange(e.target.value)}
-            className="h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
+            className="w-full h-9 px-2.5 rounded-lg border border-border bg-white text-xs text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy cursor-pointer"
           >
             <option value="ALL">All Status</option>
             <option value="DRAFT">Draft</option>
@@ -75,12 +75,12 @@ export function SalesOrdersFilters({
             <option value="CANCELLED">Cancelled</option>
           </select>
 
-          <div className="col-span-2 flex items-center gap-1.5">
+          <div className="sm:col-span-2 flex items-center gap-1.5 w-full">
             <input
               type="date"
               value={startDate}
               onChange={(e) => onStartDateChange(e.target.value)}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="Start Date"
             />
             <span className="text-muted-foreground text-xs flex-shrink-0">-</span>
@@ -88,7 +88,7 @@ export function SalesOrdersFilters({
               type="date"
               value={endDate}
               onChange={(e) => onEndDateChange(e.target.value)}
-              className="w-full h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
+              className="w-full min-w-0 h-9 px-2 rounded-lg border border-border bg-white text-[11px] text-foreground focus:outline-hidden focus:ring-1 focus:ring-navy"
               title="End Date"
             />
           </div>

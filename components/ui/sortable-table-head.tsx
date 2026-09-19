@@ -34,7 +34,7 @@ export function SortableTableHead<T extends string = string>({
   return (
     <th
       className={cn(
-        "py-3 px-4 font-semibold text-[11px] uppercase tracking-wider select-none cursor-pointer transition-colors hover:text-navy hover:bg-slate-100/70",
+        "py-3 px-4 font-semibold text-[11px] uppercase tracking-wider select-none cursor-pointer transition-colors hover:text-navy hover:bg-slate-100/70 whitespace-nowrap",
         align === "right" && "text-right",
         align === "center" && "text-center",
         align === "left" && "text-left",

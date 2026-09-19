@@ -67,7 +67,7 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
 
   return (
     <nav className="w-full lg:w-64 shrink-0 space-y-1">
-      <div className="px-3 pb-2">
+      <div className="hidden lg:block px-3 pb-2">
         <h2 className="text-xs font-normal tracking-wide text-muted-foreground/80">
           Settings
         </h2>
@@ -76,7 +76,8 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
         </p>
       </div>
 
-      <div className="space-y-1">
+      {/* Responsive Container: Horizontal pill list on mobile, vertical list on desktop */}
+      <div className="flex lg:flex-col gap-1 overflow-x-auto no-scrollbar pb-2 lg:pb-0">
         {visibleItems.map((item) => {
           const Icon = item.icon;
           const isActive =
@@ -87,7 +88,7 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
             return (
               <div
                 key={item.title}
-                className="flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-muted-foreground/50 cursor-not-allowed opacity-60"
+                className="hidden lg:flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium text-muted-foreground/50 cursor-not-allowed opacity-60 shrink-0"
               >
                 <div className="flex items-center gap-3">
                   <Icon className="h-4 w-4 shrink-0" />
@@ -110,33 +111,33 @@ export function SettingsSidebar({ userRole }: SettingsSidebarProps) {
               key={item.title}
               href={item.href}
               className={cn(
-                "flex items-center justify-between px-3 py-2.5 rounded-xl text-xs transition-all group",
+                "flex items-center justify-between px-3 py-2 lg:py-2.5 rounded-xl text-xs transition-all group shrink-0 whitespace-nowrap lg:whitespace-normal",
                 isActive
                   ? "bg-white text-navy font-semibold shadow-xs border border-border"
-                  : "text-muted-foreground hover:bg-white/60 hover:text-foreground"
+                  : "text-muted-foreground hover:bg-white/60 hover:text-foreground bg-white/40 lg:bg-transparent border border-border/40 lg:border-transparent"
               )}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2.5 lg:gap-3">
                 <div
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-lg transition-colors shrink-0",
+                    "flex h-7 w-7 lg:h-8 lg:w-8 items-center justify-center rounded-lg transition-colors shrink-0",
                     isActive
                       ? "bg-[#E8F0F7] text-navy"
                       : "bg-surface-subtle text-muted-foreground group-hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <Icon className="h-3.5 w-3.5 lg:h-4 lg:w-4" />
                 </div>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className="font-semibold text-foreground">
+                    <span className="font-semibold text-foreground text-xs">
                       {item.title}
                     </span>
                     {item.adminOnly && (
                       <Lock className="h-3 w-3 text-muted-foreground" />
                     )}
                   </div>
-                  <span className="block text-[10px] text-muted-foreground line-clamp-1">
+                  <span className="hidden lg:block text-[10px] text-muted-foreground line-clamp-1">
                     {item.description}
                   </span>
                 </div>
